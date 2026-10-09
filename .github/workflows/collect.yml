@@ -1,0 +1,30 @@
+name: Collect public fire observations
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: public-collection
+  cancel-in-progress: false
+jobs:
+  collect:
+    if: vars.ENABLE_PUBLIC_COLLECTION == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      FIRMS_MAP_KEY: ${{ secrets.FIRMS_MAP_KEY }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_KV_NAMESPACE_ID: ${{ vars.CLOUDFLARE_KV_NAMESPACE_ID }}
+      PUBLIC_SNAPSHOT_URL: ${{ vars.PUBLIC_SNAPSHOT_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Contract tests
+        run: python -m unittest discover -s tests -v
+      - name: Collect and publish
+        run: python -m fire_public.cli

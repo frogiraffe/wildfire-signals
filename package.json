@@ -1,0 +1,1 @@
+{"private":true,"type":"module","scripts":{"test:public":"node --test public/*.test.mjs functions/api/*.test.mjs"}}
