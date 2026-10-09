@@ -1,0 +1,35 @@
+name: Seven-day source pilot
+on:
+  schedule:
+    - cron: '37 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: prospective-source-pilot
+  cancel-in-progress: false
+jobs:
+  measure:
+    if: vars.ENABLE_SOURCE_PILOT == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PILOT_START_UTC: ${{ vars.PILOT_START_UTC }}
+      PILOT_END_UTC: ${{ vars.PILOT_END_UTC }}
+      FIRMS_MAP_KEY: ${{ secrets.FIRMS_MAP_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - id: window
+        name: Check seven-day window
+        run: python -m fire_public.pilot_window
+      - if: steps.window.outputs.active == 'true'
+        name: Measure public sources without publishing
+        run: python -m fire_public.pilot
+      - if: steps.window.outputs.expired == 'true'
+        name: Disable completed pilot
+        run: gh workflow disable source-pilot.yml --repo "$GITHUB_REPOSITORY"

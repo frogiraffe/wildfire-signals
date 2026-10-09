@@ -7,8 +7,10 @@ repository code, credentials, or production data. The service is **not deployed*
 
 - NASA FIRMS VIIRS NOAA-20 and NOAA-21 pixels are grouped into 0.05-degree,
   one-hour **satellite candidates**. A candidate does not establish a fire.
-- NIFC WFIGS `WF` and Canadian CWFIS active fire records are separate
+- NIFC WFIGS `WF` and Canadian CWFIS `OC`/`BH`/`UC` active fire records are separate
   **agency incidents**.
+- The time window filters satellite observations. Agency records come from the
+  current source layer; their source update date can be older than collection.
 - Nearby satellite candidates and agency incidents may be linked **provisionally**
   by point distance. This does not confirm a fire or establish common identity.
 - Source failures produce `partial` status; a complete upstream outage keeps the
@@ -36,7 +38,7 @@ causes a failed collection or stale map, not an automatic upgrade. Use a dedicat
 API token with Billing Read and KV Storage Write, plus `FIRMS_MAP_KEY`.
 
 At most one scheduled run per hour performs two KV writes. Each immutable snapshot
-is gzip compressed, capped at 20 MiB and expires in 25 hours; the current pointer
+is gzip compressed, capped at 5 MiB and expires in seven days; the current pointer
 is written last.
 Uncached map requests make two KV reads, or three while an older version is used
 during KV propagation. The 10,000 visits/day target implies 20,000–30,000
@@ -44,7 +46,8 @@ reads/day, below the current 100,000/day Free limit. This is a design
 budget, pending load and real-data measurements. Public Actions standard runners
 are free for public repositories.
 
-The site requires a Pages project with root `public/`, `functions/` directory,
+The site requires a Pages project with repository root as project root,
+`public/` as build output, a sibling `functions/` directory,
 and a KV binding named `PUBLIC_SNAPSHOTS`. `/api/*` is the only Function route.
 Set repository variables `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_KV_NAMESPACE_ID`,
 and `PUBLIC_SNAPSHOT_URL`; set repository secrets `FIRMS_MAP_KEY` and

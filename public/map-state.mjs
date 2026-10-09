@@ -1,5 +1,6 @@
 export const MESSAGES = {
   en: {title:'Fire Monitor', candidates:'Satellite candidates', incidents:'Agency incidents',
+    timeScope:'Time window filters satellite observations. Agency records show the current source layer; check each agency update date.',
     all:'All sources', time:'Time window', source:'Source', status:'Status',
     fresh:'Updated', stale:'Data is stale. Missing observations are possible.',
     unknown:'No verified scan is available yet.', partial:'Some sources failed; records may be missing.', empty:'No records in this view.',
@@ -13,6 +14,7 @@ export const MESSAGES = {
     kind:'Kind', modified:'Updated', aggregation:'Grouping', product:'Product age',
     failures:'failures', close:'Close details', ambiguous:'Multiple nearby agency records — ambiguous association.'},
   tr: {title:'Yangın İzleme', candidates:'Uydu adayları', incidents:'Kurum olayları',
+    timeScope:'Zaman aralığı uydu gözlemlerini süzer. Kurum kayıtları güncel kaynak katmanından gelir; her kaydın kurum güncelleme tarihini kontrol edin.',
     all:'Tüm kaynaklar', time:'Zaman aralığı', source:'Kaynak', status:'Durum',
     fresh:'Güncel', stale:'Veri eski. Eksik gözlem aralıkları olabilir.',
     unknown:'Henüz doğrulanmış tarama yok.', partial:'Bazı kaynaklar başarısız; kayıtlar eksik olabilir.', empty:'Bu görünümde kayıt yok.',
@@ -54,7 +56,6 @@ export function visible(snapshot, state, now = new Date()) {
     (state.source === 'all' || (item.sources || []).includes(state.source)) &&
     state.kind !== 'incident');
   const incidents = (snapshot.incidents || []).filter(item =>
-    Date.parse(item.last_seen_at) >= cutoff &&
     (state.source === 'all' || item.provider === state.source) &&
     state.kind !== 'candidate');
   return {events, incidents};

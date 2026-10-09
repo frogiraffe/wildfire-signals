@@ -35,11 +35,19 @@ class CollectTests(unittest.TestCase):
         raw = {"type":"FeatureCollection", "features":[{"geometry":{"type":"Point",
             "coordinates":[-1312706,1374104]}, "properties": {"national_fire_id":"c1",
             "agency_fire_id":"HWF-151-2026", "latitude":59.23287,
-            "longitude":-119.21388,"status_date":"2026-10-07T17:56:00Z"}}]}
+            "longitude":-119.21388,"status_date":"2026-10-07T17:56:00Z",
+            "stage_of_control_status":"UC"}}]}
         incidents = parse_cwfis_page(raw, at=AT)
         self.assertEqual(len(incidents),1)
         self.assertEqual(incidents[0]["longitude"],-119.21388)
         self.assertEqual(incidents[0]["provider"],"cwfis")
+        self.assertEqual(incidents[0]["modified_at"],"2026-10-07T17:56:00Z")
+
+    def test_cwfis_excludes_extinguished_incidents(self):
+        raw = {"type":"FeatureCollection", "features":[{"properties":{
+            "national_fire_id":"old", "latitude":55, "longitude":-115,
+            "stage_of_control_status":"EX"}}]}
+        self.assertEqual(parse_cwfis_page(raw, at=AT), [])
 
     def test_partial_source_status_and_all_failure(self):
         source = "VIIRS_NOAA20_NRT"
@@ -70,16 +78,24 @@ class CollectTests(unittest.TestCase):
         self.assertEqual(calls[1][0], "current")
 
     def test_nearby_agency_point_is_only_provisional(self):
-        events = [{"event_id":"e1", "latitude":36.9, "longitude":30.7}]
+        events = [{"event_id":"e1", "latitude":36.9, "longitude":30.7,
+                   "observed_at":AT.isoformat()}]
         incidents = [{"provider":"agency", "official_id":"i1", "latitude":36.91,
-                      "longitude":30.71}]
+                      "longitude":30.71, "modified_at":AT.isoformat()}]
         links = provisional_matches(events, incidents)
         self.assertEqual(len(links),1)
         self.assertEqual(links[0]["status"],"provisional")
         incidents.append({"provider":"agency", "official_id":"i2", "latitude":36.91,
-                          "longitude":30.72})
+                          "longitude":30.72, "modified_at":AT.isoformat()})
         self.assertEqual({x["status"] for x in provisional_matches(events, incidents)},
                          {"ambiguous"})
+
+    def test_old_agency_status_does_not_match_new_satellite_candidate(self):
+        events = [{"event_id":"e1", "latitude":36.9,"longitude":30.7,
+                   "observed_at":AT.isoformat()}]
+        incidents = [{"provider":"agency", "official_id":"old", "latitude":36.9,
+                      "longitude":30.7,"modified_at":"2020-05-01T00:00:00Z"}]
+        self.assertEqual(provisional_matches(events, incidents), [])
 
 
 if __name__ == "__main__":

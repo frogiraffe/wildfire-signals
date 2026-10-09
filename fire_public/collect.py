@@ -143,7 +143,7 @@ def parse_cwfis_page(raw: dict, *, at: datetime) -> list[dict]:
     for feature in raw["features"]:
         properties = feature.get("properties") or {}
         official_id = properties.get("national_fire_id")
-        if not official_id:
+        if not official_id or properties.get("stage_of_control_status") not in {"OC", "BH", "UC"}:
             continue
         try:
             lat, lon = float(properties["latitude"]), float(properties["longitude"])
@@ -154,7 +154,9 @@ def parse_cwfis_page(raw: dict, *, at: datetime) -> list[dict]:
         records.append({"kind":"agency_incident", "provider":"cwfis",
             "official_id":str(official_id), "name":str(properties.get("agency_fire_id") or "")[:100],
             "incident_kind":"active_wildland_fire", "latitude":lat, "longitude":lon,
-            "modified_at":properties.get("status_date"), "last_seen_at":_utc(at).isoformat()})
+            "modified_at":properties.get("status_date"),
+            "agency_status":properties["stage_of_control_status"],
+            "last_seen_at":_utc(at).isoformat()})
     return records
 
 
@@ -162,7 +164,8 @@ def fetch_cwfis(*, at: datetime) -> list[dict]:
     """Query active time slice, never the entire historical WFS layer."""
     at = _utc(at)
     stamp = at.strftime("%Y-%m-%dT%H:%M:%SZ")
-    cql = f"record_end > '{stamp}' AND record_start <= '{stamp}'"
+    cql = (f"record_end > '{stamp}' AND record_start <= '{stamp}' "
+           "AND stage_of_control_status IN ('OC','BH','UC')")
     records = {}
     for page in range(MAX_NIFC_PAGES):
         query = urlencode({"service":"WFS", "version":"2.0.0", "request":"GetFeature",
@@ -184,6 +187,12 @@ def provisional_matches(events: list[dict], incidents: list[dict]) -> list[dict]
     """Nearby points only; never a fire confirmation or shared identity."""
     index: dict[tuple[int, int], list[dict]] = {}
     for item in incidents:
+        try:
+            modified = datetime.fromisoformat(item["modified_at"])
+            if modified.tzinfo is None or modified.utcoffset() is None:
+                continue
+        except (KeyError, TypeError, ValueError):
+            continue
         cell = (math.floor(item["latitude"] * 10), math.floor(item["longitude"] * 10))
         index.setdefault(cell, []).append(item)
     matches = []
@@ -194,6 +203,14 @@ def provisional_matches(events: list[dict], incidents: list[dict]) -> list[dict]
         for dy in (-1, 0, 1):
             for dx in (-1, 0, 1):
                 for incident in index.get((cell[0] + dy, cell[1] + dx), []):
+                    try:
+                        observed = datetime.fromisoformat(event["observed_at"])
+                        modified = datetime.fromisoformat(incident["modified_at"])
+                        delta = observed - modified
+                        if not -timedelta(hours=24) <= delta <= timedelta(hours=72):
+                            continue
+                    except (KeyError, TypeError, ValueError):
+                        continue
                     phi1, phi2 = math.radians(lat), math.radians(incident["latitude"])
                     delta_phi = phi2 - phi1
                     delta_lon = math.radians(incident["longitude"] - lon)

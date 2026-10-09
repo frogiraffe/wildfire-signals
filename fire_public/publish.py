@@ -3,8 +3,8 @@ import hashlib
 import gzip
 import json
 
-MAX_VALUE_BYTES = 20 * 1024 * 1024
-TTL_SECONDS = 25 * 3600
+MAX_VALUE_BYTES = 5 * 1024 * 1024
+TTL_SECONDS = 7 * 24 * 3600
 
 
 def publish(snapshot, put, *, previous_key=None):

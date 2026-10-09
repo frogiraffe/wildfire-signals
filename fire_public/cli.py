@@ -1,5 +1,7 @@
 """Hourly collector; refuses to write before a Free subscription check."""
 import json
+import gzip
+import io
 import os
 import re
 from datetime import datetime, timezone
@@ -28,16 +30,20 @@ def api_request(url, token, *, data=None):
 def verify_free(account, token):
     payload = api_request(f"{API}/accounts/{account}/subscriptions", token)
     result = payload.get("result")
-    pages = (payload.get("result_info") or {}).get("total_pages")
-    if pages != 1:
+    info = payload.get("result_info") or {}
+    count, page = info.get("count"), info.get("page")
+    per_page, total_count = info.get("per_page"), info.get("total_count")
+    if (not all(isinstance(value, int) and not isinstance(value, bool)
+                for value in (count, page, per_page, total_count))
+            or page != 1 or per_page < 1 or count != total_count
+            or total_count > per_page):
         raise RuntimeError("cannot verify every Cloudflare subscription page")
-    if not isinstance(result, list) or not result:
+    if not isinstance(result, list) or not result or len(result) != count:
         raise RuntimeError("Cloudflare subscription could not be verified")
     for item in result:
-        if item.get("state") in {"Cancelled", "Expired", "Failed"}:
-            continue
-        if (item.get("rate_plan") or {}).get("id") not in {"free", "partners_free"} or (
-                item.get("price") not in {None, 0}):
+        if (item.get("state") != "Provisioned" or
+                (item.get("rate_plan") or {}).get("id") not in {"free", "partners_free"}
+                or item.get("price") != 0):
             raise RuntimeError("paid or unknown Cloudflare subscription; refusing publication")
 
 
@@ -51,12 +57,17 @@ def previous_snapshot(url):
                      timeout=20) as response:
             if response.status != 200:
                 return None
-            raw = response.read(20 * 1024 * 1024 + 1)
-        if len(raw) > 20 * 1024 * 1024:
+            raw = response.read(5 * 1024 * 1024 + 1)
+        if len(raw) > 5 * 1024 * 1024:
             return None
+        if raw.startswith(b"\x1f\x8b"):
+            with gzip.GzipFile(fileobj=io.BytesIO(raw)) as compressed:
+                raw = compressed.read(100 * 1024 * 1024 + 1)
+            if len(raw) > 100 * 1024 * 1024:
+                return None
         snapshot = json.loads(raw)
-        return snapshot if snapshot.get("manifest", {}).get("schema_version") == 1 else None
-    except (OSError, ValueError, json.JSONDecodeError):
+        return snapshot if isinstance(snapshot, dict) and snapshot.get("manifest", {}).get("schema_version") == 1 else None
+    except (OSError, ValueError, EOFError, json.JSONDecodeError):
         return None
 
 

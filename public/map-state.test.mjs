@@ -22,6 +22,9 @@ test('time, source and record type filters stay separate', () => {
   state.source = 'all'; state.kind = 'incident';
   assert.equal(visible(snapshot,state,now).events.length,0);
   assert.equal(visible(snapshot,state,now).incidents.length,1);
+  state.hours = 6;
+  snapshot.incidents[0].last_seen_at = '2026-10-08T12:00:00Z';
+  assert.equal(visible(snapshot,state,now).incidents.length,1);
 });
 
 test('map feature retains kind for selected record', () => {
