@@ -1,8 +1,9 @@
 import unittest
+import gzip
 from datetime import datetime, timezone
 
 from fire_public.collect import (build_snapshot, parse_cwfis_page, parse_firms_csv,
-                                 parse_nifc_page)
+                                 parse_nifc_page, provisional_matches)
 from fire_public.publish import publish
 
 AT = datetime(2026, 10, 9, 12, tzinfo=timezone.utc)
@@ -47,6 +48,14 @@ class CollectTests(unittest.TestCase):
                                   errors={"VIIRS_NOAA21_NRT": "TimeoutError"})
         self.assertEqual(snapshot["manifest"]["data_status"], "partial")
         self.assertEqual(snapshot["manifest"]["candidate_count"], 1)
+        later = build_snapshot({}, [], at=AT.replace(hour=13), previous=snapshot,
+                               errors={"VIIRS_NOAA20_NRT":"TimeoutError"})
+        health = {row["key"]:row for row in later["sources"]}
+        self.assertEqual(health["VIIRS_NOAA20_NRT"]["age_seconds"],3600)
+        self.assertEqual(health["VIIRS_NOAA20_NRT"]["consecutive_failures"],1)
+        delayed = build_snapshot({}, [], at=AT, errors={"cwfis":"SourceDeferred"})
+        self.assertEqual({row["key"]:row for row in delayed["sources"]}["cwfis"]["status"],
+                         "deferred")
         with self.assertRaises(RuntimeError):
             build_snapshot({}, [], at=AT, errors={"VIIRS_NOAA20_NRT": "error",
                 "VIIRS_NOAA21_NRT": "error", "nifc_wfigs": "error",
@@ -57,7 +66,20 @@ class CollectTests(unittest.TestCase):
         calls = []
         publish(snapshot, lambda *args: calls.append(args))
         self.assertTrue(calls[0][0].startswith("snapshot:"))
+        self.assertEqual(gzip.decompress(calls[0][1])[:1],b'{')
         self.assertEqual(calls[1][0], "current")
+
+    def test_nearby_agency_point_is_only_provisional(self):
+        events = [{"event_id":"e1", "latitude":36.9, "longitude":30.7}]
+        incidents = [{"provider":"agency", "official_id":"i1", "latitude":36.91,
+                      "longitude":30.71}]
+        links = provisional_matches(events, incidents)
+        self.assertEqual(len(links),1)
+        self.assertEqual(links[0]["status"],"provisional")
+        incidents.append({"provider":"agency", "official_id":"i2", "latitude":36.91,
+                          "longitude":30.72})
+        self.assertEqual({x["status"] for x in provisional_matches(events, incidents)},
+                         {"ambiguous"})
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseState,stateHash,visible,featureCollection} from './map-state.mjs';
+import {parseState,stateHash,visible,effectiveStatus,featureCollection} from './map-state.mjs';
 
 test('URL view round trips and invalid input is bounded', () => {
   const state = parseState('#lang=tr&hours=6&source=firms&kind=candidate&lat=35&lon=30&zoom=8');
@@ -28,4 +28,11 @@ test('map feature retains kind for selected record', () => {
   const result = featureCollection([{event_id:'e1',latitude:36,longitude:30}],'candidate');
   assert.deepEqual(result.features[0].geometry.coordinates,[30,36]);
   assert.equal(result.features[0].properties.kind,'candidate');
+});
+
+test('previously fresh snapshot becomes stale when collection stops', () => {
+  const manifest = {last_scan_at:'2026-10-09T12:00:00Z',data_status:'fresh'};
+  assert.equal(effectiveStatus(manifest,new Date('2026-10-09T12:20:00Z')),'fresh');
+  assert.equal(effectiveStatus(manifest,new Date('2026-10-09T14:00:00Z')),'stale');
+  assert.equal(effectiveStatus({},new Date('2026-10-09T12:00:00Z')),'unknown');
 });

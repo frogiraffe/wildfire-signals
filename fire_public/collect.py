@@ -7,6 +7,7 @@ import io
 import json
 import math
 from datetime import datetime, timedelta, timezone
+from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
@@ -19,6 +20,10 @@ MAX_RESPONSE_BYTES = 50 * 1024 * 1024
 MAX_CSV_ROWS = 250_000
 MAX_NIFC_PAGES = 10
 PAGE_SIZE = 1000
+
+
+class SourceDeferred(RuntimeError):
+    """Upstream quota or throttling; collection should preserve prior data."""
 
 
 def _utc(value: datetime) -> datetime:
@@ -94,11 +99,16 @@ def parse_nifc_page(raw: dict, *, at: datetime) -> list[dict]:
 
 
 def _get(url: str) -> bytes:
-    with urlopen(Request(url, headers={"User-Agent":"FireMonitorPublic/0.1 (+https://github.com/frogiraffe)"}),
-                 timeout=45) as response:
-        if response.status != 200:
-            raise RuntimeError(f"upstream HTTP {response.status}")
-        data = response.read(MAX_RESPONSE_BYTES + 1)
+    try:
+        with urlopen(Request(url, headers={"User-Agent":"FireMonitorPublic/0.1 (+https://github.com/frogiraffe)"}),
+                     timeout=45) as response:
+            if response.status != 200:
+                raise RuntimeError(f"upstream HTTP {response.status}")
+            data = response.read(MAX_RESPONSE_BYTES + 1)
+    except HTTPError as exc:
+        if exc.code == 429:
+            raise SourceDeferred("upstream rate limited") from None
+        raise
     if len(data) > MAX_RESPONSE_BYTES:
         raise ValueError("upstream response byte budget exceeded")
     return data
@@ -170,6 +180,36 @@ def fetch_cwfis(*, at: datetime) -> list[dict]:
     raise ValueError("CWFIS pagination budget exceeded")
 
 
+def provisional_matches(events: list[dict], incidents: list[dict]) -> list[dict]:
+    """Nearby points only; never a fire confirmation or shared identity."""
+    index: dict[tuple[int, int], list[dict]] = {}
+    for item in incidents:
+        cell = (math.floor(item["latitude"] * 10), math.floor(item["longitude"] * 10))
+        index.setdefault(cell, []).append(item)
+    matches = []
+    for event in events:
+        lat, lon = event["latitude"], event["longitude"]
+        cell = (math.floor(lat * 10), math.floor(lon * 10))
+        nearby = []
+        for dy in (-1, 0, 1):
+            for dx in (-1, 0, 1):
+                for incident in index.get((cell[0] + dy, cell[1] + dx), []):
+                    phi1, phi2 = math.radians(lat), math.radians(incident["latitude"])
+                    delta_phi = phi2 - phi1
+                    delta_lon = math.radians(incident["longitude"] - lon)
+                    h = math.sin(delta_phi / 2) ** 2 + (math.cos(phi1) * math.cos(phi2)
+                        * math.sin(delta_lon / 2) ** 2)
+                    distance = 12742.0176 * math.asin(math.sqrt(min(1, h)))
+                    if distance <= 8:
+                        nearby.append((incident, distance))
+        for incident, distance in nearby:
+            matches.append({"event_id":event["event_id"], "provider":incident["provider"],
+                "official_id":incident["official_id"],
+                "status":"ambiguous" if len(nearby) > 1 else "provisional",
+                "method":"cell_center_distance_v1", "distance_km":round(distance, 2)})
+    return matches
+
+
 def build_snapshot(firms: dict[str, list[dict]], incidents: list[dict], *,
                    at: datetime, previous: dict | None = None,
                    errors: dict[str, str] | None = None) -> dict:
@@ -187,16 +227,28 @@ def build_snapshot(firms: dict[str, list[dict]], incidents: list[dict], *,
                 item = {**item, "sources": sorted(set(item["sources"] + old["sources"])),
                         "detection_count": max(item["detection_count"], old["detection_count"])}
             events[item["event_id"]] = item
-    sources = [{"key": source, "status": "failed" if source in errors else "complete",
-                "last_attempt_at": at.isoformat(),
-                "last_success_at": None if source in errors else at.isoformat(),
-                "age_seconds": None if source in errors else 0}
-               for source in FIRMS_SOURCES]
-    for source in ("nifc_wfigs", "cwfis"):
-        sources.append({"key":source, "status":"failed" if source in errors else "complete",
-                        "last_attempt_at":at.isoformat(),
-                        "last_success_at":None if source in errors else at.isoformat(),
-                        "age_seconds":None if source in errors else 0})
+    prior_sources = {row["key"]: row for row in (previous or {}).get("sources", [])}
+    sources = []
+    for source in (*FIRMS_SOURCES, "nifc_wfigs", "cwfis"):
+        failed = source in errors
+        prior = prior_sources.get(source, {})
+        success = prior.get("last_success_at") if failed else at.isoformat()
+        success_at = datetime.fromisoformat(success) if success else None
+        observations = (firms.get(source, []) if source in FIRMS_SOURCES else
+                        [item for item in incidents if item.get("provider") == source])
+        product = max((item.get("observed_at") or item.get("modified_at") or ""
+                       for item in observations), default="") if not failed else ""
+        product = product or prior.get("last_product_observed_at")
+        product_at = datetime.fromisoformat(product) if product else None
+        state = ("deferred" if errors.get(source) == "SourceDeferred" else "failed") if failed else "complete"
+        sources.append({"key":source, "status":state,
+                        "last_attempt_at":at.isoformat(), "last_success_at":success,
+                        "age_seconds":max(0,int((at - success_at).total_seconds())) if success_at else None,
+                        "last_product_observed_at":product,
+                        "product_age_seconds":max(0,int((at - product_at).total_seconds()))
+                        if product_at else None,
+                        "consecutive_failures":prior.get("consecutive_failures",0) + 1
+                        if failed else 0})
     if errors and len(errors) == len(FIRMS_SOURCES) + 2:
         raise RuntimeError("all public sources failed; preserve last published snapshot")
     status = "partial" if errors else "fresh"
@@ -204,4 +256,5 @@ def build_snapshot(firms: dict[str, list[dict]], incidents: list[dict], *,
     return {"manifest":{"schema_version":1,"generated_at":at.isoformat(),
         "last_scan_at":at.isoformat(),"data_status":status,"candidate_count":len(event_list),
         "incident_count":len(incidents),"truncated":False,"source_errors":sorted(errors)},
-        "events":event_list,"incidents":incidents,"matches":[],"sources":sources,"details":{}}
+        "events":event_list,"incidents":incidents,
+        "matches":provisional_matches(event_list, incidents),"sources":sources,"details":{}}

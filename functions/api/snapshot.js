@@ -5,9 +5,12 @@ export async function onRequestGet({env}) {
     const pointer = await env.PUBLIC_SNAPSHOTS.get('current', {type:'json'});
     if (!pointer?.key || !/^snapshot:[a-f0-9]{64}$/.test(pointer.key))
       throw new Error('Public snapshot pointer missing');
-    const payload = await env.PUBLIC_SNAPSHOTS.get(pointer.key, {type:'text'});
+    let payload = await env.PUBLIC_SNAPSHOTS.get(pointer.key, {type:'arrayBuffer'});
+    if (!payload && /^snapshot:[a-f0-9]{64}$/.test(pointer.previous_key || ''))
+      payload = await env.PUBLIC_SNAPSHOTS.get(pointer.previous_key, {type:'arrayBuffer'});
     if (!payload) throw new Error('Public snapshot object missing');
     return new Response(payload, {headers:{'content-type':'application/json; charset=utf-8',
+      'content-encoding':'gzip',
       'cache-control':'public, max-age=60, stale-while-revalidate=300',
       'x-content-type-options':'nosniff'}});
   } catch (_) {

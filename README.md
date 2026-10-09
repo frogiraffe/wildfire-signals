@@ -9,7 +9,8 @@ repository code, credentials, or production data. The service is **not deployed*
   one-hour **satellite candidates**. A candidate does not establish a fire.
 - NIFC WFIGS `WF` and Canadian CWFIS active fire records are separate
   **agency incidents**.
-- The current release does not associate a pixel cluster with an agency incident.
+- Nearby satellite candidates and agency incidents may be linked **provisionally**
+  by point distance. This does not confirm a fire or establish common identity.
 - Source failures produce `partial` status; a complete upstream outage keeps the
   previous published snapshot.
 
@@ -20,6 +21,10 @@ and use the [Open Government Licence — Canada](https://cwfis.cfs.nrcan.gc.ca/d
 Attribution: Canadian Forest Service, Canadian Wildland Fire Information System
 (CWFIS), Natural Resources Canada, Northern Forestry Centre, Edmonton, Alberta.
 Map tiles use [OpenFreeMap Liberty](https://openfreemap.org/quick_start/).
+The [Europe plus Türkiye source inventory](docs/europe-official-source-inventory.csv)
+currently lists all 52 M49 areas in scope. Its official feeds remain under review;
+satellite candidates are the only current European coverage. This blocks a stable
+release claim.
 
 ## Zero-charge deployment gate
 
@@ -31,9 +36,11 @@ causes a failed collection or stale map, not an automatic upgrade. Use a dedicat
 API token with Billing Read and KV Storage Write, plus `FIRMS_MAP_KEY`.
 
 At most one scheduled run per hour performs two KV writes. Each immutable snapshot
-is capped at 20 MiB and expires in 25 hours; the current pointer is written last.
-Uncached map requests make two KV reads. The 10,000 visits/day target implies
-20,000 reads/day, below the current 100,000/day Free limit. This is a design
+is gzip compressed, capped at 20 MiB and expires in 25 hours; the current pointer
+is written last.
+Uncached map requests make two KV reads, or three while an older version is used
+during KV propagation. The 10,000 visits/day target implies 20,000–30,000
+reads/day, below the current 100,000/day Free limit. This is a design
 budget, pending load and real-data measurements. Public Actions standard runners
 are free for public repositories.
 

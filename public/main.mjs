@@ -1,5 +1,5 @@
 import * as maplibregl from 'https://unpkg.com/maplibre-gl@6.13.0/dist/maplibre-gl.mjs';
-import {MESSAGES, parseState, stateHash, visible, featureCollection} from './map-state.mjs';
+import {MESSAGES, parseState, stateHash, visible, effectiveStatus, featureCollection} from './map-state.mjs';
 
 const state = parseState(location.hash);
 let snapshot = {manifest:{data_status:'unknown'},events:[],incidents:[],matches:[],sources:[],details:{}};
@@ -17,6 +17,7 @@ function translate() {
   el('hours').value = String(state.hours);
   el('source').value = state.source;
   el('kind').value = state.kind;
+  el('detail-close').setAttribute('aria-label',MESSAGES[state.lang].close);
   document.title = `${MESSAGES[state.lang].title} — public map`;
 }
 
@@ -42,20 +43,30 @@ function showRecord(kind, id) {
   note.textContent = kind === 'candidate' ? msg.candidate : msg.agency;
   box.append(note);
   const rows = kind === 'candidate' ? [
-    ['ID', item.event_id], ['Observed', item.observed_at], ['Received', item.received_at],
-    ['Sources', (item.sources || []).join(', ')], ['Location', `${item.latitude}, ${item.longitude}`],
-    ['Thermal trend', item.thermal_pixel_trend?.direction || 'unknown'],
-    ['Detection count', item.detection_count ?? '—']]
-    : [['ID', item.official_id], ['Provider', item.provider], ['Kind', item.incident_kind],
-      ['Updated', item.modified_at || item.last_seen_at], ['Location', `${item.latitude}, ${item.longitude}`]];
+    [msg.id, item.event_id], [msg.observed, item.observed_at], [msg.received, item.received_at],
+    [msg.sources, (item.sources || []).join(', ')], [msg.location, `${item.latitude}, ${item.longitude}`],
+    [msg.thermal, item.thermal_pixel_trend?.direction || '—'],
+    [msg.detections, item.detection_count ?? '—'], [msg.aggregation,item.aggregation || '—']]
+    : [[msg.id, item.official_id], [msg.provider, item.provider], [msg.kind, item.incident_kind],
+      [msg.modified, item.modified_at || item.last_seen_at], [msg.location, `${item.latitude}, ${item.longitude}`]];
   const list = document.createElement('dl');
   for (const [label,value] of rows) {
     const dt = document.createElement('dt'), dd = document.createElement('dd');
     dt.textContent = label; dd.textContent = String(value || '—'); list.append(dt,dd);
   }
   box.append(list);
-  if (kind === 'candidate' && snapshot.matches?.some(x => x.event_id === id)) {
-    const matched = document.createElement('p'); matched.textContent = msg.provisional; box.append(matched);
+  const links = kind === 'candidate' ? (snapshot.matches || []).filter(x => x.event_id === id) : [];
+  if (links.length) {
+    const matched = document.createElement('p');
+    matched.textContent = links.some(x => x.status === 'ambiguous') ? msg.ambiguous : msg.provisional;
+    box.append(matched);
+    const list = document.createElement('ul');
+    for (const link of links) {
+      const row = document.createElement('li');
+      row.textContent = `${link.provider}: ${link.official_id} · ${link.distance_km} km`;
+      list.append(row);
+    }
+    box.append(list);
   }
   el('detail').hidden = false;
   el('detail-close').focus();
@@ -65,7 +76,7 @@ function draw() {
   translate();
   const msg = MESSAGES[state.lang];
   const notice = el('notice');
-  const dataStatus = snapshot.manifest?.data_status;
+  const dataStatus = effectiveStatus(snapshot.manifest);
   notice.textContent = dataStatus === 'fresh' ? '' : msg[['stale','partial'].includes(dataStatus) ? dataStatus : 'unknown'];
   notice.classList.toggle('show', dataStatus !== 'fresh');
   const {events, incidents} = visible(snapshot,state);
@@ -75,7 +86,8 @@ function draw() {
   const sources = el('source-list'); sources.replaceChildren();
   for (const source of snapshot.sources || []) {
     const row = document.createElement('li'), key = document.createElement('span'), health = document.createElement('em');
-    key.textContent = source.key; health.textContent = `${source.status} · ${source.age_seconds ?? '—'}s`;
+    key.textContent = source.key;
+    health.textContent = `${source.status} · ${msg.product} ${source.product_age_seconds ?? '—'}s · ${msg.failures} ${source.consecutive_failures ?? 0}`;
     row.append(key,health); sources.append(row);
   }
   if (map.getSource('candidates')) {

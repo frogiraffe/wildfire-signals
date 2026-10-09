@@ -3,7 +3,7 @@ import json
 import os
 import re
 from datetime import datetime, timezone
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 from urllib.request import Request, urlopen
 
 from .collect import FIRMS_SOURCES, build_snapshot, fetch_cwfis, fetch_firms, fetch_nifc
@@ -26,7 +26,11 @@ def api_request(url, token, *, data=None):
 
 
 def verify_free(account, token):
-    result = api_request(f"{API}/accounts/{account}/subscriptions", token).get("result")
+    payload = api_request(f"{API}/accounts/{account}/subscriptions", token)
+    result = payload.get("result")
+    pages = (payload.get("result_info") or {}).get("total_pages")
+    if pages != 1:
+        raise RuntimeError("cannot verify every Cloudflare subscription page")
     if not isinstance(result, list) or not result:
         raise RuntimeError("Cloudflare subscription could not be verified")
     for item in result:
@@ -56,16 +60,32 @@ def previous_snapshot(url):
         return None
 
 
+def current_key(account, namespace, token):
+    try:
+        url = (f"{API}/accounts/{account}/storage/kv/namespaces/{namespace}/values/current")
+        with urlopen(Request(url, headers={"Authorization":f"Bearer {token}"}), timeout=20) as response:
+            pointer = json.load(response)
+        key = pointer.get("key")
+        return key if isinstance(key, str) and re.fullmatch(r"snapshot:[a-f0-9]{64}", key) else None
+    except (OSError, ValueError, json.JSONDecodeError):
+        return None
+
+
 def main():
     account = os.environ.get("CLOUDFLARE_ACCOUNT_ID", "")
     namespace = os.environ.get("CLOUDFLARE_KV_NAMESPACE_ID", "")
     token = os.environ.get("CLOUDFLARE_API_TOKEN", "")
     map_key = os.environ.get("FIRMS_MAP_KEY", "")
+    snapshot_url = os.environ.get("PUBLIC_SNAPSHOT_URL", "")
     if not HEX_ID.fullmatch(account) or not HEX_ID.fullmatch(namespace) or not token or not map_key:
         raise RuntimeError("FIRMS key and Cloudflare Free account secrets are required")
+    parsed = urlsplit(snapshot_url)
+    if (parsed.scheme != "https" or not (parsed.hostname or "").endswith(".pages.dev")
+            or parsed.path != "/api/snapshot" or parsed.query or parsed.fragment):
+        raise RuntimeError("PUBLIC_SNAPSHOT_URL must be the free Pages HTTPS snapshot endpoint")
     verify_free(account, token)
     at = datetime.now(timezone.utc)
-    previous = previous_snapshot(os.environ.get("PUBLIC_SNAPSHOT_URL", ""))
+    previous = previous_snapshot(snapshot_url)
     firms, errors = {}, {}
     for source in FIRMS_SOURCES:
         try:
@@ -87,7 +107,7 @@ def main():
         api_request(f"{API}/accounts/{account}/storage/kv/namespaces/{namespace}/values/"
                     f"{quote(key, safe='')}{suffix}", token, data=value)
 
-    key = publish(snapshot, put)
+    key = publish(snapshot, put, previous_key=current_key(account, namespace, token))
     print(json.dumps({"key":key, "events":len(snapshot["events"]),
                       "incidents":len(snapshot["incidents"]), "errors":sorted(errors)}))
 

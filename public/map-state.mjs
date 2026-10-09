@@ -7,7 +7,11 @@ export const MESSAGES = {
     candidate:'Satellite candidate; fire is not independently confirmed.',
     agency:'Agency incident record', updated:'Last scan', health:'Source health',
     about:'Thermal detections are candidates, not confirmed fires.',
-    link:'Share view', language:'Language'},
+    link:'Share view', language:'Language', sourceCaveat:'Coverage and update times vary by source.',
+    allKinds:'All', id:'ID', observed:'Observed', received:'Received', sources:'Sources',
+    location:'Location', thermal:'Thermal trend', detections:'Detection count', provider:'Provider',
+    kind:'Kind', modified:'Updated', aggregation:'Grouping', product:'Product age',
+    failures:'failures', close:'Close details', ambiguous:'Multiple nearby agency records — ambiguous association.'},
   tr: {title:'Yangın İzleme', candidates:'Uydu adayları', incidents:'Kurum olayları',
     all:'Tüm kaynaklar', time:'Zaman aralığı', source:'Kaynak', status:'Durum',
     fresh:'Güncel', stale:'Veri eski. Eksik gözlem aralıkları olabilir.',
@@ -16,7 +20,11 @@ export const MESSAGES = {
     candidate:'Uydu adayı; bağımsız yangın doğrulaması değildir.',
     agency:'Kurum olay kaydı', updated:'Son tarama', health:'Kaynak durumu',
     about:'Termal tespitler adaydır; doğrulanmış yangın değildir.',
-    link:'Görünümü paylaş', language:'Dil'}
+    link:'Görünümü paylaş', language:'Dil', sourceCaveat:'Kapsam ve güncelleme zamanı kaynağa göre değişir.',
+    allKinds:'Tümü', id:'Kimlik', observed:'Gözlem', received:'Alınma', sources:'Kaynaklar',
+    location:'Konum', thermal:'Termal eğilim', detections:'Tespit sayısı', provider:'Kurum',
+    kind:'Tür', modified:'Güncelleme', aggregation:'Gruplama', product:'Ürün yaşı',
+    failures:'hata', close:'Ayrıntıları kapat', ambiguous:'Birden çok yakın kurum kaydı — belirsiz ilişki.'}
 };
 
 export function parseState(hash = '') {
@@ -50,6 +58,12 @@ export function visible(snapshot, state, now = new Date()) {
     (state.source === 'all' || item.provider === state.source) &&
     state.kind !== 'candidate');
   return {events, incidents};
+}
+
+export function effectiveStatus(manifest, now = new Date()) {
+  if (!manifest?.last_scan_at || !Number.isFinite(Date.parse(manifest.last_scan_at))) return 'unknown';
+  if (now.getTime() - Date.parse(manifest.last_scan_at) > 90 * 60_000) return 'stale';
+  return manifest.data_status || 'unknown';
 }
 
 export function featureCollection(items, kind) {
