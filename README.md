@@ -1,4 +1,4 @@
-# Fire Monitor Public Map (pre-release)
+# Wildfire Signals (pre-release)
 
 This is the public, standalone collector and map. It contains no private repository
 history, credentials, or production data. The service is **not deployed**.

@@ -100,7 +100,7 @@ def parse_nifc_page(raw: dict, *, at: datetime) -> list[dict]:
 
 def _get(url: str) -> bytes:
     try:
-        with urlopen(Request(url, headers={"User-Agent":"FireMonitorPublic/0.1 (+https://github.com/frogiraffe)"}),
+        with urlopen(Request(url, headers={"User-Agent":"WildfireSignals/0.1 (+https://github.com/frogiraffe/wildfire-signals)"}),
                      timeout=45) as response:
             if response.status != 200:
                 raise RuntimeError(f"upstream HTTP {response.status}")

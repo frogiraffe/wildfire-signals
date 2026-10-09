@@ -53,7 +53,7 @@ def previous_snapshot(url):
     if not url.startswith("https://"):
         raise ValueError("previous snapshot URL must use HTTPS")
     try:
-        with urlopen(Request(url, headers={"User-Agent":"FireMonitorPublic/0.1"}),
+        with urlopen(Request(url, headers={"User-Agent":"WildfireSignals/0.1"}),
                      timeout=20) as response:
             if response.status != 200:
                 return None
