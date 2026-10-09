@@ -1,7 +1,8 @@
 import unittest
 from datetime import datetime, timezone
 
-from fire_public.collect import build_snapshot, parse_firms_csv, parse_nifc_page
+from fire_public.collect import (build_snapshot, parse_cwfis_page, parse_firms_csv,
+                                 parse_nifc_page)
 from fire_public.publish import publish
 
 AT = datetime(2026, 10, 9, 12, tzinfo=timezone.utc)
@@ -28,6 +29,17 @@ class CollectTests(unittest.TestCase):
         self.assertEqual([item["official_id"] for item in incidents], ["n1"])
         self.assertEqual(incidents[0]["kind"], "agency_incident")
 
+    def test_cwfis_uses_properties_coordinates_in_new_layer(self):
+        # GeoServer's geometry is EPSG:3978; properties expose WGS84 coordinates.
+        raw = {"type":"FeatureCollection", "features":[{"geometry":{"type":"Point",
+            "coordinates":[-1312706,1374104]}, "properties": {"national_fire_id":"c1",
+            "agency_fire_id":"HWF-151-2026", "latitude":59.23287,
+            "longitude":-119.21388,"status_date":"2026-10-07T17:56:00Z"}}]}
+        incidents = parse_cwfis_page(raw, at=AT)
+        self.assertEqual(len(incidents),1)
+        self.assertEqual(incidents[0]["longitude"],-119.21388)
+        self.assertEqual(incidents[0]["provider"],"cwfis")
+
     def test_partial_source_status_and_all_failure(self):
         source = "VIIRS_NOAA20_NRT"
         events = parse_firms_csv(CSV, source, at=AT)
@@ -37,7 +49,8 @@ class CollectTests(unittest.TestCase):
         self.assertEqual(snapshot["manifest"]["candidate_count"], 1)
         with self.assertRaises(RuntimeError):
             build_snapshot({}, [], at=AT, errors={"VIIRS_NOAA20_NRT": "error",
-                "VIIRS_NOAA21_NRT": "error", "nifc_wfigs": "error"})
+                "VIIRS_NOAA21_NRT": "error", "nifc_wfigs": "error",
+                "cwfis": "error"})
 
     def test_publication_is_pointer_last(self):
         snapshot = build_snapshot({}, [], at=AT)

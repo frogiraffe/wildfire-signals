@@ -7,13 +7,18 @@ repository code, credentials, or production data. The service is **not deployed*
 
 - NASA FIRMS VIIRS NOAA-20 and NOAA-21 pixels are grouped into 0.05-degree,
   one-hour **satellite candidates**. A candidate does not establish a fire.
-- NIFC WFIGS `WF` records are separate **agency incidents**.
+- NIFC WFIGS `WF` and Canadian CWFIS active fire records are separate
+  **agency incidents**.
 - The current release does not associate a pixel cluster with an agency incident.
 - Source failures produce `partial` status; a complete upstream outage keeps the
   previous published snapshot.
 
 NASA FIRMS requires a free MAP_KEY. See <https://firms.modaps.eosdis.nasa.gov/api/area/>.
 NIFC data comes from the [WFIGS current incident layer](https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Incident_Locations_Current/FeatureServer/0).
+Canadian records come from the [CWFIS current active fire layer](https://cwfis.cfs.nrcan.gc.ca/downloads/docs/en/references/cwfif/cwfis-data-placemat.pdf)
+and use the [Open Government Licence — Canada](https://cwfis.cfs.nrcan.gc.ca/downloads/licence.txt).
+Attribution: Canadian Forest Service, Canadian Wildland Fire Information System
+(CWFIS), Natural Resources Canada, Northern Forestry Centre, Edmonton, Alberta.
 Map tiles use [OpenFreeMap Liberty](https://openfreemap.org/quick_start/).
 
 ## Zero-charge deployment gate

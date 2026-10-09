@@ -14,6 +14,7 @@ FIRMS_SOURCES = ("VIIRS_NOAA20_NRT", "VIIRS_NOAA21_NRT")
 FIRMS_URL = "https://firms.modaps.eosdis.nasa.gov/api/area/csv/{key}/{source}/world/1"
 NIFC_URL = ("https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/"
             "WFIGS_Incident_Locations_Current/FeatureServer/0/query")
+CWFIS_URL = "https://geoserver.cwfif.nrcan.gc.ca/geoserver/ows"
 MAX_RESPONSE_BYTES = 50 * 1024 * 1024
 MAX_CSV_ROWS = 250_000
 MAX_NIFC_PAGES = 10
@@ -125,6 +126,50 @@ def fetch_nifc(*, at: datetime) -> list[dict]:
     raise ValueError("NIFC pagination budget exceeded")
 
 
+def parse_cwfis_page(raw: dict, *, at: datetime) -> list[dict]:
+    if raw.get("type") != "FeatureCollection" or not isinstance(raw.get("features"), list):
+        raise ValueError("CWFIS response schema unavailable")
+    records = []
+    for feature in raw["features"]:
+        properties = feature.get("properties") or {}
+        official_id = properties.get("national_fire_id")
+        if not official_id:
+            continue
+        try:
+            lat, lon = float(properties["latitude"]), float(properties["longitude"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if not math.isfinite(lat) or not math.isfinite(lon) or not -90 <= lat <= 90 or not -180 <= lon <= 180:
+            continue
+        records.append({"kind":"agency_incident", "provider":"cwfis",
+            "official_id":str(official_id), "name":str(properties.get("agency_fire_id") or "")[:100],
+            "incident_kind":"active_wildland_fire", "latitude":lat, "longitude":lon,
+            "modified_at":properties.get("status_date"), "last_seen_at":_utc(at).isoformat()})
+    return records
+
+
+def fetch_cwfis(*, at: datetime) -> list[dict]:
+    """Query active time slice, never the entire historical WFS layer."""
+    at = _utc(at)
+    stamp = at.strftime("%Y-%m-%dT%H:%M:%SZ")
+    cql = f"record_end > '{stamp}' AND record_start <= '{stamp}'"
+    records = {}
+    for page in range(MAX_NIFC_PAGES):
+        query = urlencode({"service":"WFS", "version":"2.0.0", "request":"GetFeature",
+            "typeName":"public:cwfif_national_activefires", "count":PAGE_SIZE,
+            "startIndex":page * PAGE_SIZE, "sortBy":"national_fire_id",
+            "outputFormat":"application/json", "cql_filter":cql})
+        data = json.loads(_get(f"{CWFIS_URL}?{query}"))
+        for item in parse_cwfis_page(data, at=at):
+            records[item["official_id"]] = item
+        if len(data["features"]) < PAGE_SIZE:
+            matched = data.get("numberMatched")
+            if isinstance(matched, int) and matched > (page + 1) * PAGE_SIZE:
+                raise ValueError("CWFIS response incomplete")
+            return list(records.values())
+    raise ValueError("CWFIS pagination budget exceeded")
+
+
 def build_snapshot(firms: dict[str, list[dict]], incidents: list[dict], *,
                    at: datetime, previous: dict | None = None,
                    errors: dict[str, str] | None = None) -> dict:
@@ -147,11 +192,12 @@ def build_snapshot(firms: dict[str, list[dict]], incidents: list[dict], *,
                 "last_success_at": None if source in errors else at.isoformat(),
                 "age_seconds": None if source in errors else 0}
                for source in FIRMS_SOURCES]
-    sources.append({"key":"nifc_wfigs", "status":"failed" if "nifc_wfigs" in errors else "complete",
-                    "last_attempt_at":at.isoformat(),
-                    "last_success_at":None if "nifc_wfigs" in errors else at.isoformat(),
-                    "age_seconds":None if "nifc_wfigs" in errors else 0})
-    if errors and len(errors) == len(FIRMS_SOURCES) + 1:
+    for source in ("nifc_wfigs", "cwfis"):
+        sources.append({"key":source, "status":"failed" if source in errors else "complete",
+                        "last_attempt_at":at.isoformat(),
+                        "last_success_at":None if source in errors else at.isoformat(),
+                        "age_seconds":None if source in errors else 0})
+    if errors and len(errors) == len(FIRMS_SOURCES) + 2:
         raise RuntimeError("all public sources failed; preserve last published snapshot")
     status = "partial" if errors else "fresh"
     event_list = sorted(events.values(), key=lambda item: item["observed_at"], reverse=True)

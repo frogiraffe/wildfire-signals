@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 
-from .collect import FIRMS_SOURCES, build_snapshot, fetch_firms, fetch_nifc
+from .collect import FIRMS_SOURCES, build_snapshot, fetch_cwfis, fetch_firms, fetch_nifc
 from .publish import publish
 
 API = "https://api.cloudflare.com/client/v4"
@@ -72,11 +72,14 @@ def main():
             firms[source] = fetch_firms(map_key, source, at=at)
         except (OSError, ValueError, RuntimeError, UnicodeError) as exc:
             errors[source] = type(exc).__name__
-    try:
-        incidents = fetch_nifc(at=at)
-    except (OSError, ValueError, RuntimeError) as exc:
-        errors["nifc_wfigs"] = type(exc).__name__
-        incidents = (previous or {}).get("incidents", [])
+    incidents = []
+    for source, fetch in (("nifc_wfigs", fetch_nifc), ("cwfis", fetch_cwfis)):
+        try:
+            incidents.extend(fetch(at=at))
+        except (OSError, ValueError, RuntimeError) as exc:
+            errors[source] = type(exc).__name__
+            incidents.extend(item for item in (previous or {}).get("incidents", [])
+                             if item.get("provider") == source)
     snapshot = build_snapshot(firms, incidents, at=at, previous=previous, errors=errors)
 
     def put(key, value, ttl):
