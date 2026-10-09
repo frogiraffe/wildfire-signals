@@ -16,8 +16,6 @@ jobs:
     timeout-minutes: 15
     env:
       GH_TOKEN: ${{ github.token }}
-      PILOT_START_UTC: ${{ vars.PILOT_START_UTC }}
-      PILOT_END_UTC: ${{ vars.PILOT_END_UTC }}
       FIRMS_MAP_KEY: ${{ secrets.FIRMS_MAP_KEY }}
     steps:
       - uses: actions/checkout@v4

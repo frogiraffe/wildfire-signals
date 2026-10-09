@@ -1,7 +1,7 @@
 # Fire Monitor Public Map (pre-release)
 
-This is the public, standalone collector and map. It contains no private Fire Monitor
-repository code, credentials, or production data. The service is **not deployed**.
+This is the public, standalone collector and map. It contains no private repository
+history, credentials, or production data. The service is **not deployed**.
 
 ## Data meaning
 
@@ -59,4 +59,14 @@ real-data size, source terms, and seven-day pilot have been checked.
 ```sh
 python -m unittest discover -s tests -v
 node --test public/*.test.mjs functions/api/*.test.mjs
+```
+
+After the fixed pilot end, count missing and failed scheduled intervals using
+GitHub's workflow run history (including delayed runs as gaps in the expected
+hour). This read-only audit does not make a release decision on its own:
+
+```sh
+gh run list --workflow source-pilot.yml --limit 200 \
+  --json createdAt,status,conclusion,event,databaseId > pilot-runs.json
+python -m fire_public.pilot_audit pilot-runs.json
 ```
