@@ -6,6 +6,8 @@ from pathlib import Path
 
 from .pilot_window import PILOT_END_UTC, PILOT_START_UTC
 
+SCHEDULE_GRACE = timedelta(hours=2)
+
 
 def _utc(value):
     parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
@@ -16,13 +18,14 @@ def _utc(value):
 
 def audit(runs, *, until=None):
     start, end = _utc(PILOT_START_UTC), _utc(PILOT_END_UTC)
-    end = min(end, _utc(until) if until else datetime.now(timezone.utc))
+    checked_at = _utc(until) if until else datetime.now(timezone.utc)
+    assessment_end = min(end, checked_at - SCHEDULE_GRACE)
     first_tick = start.replace(minute=37, second=0, microsecond=0)
     if first_tick < start:
         first_tick += timedelta(hours=1)
     slots = {}
     tick = first_tick
-    while tick < end:
+    while tick < assessment_end:
         slots[tick.isoformat()] = []
         tick += timedelta(hours=1)
     for run in runs:
@@ -47,7 +50,7 @@ def audit(runs, *, until=None):
     return {"expected_intervals":len(slots), "successful_intervals":successful,
             "missing_intervals":missing, "failed_intervals":failed,
             "pending_intervals":pending,
-            "complete_window":end >= _utc(PILOT_END_UTC)}
+            "complete_window":checked_at >= end + SCHEDULE_GRACE}
 
 
 def main():

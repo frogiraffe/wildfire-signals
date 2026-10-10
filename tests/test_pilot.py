@@ -34,11 +34,16 @@ class PilotTests(unittest.TestCase):
                'status':'completed','conclusion':'success'},
               {'event':'schedule','createdAt':'2026-10-09T20:38:00Z',
                'status':'completed','conclusion':'failure'}]
-        result=audit(runs,until='2026-10-09T22:37:00Z')
+        result=audit(runs,until='2026-10-10T00:37:00Z')
         self.assertEqual(result['expected_intervals'],4)
         self.assertEqual(result['successful_intervals'],1)
         self.assertEqual(len(result['failed_intervals']),1)
         self.assertEqual(len(result['missing_intervals']),2)
+
+    def test_interval_ledger_waits_for_delayed_scheduled_run(self):
+        result=audit([],until='2026-10-09T18:50:00Z')
+        self.assertEqual(result['expected_intervals'],0)
+        self.assertEqual(result['missing_intervals'],[])
 
 
 if __name__ == '__main__':

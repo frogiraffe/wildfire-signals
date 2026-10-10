@@ -51,8 +51,15 @@ The site requires a Pages project with repository root as project root,
 and a KV binding named `PUBLIC_SNAPSHOTS`. `/api/*` is the only Function route.
 Set repository variables `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_KV_NAMESPACE_ID`,
 and `PUBLIC_SNAPSHOT_URL`; set repository secrets `FIRMS_MAP_KEY` and
-`CLOUDFLARE_API_TOKEN`. Keep the workflow disabled until the account, binding,
-real-data size, source terms, and seven-day pilot have been checked.
+`CLOUDFLARE_API_TOKEN`.
+
+The seven-day source-only pilot runs on GitHub-hosted runners. It does not need
+the developer's computer to stay on and does not publish to Cloudflare. After
+the map implementation, source terms, Free account and initial size checks pass,
+deploy a **preview** site and enable its hosted collector. Observe the preview
+for seven days while it is live. Check gaps, source freshness, Free quotas,
+browser behavior and real traffic before a 1.0/stable release claim. The source
+pilot can continue independently; it is not a prerequisite to preview deployment.
 
 ## Local checks
 
@@ -61,9 +68,10 @@ python -m unittest discover -s tests -v
 node --test public/*.test.mjs functions/api/*.test.mjs
 ```
 
-After the fixed pilot end, count missing and failed scheduled intervals using
-GitHub's workflow run history (including delayed runs as gaps in the expected
-hour). This read-only audit does not make a release decision on its own:
+After the fixed source pilot end plus two hours of scheduling grace, count missing
+and failed scheduled intervals using GitHub's workflow run history. A run delayed
+beyond two hours counts as a gap in its expected hour. This read-only audit does
+not make a release decision on its own:
 
 ```sh
 gh run list --workflow source-pilot.yml --limit 200 \
