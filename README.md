@@ -12,6 +12,8 @@ is live with hourly hosted collection. It is not a stable 1.0 release.
   **agency incidents**.
 - The time window filters satellite observations. Agency records come from the
   current source layer; their source update date can be older than collection.
+- The 72-hour view now uses a rolling 72-hour FIRMS window from four UTC calendar
+  dates. The 6- and 24-hour views filter the same snapshot in the browser.
 - Nearby satellite candidates and agency incidents may be linked **provisionally**
   by point distance. This does not confirm a fire or establish common identity.
 - Source failures produce `partial` status; a complete upstream outage keeps the
@@ -45,6 +47,9 @@ also requires an account-specific dashboard Free-plan attestation in
 At most one scheduled run per hour performs two KV writes. Each immutable snapshot
 is gzip compressed, capped at 5 MiB and expires in seven days; the current pointer
 is written last.
+The first 72-hour source-only probe produced a 3.20 MB gzip snapshot; a later
+live run published about 149,000 candidates. A larger future source response or
+snapshot can hit the fail-closed limits and leave the prior version stale.
 Uncached map requests make two KV reads, or three while an older version is used
 during KV propagation. The 10,000 visits/day target implies 20,000–30,000
 reads/day, below the current 100,000/day Free limit. This is a design
@@ -92,8 +97,8 @@ and real traffic before a 1.0/stable release claim.
 
 The manual `Check live map in browser` GitHub workflow checks desktop and mobile
 Chromium against the public preview. It checks loaded data, source state, map
-canvas and horizontal fit; visual quality and real device interaction still need
-review.
+canvas, the 72-hour filter and horizontal fit; visual quality and real device
+interaction still need review.
 
 ## Local checks
 

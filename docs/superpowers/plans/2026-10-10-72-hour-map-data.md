@@ -29,9 +29,13 @@ Ruling: Fix previous-snapshot gzip negotiation before live publication. The old 
 
 ## Task 3: Live acceptance
 
-- [ ] Merge the proven change to `main`, let Pages deploy, and run the collector manually once.
-- [ ] Confirm events, errors, endpoint gzip/JSON, and desktop/mobile browser checks; keep the hourly schedule enabled.
-- [ ] Update the public README and private single-file status report with measured limits and unresolved seven-day acceptance.
+- [x] Merge the proven change to `main`, let Pages deploy, and run the collector manually once.
+- [x] Confirm events, errors, endpoint gzip/JSON, and desktop/mobile browser checks; keep the hourly schedule enabled.
+- [x] Update the public README and private single-file status report with measured limits and unresolved seven-day acceptance.
+
+[Live collector](https://github.com/frogiraffe/wildfire-signals/actions/runs/38012942753),
+[endpoint check](https://github.com/frogiraffe/wildfire-signals/actions/runs/38012974739),
+and [desktop/mobile 24h versus 72h browser check](https://github.com/frogiraffe/wildfire-signals/actions/runs/38013034966) passed.
 
 ## Review Focus
 
