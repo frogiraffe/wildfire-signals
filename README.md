@@ -31,7 +31,9 @@ currently lists all 52 M49 areas in scope. Its official feeds remain under revie
 satellite candidates are the only current European coverage. This blocks a stable
 release claim. The [EFFIS shared-source audit](docs/europe-shared-source-audit-2026-10-10.md)
 explains why its FIRMS-derived active-fire layer cannot count as an independent
-agency incident feed.
+agency incident feed. The [MTG publication audit](docs/mtg-publication-audit-2026-10-10.md)
+records the source rights and runtime checks still needed before public MTG
+collection can be enabled.
 
 ## Zero-charge deployment gate
 
