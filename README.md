@@ -103,7 +103,10 @@ allows 100,000 requests/day, and the [Free account has five Cron Trigger
 slots](https://developers.cloudflare.com/workers/platform/limits/). This
 project uses one trigger (96 scheduled invocations/day). With a healthy map it
 reads one small KV pointer per invocation; when stale it also reads a dispatch
-marker and can write one marker per successful GitHub dispatch. Free quota
+marker and can write one marker per successful GitHub dispatch. Each scheduled
+invocation also writes a small `scheduler:tick:<UTC time>` receipt with an
+eight-day TTL (at most 96 extra writes/day). These receipts show whether Cron
+ran even when a fresh snapshot correctly suppresses a GitHub run. Free quota
 exhaustion fails rather than activating paid usage. Confirm a Cron slot is
 available in the Cloudflare account before deployment; no paid plan is needed.
 

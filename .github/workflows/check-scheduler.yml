@@ -1,0 +1,43 @@
+name: Check backup scheduler receipts
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Read latest Cron receipt from Free KV
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from urllib.parse import urlencode, quote
+          from urllib.request import Request, urlopen
+
+          account = os.environ['CLOUDFLARE_ACCOUNT_ID']
+          token = os.environ['CLOUDFLARE_API_TOKEN']
+          namespace = '191f9f5e688f436fa60e5a5f8ca89d53'
+          base = (f'https://api.cloudflare.com/client/v4/accounts/{account}'
+                  f'/storage/kv/namespaces/{namespace}')
+          headers = {'Authorization': f'Bearer {token}'}
+          query = urlencode({'prefix': 'scheduler:tick:', 'limit': 1000})
+          with urlopen(Request(f'{base}/keys?{query}', headers=headers), timeout=30) as reply:
+              payload = json.load(reply)
+          if payload.get('success') is not True or not isinstance(payload.get('result'), list):
+              raise RuntimeError('Cloudflare KV receipt listing failed')
+          names = sorted((item['name'] for item in payload['result']
+                          if isinstance(item.get('name'), str)), reverse=True)
+          if not names:
+              raise RuntimeError('No Cron invocation receipt yet')
+          with urlopen(Request(f'{base}/values/{quote(names[0], safe="")}',
+                               headers=headers), timeout=30) as reply:
+              receipt = json.load(reply)
+          if not isinstance(receipt, dict) or receipt.get('at') != names[0].split('scheduler:tick:', 1)[1]:
+              raise RuntimeError('Latest Cron receipt is malformed')
+          print(json.dumps({'latest_receipt': receipt}, sort_keys=True))
+          PY

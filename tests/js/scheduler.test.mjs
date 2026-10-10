@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { runSchedule } from '../../scheduler-worker/src/index.mjs';
+import { runSchedule, runScheduled } from '../../scheduler-worker/src/index.mjs';
 
 const now = new Date('2026-10-10T12:00:00.000Z');
 const key = `snapshot:${'a'.repeat(64)}`;
@@ -115,4 +115,25 @@ test('failed GitHub dispatch does not write the marker', async () => {
     status: 503,
   })), /GitHub dispatch failed: 503/);
   assert.equal(f.writes.length, 0);
+});
+
+test('scheduled invocation records an eight-day receipt even when no dispatch is needed', async () => {
+  const f = fixture({ key, last_scan_at: '2026-10-10T11:10:00+00:00' });
+  assert.equal(await runScheduled(f.env, now, f.fetchGitHub), 'fresh');
+  assert.deepEqual(f.writes, [{
+    name: 'scheduler:tick:2026-10-10T12:00:00.000Z',
+    value: { at: '2026-10-10T12:00:00.000Z', outcome: 'fresh' },
+    options: { expirationTtl: 8 * 86400 },
+  }]);
+});
+
+test('scheduled failure records a receipt without dispatching', async () => {
+  const f = fixture({ key: 'invalid', last_scan_at: '2026-10-10T10:00:00Z' });
+  await assert.rejects(runScheduled(f.env, now, f.fetchGitHub), /current pointer is invalid/);
+  assert.deepEqual(f.writes, [{
+    name: 'scheduler:tick:2026-10-10T12:00:00.000Z',
+    value: { at: '2026-10-10T12:00:00.000Z', outcome: 'error' },
+    options: { expirationTtl: 8 * 86400 },
+  }]);
+  assert.equal(f.requests.length, 0);
 });

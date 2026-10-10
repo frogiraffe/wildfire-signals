@@ -59,8 +59,26 @@ export async function runSchedule(env, now = new Date(), fetchGitHub = fetch) {
   return 'dispatched';
 }
 
+export async function runScheduled(env, now = new Date(), fetchGitHub = fetch) {
+  let outcome = 'error';
+  try {
+    outcome = await runSchedule(env, now, fetchGitHub);
+    return outcome;
+  } finally {
+    // One bounded receipt per Cron invocation makes missed triggers observable.
+    // A failed receipt must not prevent a successful dispatch or hide its error.
+    try {
+      await env.PUBLIC_SNAPSHOTS.put(`scheduler:tick:${now.toISOString()}`,
+        JSON.stringify({ at: now.toISOString(), outcome }),
+        { expirationTtl: 8 * 86400 });
+    } catch {
+      console.error('scheduler receipt write failed');
+    }
+  }
+}
+
 export default {
   async scheduled(_controller, env) {
-    console.log(`scheduler: ${await runSchedule(env)}`);
+    console.log(`scheduler: ${await runScheduled(env)}`);
   },
 };
