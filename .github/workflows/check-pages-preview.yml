@@ -35,7 +35,7 @@ jobs:
                   or parsed.path != "/api/snapshot" or parsed.query or parsed.fragment):
               raise RuntimeError("PUBLIC_SNAPSHOT_URL is not a Pages snapshot endpoint")
           root = f"https://{parsed.hostname}/"
-          headers = {"User-Agent": "WildfireSignals/0.1"}
+          headers = {"User-Agent": "WildfireSignals/0.1", "Accept-Encoding": "gzip"}
           try:
               root_response = urlopen(Request(root, headers=headers), timeout=20)
           except HTTPError as error:
