@@ -60,8 +60,11 @@ To connect the account without pasting a token into chat:
    products or upgrades.
 2. Create a narrowly scoped [API token](https://dash.cloudflare.com/profile/api-tokens)
    for that account with **Billing Read** and **Workers KV Storage Edit**. Store it
-   as the repository's `CLOUDFLARE_API_TOKEN` Actions secret. Store the account ID
-   as its `CLOUDFLARE_ACCOUNT_ID` Actions variable.
+   as the repository's `CLOUDFLARE_API_TOKEN` Actions **secret**. Copy the
+   [Account ID](https://developers.cloudflare.com/fundamentals/account/find-account-and-zone-ids/)
+   (32 hexadecimal characters) into the `CLOUDFLARE_ACCOUNT_ID` Actions
+   **variable**. An API token is never an Actions variable. If one was placed
+   there, delete it and revoke it in Cloudflare before creating a replacement.
 3. Run the manual `Verify Cloudflare Free account` GitHub Actions workflow. It
    only reads subscription information. A paid, unknown or unverifiable response
    fails closed and creates no resource.
