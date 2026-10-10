@@ -117,10 +117,13 @@ def main():
         age = at - scan_at.astimezone(timezone.utc)
     except (KeyError, TypeError, ValueError, AttributeError):
         age = None
-    if (os.environ.get("FORCE_COLLECTION") != "true" and age is not None
-            and timedelta(0) <= age < MIN_SCAN_INTERVAL):
-        print(json.dumps({"skipped":"recent_snapshot", "last_scan_at":scan_at.isoformat()}))
-        return
+    if os.environ.get("FORCE_COLLECTION") != "true":
+        if age is None or age < timedelta(0):
+            print(json.dumps({"skipped":"unverified_previous_snapshot"}))
+            return
+        if age < MIN_SCAN_INTERVAL:
+            print(json.dumps({"skipped":"recent_snapshot", "last_scan_at":scan_at.isoformat()}))
+            return
     firms, errors = {}, {}
     for source in FIRMS_SOURCES:
         try:

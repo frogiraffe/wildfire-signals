@@ -34,28 +34,29 @@ class FreePlanTests(unittest.TestCase):
         cwfis.assert_not_called()
         publish.assert_not_called()
 
-    def test_manual_force_collects_even_when_snapshot_is_recent(self):
-        prior = {"manifest":{"schema_version":1,
-                             "last_scan_at":datetime.now(timezone.utc).isoformat()}}
+    def test_manual_force_collects_with_recent_or_unreadable_snapshot(self):
+        recent = {"manifest":{"schema_version":1,
+                              "last_scan_at":datetime.now(timezone.utc).isoformat()}}
         env = {"CLOUDFLARE_ACCOUNT_ID":"a" * 32,
                "CLOUDFLARE_KV_NAMESPACE_ID":"b" * 32,
                "CLOUDFLARE_API_TOKEN":"test-token", "FIRMS_MAP_KEY":"test-key",
                "PUBLIC_SNAPSHOT_URL":"https://wildfire-signals.pages.dev/api/snapshot",
                "FORCE_COLLECTION":"true"}
-        with patch.dict(os.environ, env, clear=True), \
-                patch("fire_public.cli.verify_free"), \
-                patch("fire_public.cli.previous_snapshot", return_value=prior), \
-                patch("fire_public.cli.fetch_firms", return_value=[]) as firms, \
-                patch("fire_public.cli.fetch_nifc", return_value=[]), \
-                patch("fire_public.cli.fetch_cwfis", return_value=[]), \
-                patch("fire_public.cli.current_key", return_value=None), \
-                patch("fire_public.cli.publish", return_value="snapshot:test") as publish, \
-                redirect_stdout(io.StringIO()):
-            main()
-        self.assertEqual(firms.call_count, 2)
-        publish.assert_called_once()
+        for prior in (recent, None):
+            with self.subTest(prior=prior), patch.dict(os.environ, env, clear=True), \
+                    patch("fire_public.cli.verify_free"), \
+                    patch("fire_public.cli.previous_snapshot", return_value=prior), \
+                    patch("fire_public.cli.fetch_firms", return_value=[]) as firms, \
+                    patch("fire_public.cli.fetch_nifc", return_value=[]), \
+                    patch("fire_public.cli.fetch_cwfis", return_value=[]), \
+                    patch("fire_public.cli.current_key", return_value=None), \
+                    patch("fire_public.cli.publish", return_value="snapshot:test") as publish, \
+                    redirect_stdout(io.StringIO()):
+                main()
+            self.assertEqual(firms.call_count, 2)
+            publish.assert_called_once()
 
-    def test_invalid_prior_timestamp_does_not_suppress_collection(self):
+    def test_unverifiable_prior_snapshot_skips_scheduled_collection(self):
         env = {"CLOUDFLARE_ACCOUNT_ID":"a" * 32,
                "CLOUDFLARE_KV_NAMESPACE_ID":"b" * 32,
                "CLOUDFLARE_API_TOKEN":"test-token", "FIRMS_MAP_KEY":"test-key",
@@ -70,13 +71,18 @@ class FreePlanTests(unittest.TestCase):
                     patch("fire_public.cli.verify_free"), \
                     patch("fire_public.cli.previous_snapshot", return_value=prior), \
                     patch("fire_public.cli.fetch_firms", return_value=[]) as firms, \
-                    patch("fire_public.cli.fetch_nifc", return_value=[]), \
-                    patch("fire_public.cli.fetch_cwfis", return_value=[]), \
+                    patch("fire_public.cli.fetch_nifc", return_value=[]) as nifc, \
+                    patch("fire_public.cli.fetch_cwfis", return_value=[]) as cwfis, \
                     patch("fire_public.cli.current_key", return_value=None), \
-                    patch("fire_public.cli.publish", return_value="snapshot:test"), \
-                    redirect_stdout(io.StringIO()):
+                    patch("fire_public.cli.publish", return_value="snapshot:test") as publish, \
+                    redirect_stdout(io.StringIO()) as output:
                 main()
-                self.assertEqual(firms.call_count, 2)
+                self.assertEqual(json.loads(output.getvalue())["skipped"],
+                                 "unverified_previous_snapshot")
+                firms.assert_not_called()
+                nifc.assert_not_called()
+                cwfis.assert_not_called()
+                publish.assert_not_called()
 
     def test_fifty_five_minute_old_snapshot_allows_collection(self):
         prior = {"manifest":{"schema_version":1,

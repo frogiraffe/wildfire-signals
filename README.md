@@ -45,11 +45,16 @@ also requires an account-specific dashboard Free-plan attestation in
 `CLOUDFLARE_ACCOUNT_ID`; a paid subscription is always rejected.
 
 The workflow is scheduled at :17 and :47 UTC each hour. A run skips provider
-downloads and KV writes if the last successful scan is under 55 minutes old;
-manual dispatch can force a repair collection. Each immutable snapshot is gzip
+downloads and KV writes if the last successful scan is under 55 minutes old.
+If the previous snapshot cannot be read or its timestamp is invalid, scheduled
+runs also skip collection until the read recovers or an operator manually
+dispatches a repair run. Manual dispatch bypasses this cadence guard, so repeated
+manual runs can exhaust the Free storage quota and leave the map stale; they do
+not activate a paid plan. Each immutable snapshot is gzip
 compressed, capped at 5 MiB and expires in seven days; the current pointer is
-written last. Even a maximum-size snapshot every 55 minutes stays below the
-1 GB Free storage ceiling for seven days. [GitHub may delay or drop scheduled
+written last. With successful timestamp reads and no repeated manual overrides,
+even a maximum-size snapshot every 55 minutes stays below the 1 GB Free storage
+ceiling for seven days. [GitHub may delay or drop scheduled
 events](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows),
 so successful jobs alone do not prove continuous coverage.
 The first 72-hour source-only probe produced a 3.20 MB gzip snapshot; a later
