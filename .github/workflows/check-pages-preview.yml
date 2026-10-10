@@ -47,6 +47,7 @@ jobs:
                   "cf_mitigated": error.headers.get("cf-mitigated"),
                   "title": re.sub(r"\s+", " ", title.group(1)).strip()[:120] if title else None,
                   "cloudflare_error_code": error_code.group(1) if error_code else None,
+                  "body_prefix": re.sub(r"\s+", " ", page[:120]).strip(),
               }, flush=True)
               raise
           with root_response as response:
