@@ -30,8 +30,17 @@ try {
       assert.equal(result.sourceCount, 4, 'four source states should be present');
       assert.notEqual(result.lastScan, '–', 'scan time should be populated');
       assert.equal(result.horizontalOverflow, false, 'page should fit the viewport');
+      await page.locator('#hours').selectOption('72');
+      await page.waitForFunction(previous => {
+        const count = Number((document.querySelector('#candidate-count')?.textContent || '').replace(/\D/g, ''));
+        return count > previous;
+      }, result.candidateCount, {timeout: 30000});
+      const threeDayCount = Number((await page.locator('#candidate-count').textContent()).replace(/\D/g, ''));
+      assert.ok(threeDayCount > result.candidateCount,
+        '72-hour view should contain observations absent from the 24-hour view');
       assert.deepEqual(failures, [], 'page should have no uncaught JavaScript errors');
-      console.log(JSON.stringify({viewport: `${viewport.width}x${viewport.height}`, ...result}));
+      console.log(JSON.stringify({viewport: `${viewport.width}x${viewport.height}`,
+        ...result, threeDayCount}));
     } finally {
       await page.close();
     }
