@@ -38,7 +38,16 @@ jobs:
           try:
               root_response = urlopen(root, timeout=20)
           except HTTPError as error:
-              print(f"Pages root status={error.code}; server={error.headers.get('server')}")
+              page = error.read(2000).decode("utf-8", "replace")
+              title = re.search(r"<title[^>]*>(.*?)</title>", page, re.I | re.S)
+              error_code = re.search(r"(?:Error|error code)\s*(\d{3,4})", page)
+              print("Pages root rejection:", {
+                  "status": error.code,
+                  "server": error.headers.get("server"),
+                  "cf_mitigated": error.headers.get("cf-mitigated"),
+                  "title": re.sub(r"\s+", " ", title.group(1)).strip()[:120] if title else None,
+                  "cloudflare_error_code": error_code.group(1) if error_code else None,
+              }, flush=True)
               raise
           with root_response as response:
               html = response.read(256_000)
