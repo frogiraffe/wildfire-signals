@@ -19,7 +19,7 @@ def publish(snapshot, put, *, previous_key=None):
         raise ValueError("snapshot exceeds Free-plan value budget")
     key = "snapshot:" + hashlib.sha256(raw).hexdigest()
     put(key, payload, TTL_SECONDS)
-    pointer = {"key": key}
+    pointer = {"key": key, "last_scan_at": snapshot["manifest"]["last_scan_at"]}
     if previous_key and previous_key.startswith("snapshot:") and previous_key != key:
         pointer["previous_key"] = previous_key
     put("current", json.dumps(pointer).encode("utf-8"), None)

@@ -6,6 +6,7 @@ import os
 import re
 from datetime import datetime, timedelta, timezone
 from urllib.parse import quote, urlsplit
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 from .collect import FIRMS_SOURCES, build_snapshot, fetch_cwfis, fetch_firms, fetch_nifc
@@ -94,6 +95,21 @@ def current_key(account, namespace, token):
         return None
 
 
+def current_pointer(account, namespace, token):
+    url = f"{API}/accounts/{account}/storage/kv/namespaces/{namespace}/values/current"
+    try:
+        with urlopen(Request(url, headers={"Authorization":f"Bearer {token}"}), timeout=20) as response:
+            pointer = json.load(response)
+    except HTTPError as exc:
+        if exc.code == 404:
+            return None
+        raise
+    if (not isinstance(pointer, dict) or not isinstance(pointer.get("key"), str)
+            or not re.fullmatch(r"snapshot:[a-f0-9]{64}", pointer["key"])):
+        raise RuntimeError("current snapshot pointer is invalid")
+    return pointer
+
+
 def main():
     account = os.environ.get("CLOUDFLARE_ACCOUNT_ID", "")
     namespace = os.environ.get("CLOUDFLARE_KV_NAMESPACE_ID", "")
@@ -110,14 +126,20 @@ def main():
                 attested_account=os.environ.get("CLOUDFLARE_FREE_ATTESTED_ACCOUNT_ID", ""))
     at = datetime.now(timezone.utc)
     previous = previous_snapshot(snapshot_url)
+    force = os.environ.get("FORCE_COLLECTION") == "true"
+    pointer = current_pointer(account, namespace, token) if previous is None and not force else None
     try:
-        scan_at = datetime.fromisoformat(previous["manifest"]["last_scan_at"])
+        timestamp = (pointer["last_scan_at"] if previous is None
+                     else previous["manifest"]["last_scan_at"])
+        scan_at = datetime.fromisoformat(timestamp)
         if scan_at.tzinfo is None or scan_at.utcoffset() is None:
             raise ValueError("prior scan timestamp lacks timezone")
         age = at - scan_at.astimezone(timezone.utc)
     except (KeyError, TypeError, ValueError, AttributeError):
         age = None
-    if os.environ.get("FORCE_COLLECTION") != "true":
+    if not force:
+        if previous is None and pointer is None:
+            age = MIN_SCAN_INTERVAL  # Empty namespace: first scheduled run may seed it.
         if age is None or age < timedelta(0):
             print(json.dumps({"skipped":"unverified_previous_snapshot"}))
             return

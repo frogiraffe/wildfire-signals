@@ -46,9 +46,11 @@ also requires an account-specific dashboard Free-plan attestation in
 
 The workflow is scheduled at :17 and :47 UTC each hour. A run skips provider
 downloads and KV writes if the last successful scan is under 55 minutes old.
-If the previous snapshot cannot be read or its timestamp is invalid, scheduled
-runs also skip collection until the read recovers or an operator manually
-dispatches a repair run. Manual dispatch bypasses this cadence guard, so repeated
+If the public snapshot cannot be read, scheduled runs use the current KV pointer's
+last scan time. An empty namespace can seed itself, and an expired snapshot can
+be replaced on the next scheduled run. If both timestamps are unverifiable,
+scheduled runs skip until readback recovers or an operator manually dispatches
+a repair run. Manual dispatch bypasses this cadence guard, so repeated
 manual runs can exhaust the Free storage quota and leave the map stale; they do
 not activate a paid plan. Each immutable snapshot is gzip
 compressed, capped at 5 MiB and expires in seven days; the current pointer is

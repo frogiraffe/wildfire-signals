@@ -112,6 +112,8 @@ class CollectTests(unittest.TestCase):
         snapshot = build_snapshot({}, [], at=AT)
         calls = []
         publish(snapshot, lambda *args: calls.append(args))
+        self.assertEqual(__import__("json").loads(calls[-1][1])["last_scan_at"],
+                         snapshot["manifest"]["last_scan_at"])
         self.assertTrue(calls[0][0].startswith("snapshot:"))
         self.assertEqual(gzip.decompress(calls[0][1])[:1],b'{')
         self.assertEqual(calls[1][0], "current")
