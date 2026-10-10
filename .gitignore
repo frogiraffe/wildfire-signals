@@ -2,5 +2,6 @@ __pycache__/
 *.py[cod]
 .env
 .venv/
+node_modules/
 *.sqlite3
 *.db
