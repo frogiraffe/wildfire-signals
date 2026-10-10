@@ -36,6 +36,10 @@ R2, paid add-ons, or larger GitHub runners. The collector reads account subscrip
 before each KV write and rejects paid or unknown plans. KV Free quota exhaustion
 causes a failed collection or stale map, not an automatic upgrade. Use a dedicated
 API token with Billing Read and KV Storage Write, plus `FIRMS_MAP_KEY`.
+For a new account whose subscriptions API returns an empty first page, the gate
+also requires an account-specific dashboard Free-plan attestation in
+`CLOUDFLARE_FREE_ATTESTED_ACCOUNT_ID`. This value must match
+`CLOUDFLARE_ACCOUNT_ID`; a paid subscription is always rejected.
 
 At most one scheduled run per hour performs two KV writes. Each immutable snapshot
 is gzip compressed, capped at 5 MiB and expires in seven days; the current pointer
@@ -66,8 +70,10 @@ To connect the account without pasting a token into chat:
    **variable**. An API token is never an Actions variable. If one was placed
    there, delete it and revoke it in Cloudflare before creating a replacement.
 3. Run the manual `Verify Cloudflare Free account` GitHub Actions workflow. It
-   only reads subscription information. A paid, unknown or unverifiable response
-   fails closed and creates no resource.
+   only reads subscription information. If Cloudflare returns no subscriptions,
+   first confirm Workers & Pages shows **Free** with no paid add-ons, then set
+   `CLOUDFLARE_FREE_ATTESTED_ACCOUNT_ID` to the same Account ID. A paid, unknown
+   or unverifiable response fails closed and creates no resource.
 4. Connect this repository to Cloudflare Pages with repository root `/`, no build
    command and output directory `public`. Create a KV namespace and bind it to
    Pages production Functions as `PUBLIC_SNAPSHOTS`. Set the namespace ID and

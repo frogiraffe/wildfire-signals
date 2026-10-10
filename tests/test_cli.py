@@ -47,6 +47,22 @@ class FreePlanTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "subscription could not be verified"):
             verify_free("a" * 32, "token")
 
+    @patch("fire_public.cli.api_request")
+    def test_false_cursor_marks_last_page(self, request):
+        request.return_value = {"result_info": {"page": 1, "per_page": 25, "next_page": False},
+            "result": [{"state": "Provisioned", "rate_plan": {"id": "free"}, "price": 0}]}
+        verify_free("a" * 32, "token")
+
+    @patch("fire_public.cli.api_request")
+    def test_empty_page_requires_matching_dashboard_attestation(self, request):
+        request.return_value = {"result_info": {"page": 1, "per_page": 25, "next_page": False},
+            "result": []}
+        with self.assertRaisesRegex(RuntimeError, "subscription could not be verified"):
+            verify_free("a" * 32, "token")
+        verify_free("a" * 32, "token", attested_account="a" * 32)
+        with self.assertRaisesRegex(RuntimeError, "subscription could not be verified"):
+            verify_free("a" * 32, "token", attested_account="b" * 32)
+
     @patch("fire_public.cli.urlopen")
     def test_compressed_public_snapshot_readback(self, urlopen):
         class Response:

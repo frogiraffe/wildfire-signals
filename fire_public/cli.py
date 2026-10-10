@@ -27,7 +27,7 @@ def api_request(url, token, *, data=None):
     return payload
 
 
-def verify_free(account, token):
+def verify_free(account, token, *, attested_account=""):
     payload = api_request(f"{API}/accounts/{account}/subscriptions", token)
     result = payload.get("result")
     info = payload.get("result_info") or {}
@@ -37,19 +37,17 @@ def verify_free(account, token):
             or page != 1 or per_page < 1):
         raise RuntimeError("cannot verify every Cloudflare subscription page")
     if "next_page" in info and "count" not in info and "total_count" not in info:
-        complete = info["next_page"] is None
+        complete = info["next_page"] is None or info["next_page"] is False
     else:
         count, total_count = info.get("count"), info.get("total_count")
         complete = (valid_number(count) and valid_number(total_count)
                     and count == total_count and total_count <= per_page)
     if not complete:
-        raise RuntimeError(
-            "cannot verify every Cloudflare subscription page "
-            f"(next_page_type={type(info.get('next_page')).__name__}, "
-            f"has_next_page={bool(info.get('next_page'))})"
-        )
-    if not isinstance(result, list) or not result:
+        raise RuntimeError("cannot verify every Cloudflare subscription page")
+    if not isinstance(result, list) or (not result and attested_account != account):
         raise RuntimeError("Cloudflare subscription could not be verified")
+    if not result:
+        return
     if "count" in info and len(result) != info["count"]:
         raise RuntimeError("Cloudflare subscription count mismatch")
     for item in result:
@@ -106,7 +104,8 @@ def main():
     if (parsed.scheme != "https" or not (parsed.hostname or "").endswith(".pages.dev")
             or parsed.path != "/api/snapshot" or parsed.query or parsed.fragment):
         raise RuntimeError("PUBLIC_SNAPSHOT_URL must be the free Pages HTTPS snapshot endpoint")
-    verify_free(account, token)
+    verify_free(account, token,
+                attested_account=os.environ.get("CLOUDFLARE_FREE_ATTESTED_ACCOUNT_ID", ""))
     at = datetime.now(timezone.utc)
     previous = previous_snapshot(snapshot_url)
     firms, errors = {}, {}
