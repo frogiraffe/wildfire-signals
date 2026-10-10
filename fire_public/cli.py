@@ -4,7 +4,7 @@ import gzip
 import io
 import os
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from urllib.parse import quote, urlsplit
 from urllib.request import Request, urlopen
 
@@ -13,6 +13,7 @@ from .publish import publish
 
 API = "https://api.cloudflare.com/client/v4"
 HEX_ID = re.compile(r"^[a-f0-9]{32}$")
+MIN_SCAN_INTERVAL = timedelta(minutes=55)
 
 
 def api_request(url, token, *, data=None):
@@ -109,6 +110,17 @@ def main():
                 attested_account=os.environ.get("CLOUDFLARE_FREE_ATTESTED_ACCOUNT_ID", ""))
     at = datetime.now(timezone.utc)
     previous = previous_snapshot(snapshot_url)
+    try:
+        scan_at = datetime.fromisoformat(previous["manifest"]["last_scan_at"])
+        if scan_at.tzinfo is None or scan_at.utcoffset() is None:
+            raise ValueError("prior scan timestamp lacks timezone")
+        age = at - scan_at.astimezone(timezone.utc)
+    except (KeyError, TypeError, ValueError, AttributeError):
+        age = None
+    if (os.environ.get("FORCE_COLLECTION") != "true" and age is not None
+            and timedelta(0) <= age < MIN_SCAN_INTERVAL):
+        print(json.dumps({"skipped":"recent_snapshot", "last_scan_at":scan_at.isoformat()}))
+        return
     firms, errors = {}, {}
     for source in FIRMS_SOURCES:
         try:

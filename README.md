@@ -44,9 +44,14 @@ also requires an account-specific dashboard Free-plan attestation in
 `CLOUDFLARE_FREE_ATTESTED_ACCOUNT_ID`. This value must match
 `CLOUDFLARE_ACCOUNT_ID`; a paid subscription is always rejected.
 
-At most one scheduled run per hour performs two KV writes. Each immutable snapshot
-is gzip compressed, capped at 5 MiB and expires in seven days; the current pointer
-is written last.
+The workflow is scheduled at :17 and :47 UTC each hour. A run skips provider
+downloads and KV writes if the last successful scan is under 55 minutes old;
+manual dispatch can force a repair collection. Each immutable snapshot is gzip
+compressed, capped at 5 MiB and expires in seven days; the current pointer is
+written last. Even a maximum-size snapshot every 55 minutes stays below the
+1 GB Free storage ceiling for seven days. [GitHub may delay or drop scheduled
+events](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows),
+so successful jobs alone do not prove continuous coverage.
 The first 72-hour source-only probe produced a 3.20 MB gzip snapshot; a later
 live run published about 149,000 candidates. A larger future source response or
 snapshot can hit the fail-closed limits and leave the prior version stale.

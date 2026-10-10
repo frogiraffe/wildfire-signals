@@ -1,7 +1,7 @@
 name: Collect public fire observations
 on:
   schedule:
-    - cron: '17 * * * *'
+    - cron: '17,47 * * * *'
   workflow_dispatch:
 permissions:
   contents: read
@@ -20,6 +20,7 @@ jobs:
       CLOUDFLARE_FREE_ATTESTED_ACCOUNT_ID: ${{ vars.CLOUDFLARE_FREE_ATTESTED_ACCOUNT_ID }}
       CLOUDFLARE_KV_NAMESPACE_ID: ${{ vars.CLOUDFLARE_KV_NAMESPACE_ID }}
       PUBLIC_SNAPSHOT_URL: ${{ vars.PUBLIC_SNAPSHOT_URL }}
+      FORCE_COLLECTION: ${{ github.event_name == 'workflow_dispatch' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

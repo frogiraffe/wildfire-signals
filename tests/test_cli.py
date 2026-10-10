@@ -1,12 +1,103 @@
 import unittest
 import gzip
 import json
+import io
+import os
+from contextlib import redirect_stdout
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
-from fire_public.cli import previous_snapshot, verify_free
+from fire_public.cli import main, previous_snapshot, verify_free
 
 
 class FreePlanTests(unittest.TestCase):
+    def test_recent_snapshot_skips_provider_reads_and_publication(self):
+        prior = {"manifest":{"schema_version":1,
+                             "last_scan_at":(datetime.now(timezone.utc) -
+                                             timedelta(minutes=54)).isoformat()}}
+        env = {"CLOUDFLARE_ACCOUNT_ID":"a" * 32,
+               "CLOUDFLARE_KV_NAMESPACE_ID":"b" * 32,
+               "CLOUDFLARE_API_TOKEN":"test-token", "FIRMS_MAP_KEY":"test-key",
+               "PUBLIC_SNAPSHOT_URL":"https://wildfire-signals.pages.dev/api/snapshot"}
+        with patch.dict(os.environ, env, clear=True), \
+                patch("fire_public.cli.verify_free"), \
+                patch("fire_public.cli.previous_snapshot", return_value=prior), \
+                patch("fire_public.cli.fetch_firms", return_value=[]) as firms, \
+                patch("fire_public.cli.fetch_nifc", return_value=[]) as nifc, \
+                patch("fire_public.cli.fetch_cwfis", return_value=[]) as cwfis, \
+                patch("fire_public.cli.current_key", return_value=None), \
+                patch("fire_public.cli.publish", return_value="snapshot:test") as publish, \
+                redirect_stdout(io.StringIO()):
+            main()
+        firms.assert_not_called()
+        nifc.assert_not_called()
+        cwfis.assert_not_called()
+        publish.assert_not_called()
+
+    def test_manual_force_collects_even_when_snapshot_is_recent(self):
+        prior = {"manifest":{"schema_version":1,
+                             "last_scan_at":datetime.now(timezone.utc).isoformat()}}
+        env = {"CLOUDFLARE_ACCOUNT_ID":"a" * 32,
+               "CLOUDFLARE_KV_NAMESPACE_ID":"b" * 32,
+               "CLOUDFLARE_API_TOKEN":"test-token", "FIRMS_MAP_KEY":"test-key",
+               "PUBLIC_SNAPSHOT_URL":"https://wildfire-signals.pages.dev/api/snapshot",
+               "FORCE_COLLECTION":"true"}
+        with patch.dict(os.environ, env, clear=True), \
+                patch("fire_public.cli.verify_free"), \
+                patch("fire_public.cli.previous_snapshot", return_value=prior), \
+                patch("fire_public.cli.fetch_firms", return_value=[]) as firms, \
+                patch("fire_public.cli.fetch_nifc", return_value=[]), \
+                patch("fire_public.cli.fetch_cwfis", return_value=[]), \
+                patch("fire_public.cli.current_key", return_value=None), \
+                patch("fire_public.cli.publish", return_value="snapshot:test") as publish, \
+                redirect_stdout(io.StringIO()):
+            main()
+        self.assertEqual(firms.call_count, 2)
+        publish.assert_called_once()
+
+    def test_invalid_prior_timestamp_does_not_suppress_collection(self):
+        env = {"CLOUDFLARE_ACCOUNT_ID":"a" * 32,
+               "CLOUDFLARE_KV_NAMESPACE_ID":"b" * 32,
+               "CLOUDFLARE_API_TOKEN":"test-token", "FIRMS_MAP_KEY":"test-key",
+               "PUBLIC_SNAPSHOT_URL":"https://wildfire-signals.pages.dev/api/snapshot"}
+        for prior in [None,
+                      {"manifest":{"schema_version":1}},
+                      {"manifest":{"schema_version":1,"last_scan_at":"bad-date"}},
+                      {"manifest":{"schema_version":1,"last_scan_at":datetime.now().isoformat()}},
+                      {"manifest":{"schema_version":1,"last_scan_at":(
+                          datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat()}}]:
+            with self.subTest(prior=prior), patch.dict(os.environ, env, clear=True), \
+                    patch("fire_public.cli.verify_free"), \
+                    patch("fire_public.cli.previous_snapshot", return_value=prior), \
+                    patch("fire_public.cli.fetch_firms", return_value=[]) as firms, \
+                    patch("fire_public.cli.fetch_nifc", return_value=[]), \
+                    patch("fire_public.cli.fetch_cwfis", return_value=[]), \
+                    patch("fire_public.cli.current_key", return_value=None), \
+                    patch("fire_public.cli.publish", return_value="snapshot:test"), \
+                    redirect_stdout(io.StringIO()):
+                main()
+                self.assertEqual(firms.call_count, 2)
+
+    def test_fifty_five_minute_old_snapshot_allows_collection(self):
+        prior = {"manifest":{"schema_version":1,
+                             "last_scan_at":(datetime.now(timezone.utc) -
+                                             timedelta(minutes=55)).isoformat()}}
+        env = {"CLOUDFLARE_ACCOUNT_ID":"a" * 32,
+               "CLOUDFLARE_KV_NAMESPACE_ID":"b" * 32,
+               "CLOUDFLARE_API_TOKEN":"test-token", "FIRMS_MAP_KEY":"test-key",
+               "PUBLIC_SNAPSHOT_URL":"https://wildfire-signals.pages.dev/api/snapshot"}
+        with patch.dict(os.environ, env, clear=True), \
+                patch("fire_public.cli.verify_free"), \
+                patch("fire_public.cli.previous_snapshot", return_value=prior), \
+                patch("fire_public.cli.fetch_firms", return_value=[]) as firms, \
+                patch("fire_public.cli.fetch_nifc", return_value=[]), \
+                patch("fire_public.cli.fetch_cwfis", return_value=[]), \
+                patch("fire_public.cli.current_key", return_value=None), \
+                patch("fire_public.cli.publish", return_value="snapshot:test"), \
+                redirect_stdout(io.StringIO()):
+            main()
+        self.assertEqual(firms.call_count, 2)
+
     @patch("fire_public.cli.api_request")
     def test_paid_plan_refused(self, request):
         request.return_value = {"result_info":{"count":1,"page":1,"per_page":20,"total_count":1},
