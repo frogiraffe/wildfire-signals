@@ -43,7 +43,11 @@ def verify_free(account, token):
         complete = (valid_number(count) and valid_number(total_count)
                     and count == total_count and total_count <= per_page)
     if not complete:
-        raise RuntimeError("cannot verify every Cloudflare subscription page")
+        raise RuntimeError(
+            "cannot verify every Cloudflare subscription page "
+            f"(next_page_type={type(info.get('next_page')).__name__}, "
+            f"has_next_page={bool(info.get('next_page'))})"
+        )
     if not isinstance(result, list) or not result:
         raise RuntimeError("Cloudflare subscription could not be verified")
     if "count" in info and len(result) != info["count"]:
