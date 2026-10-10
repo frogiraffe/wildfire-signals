@@ -1,0 +1,12 @@
+{
+  "name": "wildfire-signals-scheduler",
+  "main": "src/index.mjs",
+  "compatibility_date": "2026-10-10",
+  "workers_dev": false,
+  "triggers": { "crons": ["5,20,35,50 * * * *"] },
+  "kv_namespaces": [
+    { "binding": "PUBLIC_SNAPSHOTS", "id": "191f9f5e688f436fa60e5a5f8ca89d53" }
+  ],
+  "secrets": { "required": ["GITHUB_DISPATCH_TOKEN"] },
+  "observability": { "enabled": false }
+}

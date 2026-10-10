@@ -48,7 +48,13 @@ also requires an account-specific dashboard Free-plan attestation in
 `CLOUDFLARE_FREE_ATTESTED_ACCOUNT_ID`. This value must match
 `CLOUDFLARE_ACCOUNT_ID`; a paid subscription is always rejected.
 
-The workflow is scheduled at :17 and :47 UTC each hour. A run skips provider
+The GitHub workflow is scheduled at :17 and :47 UTC each hour. A separate
+Cloudflare Workers Free Cron Trigger checks the KV pointer at :05, :20, :35,
+and :50. It dispatches the same GitHub workflow without forcing collection
+only when the latest verified scan is at least 65 minutes old. A one-hour KV
+dispatch marker limits repeated requests if GitHub is slow. The Worker has no
+public HTTP route and does not download FIRMS data or publish snapshots.
+A run skips provider
 downloads and KV writes if the last successful scan is under 55 minutes old.
 If the public snapshot cannot be read, scheduled runs use the current KV pointer's
 last scan time. An empty namespace can seed itself, and an expired snapshot can
@@ -68,7 +74,9 @@ timestamp reads and no repeated manual overrides,
 even a maximum-size snapshot every 55 minutes stays below the 1 GB Free storage
 ceiling for seven days. [GitHub may delay or drop scheduled
 events](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows),
-so successful jobs alone do not prove continuous coverage.
+so successful jobs alone do not prove continuous coverage. The independent
+Cron Trigger reduces dependence on GitHub's scheduler but still requires live
+observation; its own failure or an expired GitHub token can stop the backup.
 The first 72-hour source-only probe produced a 3.20 MB gzip snapshot; a later
 live run published about 149,000 candidates. A larger future source response or
 snapshot can hit the fail-closed limits and leave the prior version stale.
@@ -85,6 +93,39 @@ The checked-in `wrangler.toml` supplies the `PUBLIC_SNAPSHOTS` KV binding.
 Set repository variables `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_KV_NAMESPACE_ID`,
 and `PUBLIC_SNAPSHOT_URL`; set repository secrets `FIRMS_MAP_KEY` and
 `CLOUDFLARE_API_TOKEN`.
+
+### Free backup scheduler deployment
+
+The scheduler is a separate Worker in `scheduler-worker/`; it does not replace
+the Pages project. [Workers Free](https://developers.cloudflare.com/workers/platform/pricing/)
+allows 100,000 requests/day, and the [Free account has five Cron Trigger
+slots](https://developers.cloudflare.com/workers/platform/limits/). This
+project uses one trigger (96 scheduled invocations/day). With a healthy map it
+reads one small KV pointer per invocation; when stale it also reads a dispatch
+marker and can write one marker per successful GitHub dispatch. Free quota
+exhaustion fails rather than activating paid usage. Confirm a Cron slot is
+available in the Cloudflare account before deployment; no paid plan is needed.
+
+Create two repository [Actions secrets](https://github.com/frogiraffe/wildfire-signals/settings/secrets/actions)
+without posting their values in issues or chat:
+
+1. `SCHEDULER_GITHUB_TOKEN`: a [fine-grained GitHub token](https://github.com/settings/personal-access-tokens/new)
+   limited to `frogiraffe/wildfire-signals`, with repository **Actions: Read and
+   write** only. The Worker receives it as an encrypted secret. Record its
+   expiration and renew it before expiry.
+2. `CLOUDFLARE_WORKERS_DEPLOY_TOKEN`: a [Cloudflare API token](https://dash.cloudflare.com/profile/api-tokens)
+   limited to this account, with Workers Scripts Edit/new Worker deployment
+   permission. Do not grant Billing Edit or R2 permissions. The existing
+   Cloudflare token separately verifies the Free subscription before deployment.
+
+Run the [Deploy Free backup scheduler workflow](https://github.com/frogiraffe/wildfire-signals/actions/workflows/deploy-scheduler.yml)
+manually from `main`. It tests the Worker, checks the Free gate, and deploys
+`wildfire-signals-scheduler` with no public route and a 15-minute Cron Trigger.
+The token values remain GitHub/Cloudflare secrets. Check the Cloudflare Worker
+Cron execution history and the GitHub collect workflow's dispatch runs. A
+manual collect run defaults to forced repair; the Worker explicitly passes
+`force_collection=false`, so the collector's 55-minute guard remains active.
+Deployment success alone does not prove a Cron invocation or a fresh snapshot.
 
 To connect the account without pasting a token into chat:
 

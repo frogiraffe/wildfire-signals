@@ -3,6 +3,12 @@ on:
   schedule:
     - cron: '17,47 * * * *'
   workflow_dispatch:
+    inputs:
+      force_collection:
+        description: Bypass the 55-minute cadence only for manual repair
+        type: boolean
+        required: true
+        default: true
 permissions:
   contents: read
 concurrency:
@@ -20,7 +26,7 @@ jobs:
       CLOUDFLARE_FREE_ATTESTED_ACCOUNT_ID: ${{ vars.CLOUDFLARE_FREE_ATTESTED_ACCOUNT_ID }}
       CLOUDFLARE_KV_NAMESPACE_ID: ${{ vars.CLOUDFLARE_KV_NAMESPACE_ID }}
       PUBLIC_SNAPSHOT_URL: ${{ vars.PUBLIC_SNAPSHOT_URL }}
-      FORCE_COLLECTION: ${{ github.event_name == 'workflow_dispatch' }}
+      FORCE_COLLECTION: ${{ github.event_name == 'workflow_dispatch' && inputs.force_collection == true }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
