@@ -76,6 +76,29 @@ class FreePlanTests(unittest.TestCase):
         self.assertEqual(previous_snapshot("https://map.pages.dev/api/snapshot")
                          ["events"][0]["event_id"], "prior")
 
+    @patch("fire_public.cli.urlopen")
+    def test_previous_snapshot_requests_gzip_to_preserve_large_history(self, urlopen):
+        snapshot = {"manifest":{"schema_version":1}, "events":[{"event_id":"prior"}],
+                    "padding":"x" * (5 * 1024 * 1024)}
+        plain = json.dumps(snapshot).encode()
+        compressed = gzip.compress(plain)
+
+        class Response:
+            status = 200
+            def __init__(self, body): self.body = body
+            def __enter__(self): return self
+            def __exit__(self, *_): return None
+            def read(self, size): return self.body[:size]
+
+        def serve(request, timeout):
+            accepted = request.get_header("Accept-encoding")
+            return Response(compressed if accepted == "gzip" else plain)
+
+        urlopen.side_effect = serve
+        result = previous_snapshot("https://map.pages.dev/api/snapshot")
+        self.assertIsNotNone(result)
+        self.assertEqual(result["events"][0]["event_id"], "prior")
+
 
 if __name__ == "__main__":
     unittest.main()
