@@ -19,12 +19,27 @@ jobs:
         run: |
           python - <<'PY'
           import os
-          from fire_public.cli import HEX_ID, verify_free
+          from fire_public.cli import API, HEX_ID, api_request, verify_free
 
           account = os.environ.get("CLOUDFLARE_ACCOUNT_ID", "")
           token = os.environ.get("CLOUDFLARE_API_TOKEN", "")
           if not HEX_ID.fullmatch(account) or not token:
               raise RuntimeError("Cloudflare account ID and scoped token are required")
-          verify_free(account, token)
+          try:
+              verify_free(account, token)
+          except RuntimeError:
+              payload = api_request(f"{API}/accounts/{account}/subscriptions", token)
+              info = payload.get("result_info")
+              result = payload.get("result")
+              print("Subscription response shape:", {
+                  "result_type": type(result).__name__,
+                  "result_length": len(result) if isinstance(result, list) else None,
+                  "result_info_type": type(info).__name__,
+                  "result_info_fields": sorted(info) if isinstance(info, dict) else None,
+                  "pagination": {key: info.get(key) for key in
+                                 ("count", "page", "per_page", "total_count")}
+                  if isinstance(info, dict) else None,
+              }, flush=True)
+              raise
           print("Cloudflare account subscriptions verified as Free; no resource was created")
           PY
