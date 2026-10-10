@@ -12,7 +12,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 FIRMS_SOURCES = ("VIIRS_NOAA20_NRT", "VIIRS_NOAA21_NRT")
-FIRMS_URL = "https://firms.modaps.eosdis.nasa.gov/api/area/csv/{key}/{source}/world/2"
+FIRMS_URL = "https://firms.modaps.eosdis.nasa.gov/api/area/csv/{key}/{source}/world/4"
 NIFC_URL = ("https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/"
             "WFIGS_Incident_Locations_Current/FeatureServer/0/query")
 CWFIS_URL = "https://geoserver.cwfif.nrcan.gc.ca/geoserver/ows"
@@ -53,7 +53,7 @@ def parse_firms_csv(raw: str, source: str, *, at: datetime) -> list[dict]:
             continue
         if (not math.isfinite(lat) or not math.isfinite(lon) or not -90 <= lat <= 90
                 or not -180 <= lon <= 180 or observed > at
-                or observed < at - timedelta(hours=24)):
+                or observed < at - timedelta(hours=72)):
             continue
         cell = (math.floor(lat * 20), math.floor(lon * 20),
                 observed.strftime("%Y-%m-%dT%H:00:00+00:00"))

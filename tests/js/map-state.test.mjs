@@ -18,6 +18,8 @@ test('time, source and record type filters stay separate', () => {
   incidents:[{official_id:'n1',provider:'nifc',last_seen_at:'2026-10-09T11:00:00Z'}]};
   const state = {...parseState(),hours:24,source:'firms',kind:'all'};
   assert.deepEqual(visible(snapshot,state,now).events.map(x => x.event_id),['new']);
+  state.hours = 72;
+  assert.deepEqual(visible(snapshot,state,now).events.map(x => x.event_id),['new','old']);
   assert.equal(visible(snapshot,state,now).incidents.length,0);
   state.source = 'all'; state.kind = 'incident';
   assert.equal(visible(snapshot,state,now).events.length,0);

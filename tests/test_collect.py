@@ -11,15 +11,15 @@ AT = datetime(2026, 10, 9, 12, tzinfo=timezone.utc)
 CSV = ("latitude,longitude,acq_date,acq_time,frp\n"
        "36.900,30.700,2026-10-09,1130,5\n"
        "36.901,30.701,2026-10-09,1135,7\n"
-       "36.9,30.7,2026-10-07,1130,9\n")
+       "36.9,30.7,2026-10-05,1130,9\n")
 
 
 class CollectTests(unittest.TestCase):
-    def test_midnight_collection_requests_yesterday_and_keeps_rolling_day(self):
+    def test_three_day_window_crosses_four_utc_dates(self):
         at = datetime(2026, 10, 10, 0, 55, tzinfo=timezone.utc)
         csv = ("latitude,longitude,acq_date,acq_time,frp\n"
-               "36.900,30.700,2026-10-09,2330,5\n"
-               "36.901,30.701,2026-10-08,2330,7\n")
+               "36.900,30.700,2026-10-07,0100,5\n"
+               "36.901,30.701,2026-10-07,0054,7\n")
         urls = []
 
         def fake_get(url):
@@ -30,7 +30,26 @@ class CollectTests(unittest.TestCase):
             events = fetch_firms("test-key", "VIIRS_NOAA20_NRT", at=at)
 
         self.assertEqual(urls, ["https://firms.modaps.eosdis.nasa.gov/api/area/csv/"
-                                "test-key/VIIRS_NOAA20_NRT/world/2"])
+                                "test-key/VIIRS_NOAA20_NRT/world/4"])
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["detection_count"], 1)
+
+    def test_midnight_collection_requests_yesterday_and_keeps_rolling_window(self):
+        at = datetime(2026, 10, 10, 0, 55, tzinfo=timezone.utc)
+        csv = ("latitude,longitude,acq_date,acq_time,frp\n"
+               "36.900,30.700,2026-10-09,2330,5\n"
+               "36.901,30.701,2026-10-06,2330,7\n")
+        urls = []
+
+        def fake_get(url):
+            urls.append(url)
+            return csv.encode()
+
+        with patch("fire_public.collect._get", side_effect=fake_get):
+            events = fetch_firms("test-key", "VIIRS_NOAA20_NRT", at=at)
+
+        self.assertEqual(urls, ["https://firms.modaps.eosdis.nasa.gov/api/area/csv/"
+                                "test-key/VIIRS_NOAA20_NRT/world/4"])
         self.assertEqual(len(events), 1)
         self.assertEqual(events[0]["detection_count"], 1)
 
