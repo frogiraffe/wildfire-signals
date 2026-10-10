@@ -20,7 +20,7 @@
 ## Task 2: Second schedule and live check
 
 - [x] Add minute 47 to `collect.yml`; set `FORCE_COLLECTION` only for `workflow_dispatch`.
-- [ ] Run the workflow manually to prove forced collection still works; inspect events/errors and public snapshot.
+- [x] [Run the workflow manually](https://github.com/frogiraffe/wildfire-signals/actions/runs/38043222321): 148,179 candidates, 477 incidents, zero source errors; [Pages readback](https://github.com/frogiraffe/wildfire-signals/actions/runs/38043295337) passed.
 - [x] Document the fallback and the fact GitHub schedule can still delay or omit both ticks.
 
 ## Review Focus
