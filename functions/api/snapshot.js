@@ -16,6 +16,7 @@ export async function onRequestGet({env}) {
   } catch (_) {
     return Response.json({manifest:{schema_version:1,data_status:'unknown'},
       events:[],incidents:[],matches:[],sources:[],details:{},error:'snapshot_unavailable'},
-    {status:503,headers:{'cache-control':'no-store'}});
+    {status:503,headers:{'cache-control':'no-store',
+      'x-public-binding':env.PUBLIC_SNAPSHOTS ? 'ready' : 'missing'}});
   }
 }

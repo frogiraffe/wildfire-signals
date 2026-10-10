@@ -25,6 +25,15 @@ test('missing shard and quota error fail closed', async () => {
   }
 });
 
+test('unavailable snapshot reveals only KV binding readiness', async () => {
+  const missing = await onRequestGet({env:{}});
+  assert.equal(missing.status,503);
+  assert.equal(missing.headers.get('x-public-binding'), 'missing');
+  const ready = await onRequestGet({env:{PUBLIC_SNAPSHOTS:{get:async () => null}}});
+  assert.equal(ready.status,503);
+  assert.equal(ready.headers.get('x-public-binding'), 'ready');
+});
+
 test('serves previous version during cross-region KV propagation', async () => {
   const old = `snapshot:${'d'.repeat(64)}`, next = `snapshot:${'e'.repeat(64)}`;
   const calls = [];
