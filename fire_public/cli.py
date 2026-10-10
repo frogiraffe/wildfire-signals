@@ -84,17 +84,6 @@ def previous_snapshot(url):
         return None
 
 
-def current_key(account, namespace, token):
-    try:
-        url = (f"{API}/accounts/{account}/storage/kv/namespaces/{namespace}/values/current")
-        with urlopen(Request(url, headers={"Authorization":f"Bearer {token}"}), timeout=20) as response:
-            pointer = json.load(response)
-        key = pointer.get("key")
-        return key if isinstance(key, str) and re.fullmatch(r"snapshot:[a-f0-9]{64}", key) else None
-    except (OSError, ValueError, json.JSONDecodeError):
-        return None
-
-
 def current_pointer(account, namespace, token):
     url = f"{API}/accounts/{account}/storage/kv/namespaces/{namespace}/values/current"
     try:
@@ -127,14 +116,21 @@ def main():
     at = datetime.now(timezone.utc)
     previous = previous_snapshot(snapshot_url)
     force = os.environ.get("FORCE_COLLECTION") == "true"
-    pointer = current_pointer(account, namespace, token) if previous is None and not force else None
+    pointer = current_pointer(account, namespace, token)
     try:
-        timestamp = (pointer["last_scan_at"] if previous is None
-                     else previous["manifest"]["last_scan_at"])
-        scan_at = datetime.fromisoformat(timestamp)
-        if scan_at.tzinfo is None or scan_at.utcoffset() is None:
-            raise ValueError("prior scan timestamp lacks timezone")
-        age = at - scan_at.astimezone(timezone.utc)
+        timestamps = []
+        if previous is not None:
+            timestamps.append(previous["manifest"]["last_scan_at"])
+        if pointer is not None and (previous is None or "last_scan_at" in pointer):
+            timestamps.append(pointer["last_scan_at"])
+        times = []
+        for timestamp in timestamps:
+            parsed = datetime.fromisoformat(timestamp)
+            if parsed.tzinfo is None or parsed.utcoffset() is None:
+                raise ValueError("prior scan timestamp lacks timezone")
+            times.append(parsed.astimezone(timezone.utc))
+        scan_at = max(times)
+        age = at - scan_at
     except (KeyError, TypeError, ValueError, AttributeError):
         age = None
     if not force:
@@ -167,7 +163,7 @@ def main():
         api_request(f"{API}/accounts/{account}/storage/kv/namespaces/{namespace}/values/"
                     f"{quote(key, safe='')}{suffix}", token, data=value)
 
-    key = publish(snapshot, put, previous_key=current_key(account, namespace, token))
+    key = publish(snapshot, put, previous_key=pointer["key"] if pointer else None)
     print(json.dumps({"key":key, "events":len(snapshot["events"]),
                       "incidents":len(snapshot["incidents"]), "errors":sorted(errors)}))
 

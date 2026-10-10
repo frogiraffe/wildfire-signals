@@ -60,7 +60,9 @@ dispatch bypasses this cadence guard, so repeated
 manual runs can exhaust the Free storage quota and leave the map stale; they do
 not activate a paid plan. Each immutable snapshot is gzip
 compressed, capped at 5 MiB and expires in seven days; the current pointer is
-written last. With successful timestamp reads and no repeated manual overrides,
+read before provider downloads and written last. A failed pointer read aborts
+the run; if Pages serves an older cached snapshot, the newer pointer time controls
+the cadence guard. With successful timestamp reads and no repeated manual overrides,
 even a maximum-size snapshot every 55 minutes stays below the 1 GB Free storage
 ceiling for seven days. [GitHub may delay or drop scheduled
 events](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows),
