@@ -24,7 +24,7 @@ jobs:
           import re
           from urllib.error import HTTPError
           from urllib.parse import urlsplit
-          from urllib.request import urlopen
+          from urllib.request import Request, urlopen
 
           host = os.environ.get("PAGES_HOST") or "wildfire-signals.pages.dev"
           if not re.fullmatch(r"(?:[a-f0-9]{8}\.)?wildfire-signals\.pages\.dev", host):
@@ -35,8 +35,9 @@ jobs:
                   or parsed.path != "/api/snapshot" or parsed.query or parsed.fragment):
               raise RuntimeError("PUBLIC_SNAPSHOT_URL is not a Pages snapshot endpoint")
           root = f"https://{parsed.hostname}/"
+          headers = {"User-Agent": "WildfireSignals/0.1"}
           try:
-              root_response = urlopen(root, timeout=20)
+              root_response = urlopen(Request(root, headers=headers), timeout=20)
           except HTTPError as error:
               page = error.read(2000).decode("utf-8", "replace")
               title = re.search(r"<title[^>]*>(.*?)</title>", page, re.I | re.S)
@@ -55,7 +56,7 @@ jobs:
               if response.status != 200 or b"Wildfire Signals" not in html:
                   raise RuntimeError("Pages map is not serving the expected page")
           try:
-              response = urlopen(url, timeout=20)
+              response = urlopen(Request(url, headers=headers), timeout=20)
           except HTTPError as error:
               response = error
           with response:
