@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {gzipSync,gunzipSync} from 'node:zlib';
-import {onRequestGet} from './snapshot.js';
+import {onRequestGet} from '../../functions/api/snapshot.js';
 
 test('returns current snapshot with two reads', async () => {
   const calls = [];

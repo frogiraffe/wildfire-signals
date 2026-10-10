@@ -1,0 +1,7 @@
+name = "wildfire-signals"
+pages_build_output_dir = "./public"
+compatibility_date = "2026-10-08"
+
+[[kv_namespaces]]
+binding = "PUBLIC_SNAPSHOTS"
+id = "191f9f5e688f436fa60e5a5f8ca89d53"

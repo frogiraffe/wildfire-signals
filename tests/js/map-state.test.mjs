@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseState,stateHash,visible,effectiveStatus,featureCollection} from './map-state.mjs';
+import {parseState,stateHash,visible,effectiveStatus,featureCollection} from '../../public/map-state.mjs';
 
 test('URL view round trips and invalid input is bounded', () => {
   const state = parseState('#lang=tr&hours=6&source=firms&kind=candidate&lat=35&lon=30&zoom=8');

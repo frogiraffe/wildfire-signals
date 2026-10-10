@@ -50,9 +50,10 @@ reads/day, below the current 100,000/day Free limit. This is a design
 budget, pending load and real-data measurements. Public Actions standard runners
 are free for public repositories.
 
-The site requires a Pages project with repository root as project root,
-`public/` as build output, a sibling `functions/` directory,
-and a KV binding named `PUBLIC_SNAPSHOTS`. `/api/*` is the only Function route.
+The site requires a Pages project named `wildfire-signals`, with repository root
+as project root, `public/` as build output, and a sibling `functions/` directory.
+The checked-in `wrangler.toml` supplies the `PUBLIC_SNAPSHOTS` KV binding.
+`/api/*` is the only Function route.
 Set repository variables `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_KV_NAMESPACE_ID`,
 and `PUBLIC_SNAPSHOT_URL`; set repository secrets `FIRMS_MAP_KEY` and
 `CLOUDFLARE_API_TOKEN`.
@@ -74,10 +75,11 @@ To connect the account without pasting a token into chat:
    first confirm Workers & Pages shows **Free** with no paid add-ons, then set
    `CLOUDFLARE_FREE_ATTESTED_ACCOUNT_ID` to the same Account ID. A paid, unknown
    or unverifiable response fails closed and creates no resource.
-4. Connect this repository to Cloudflare Pages with repository root `/`, no build
-   command and output directory `public`. Create a KV namespace and bind it to
-   Pages production Functions as `PUBLIC_SNAPSHOTS`. Set the namespace ID and
-   actual `https://<project>.pages.dev/api/snapshot` URL as repository variables.
+4. Connect this repository to Cloudflare Pages as project `wildfire-signals`,
+   with repository root `/`, no build command and output directory `public`.
+   The classic KV namespace has already been created and its binding is in
+   `wrangler.toml`; confirm it appears in the deployed Pages project. Set the
+   actual `https://<project>.pages.dev/api/snapshot` URL as a repository variable.
 5. Check the initial public snapshot size and the live endpoint before enabling
    `ENABLE_PUBLIC_COLLECTION=true`. That switch starts hosted collection; it
    does not use the developer's computer. Keep it unset until the Free check and
