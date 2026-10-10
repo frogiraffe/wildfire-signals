@@ -29,7 +29,9 @@ Map tiles use [OpenFreeMap Liberty](https://openfreemap.org/quick_start/).
 The [Europe plus Türkiye source inventory](docs/europe-official-source-inventory.csv)
 currently lists all 52 M49 areas in scope. Its official feeds remain under review;
 satellite candidates are the only current European coverage. This blocks a stable
-release claim.
+release claim. The [EFFIS shared-source audit](docs/europe-shared-source-audit-2026-10-10.md)
+explains why its FIRMS-derived active-fire layer cannot count as an independent
+agency incident feed.
 
 ## Zero-charge deployment gate
 
