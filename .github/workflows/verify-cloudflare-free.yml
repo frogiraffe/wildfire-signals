@@ -1,0 +1,30 @@
+name: Verify Cloudflare Free account
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Refuse paid or unverifiable account subscriptions
+        run: |
+          python - <<'PY'
+          import os
+          from fire_public.cli import HEX_ID, verify_free
+
+          account = os.environ.get("CLOUDFLARE_ACCOUNT_ID", "")
+          token = os.environ.get("CLOUDFLARE_API_TOKEN", "")
+          if not HEX_ID.fullmatch(account) or not token:
+              raise RuntimeError("Cloudflare account ID and scoped token are required")
+          verify_free(account, token)
+          print("Cloudflare account subscriptions verified as Free; no resource was created")
+          PY

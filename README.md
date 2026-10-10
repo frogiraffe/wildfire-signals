@@ -53,6 +53,27 @@ Set repository variables `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_KV_NAMESPACE_ID`,
 and `PUBLIC_SNAPSHOT_URL`; set repository secrets `FIRMS_MAP_KEY` and
 `CLOUDFLARE_API_TOKEN`.
 
+To connect the account without pasting a token into chat:
+
+1. In the [Cloudflare dashboard](https://dash.cloudflare.com/), confirm the
+   account uses Workers Free. Keep the free `pages.dev` address and decline paid
+   products or upgrades.
+2. Create a narrowly scoped [API token](https://dash.cloudflare.com/profile/api-tokens)
+   for that account with **Billing Read** and **Workers KV Storage Edit**. Store it
+   as the repository's `CLOUDFLARE_API_TOKEN` Actions secret. Store the account ID
+   as its `CLOUDFLARE_ACCOUNT_ID` Actions variable.
+3. Run the manual `Verify Cloudflare Free account` GitHub Actions workflow. It
+   only reads subscription information. A paid, unknown or unverifiable response
+   fails closed and creates no resource.
+4. Connect this repository to Cloudflare Pages with repository root `/`, no build
+   command and output directory `public`. Create a KV namespace and bind it to
+   Pages production Functions as `PUBLIC_SNAPSHOTS`. Set the namespace ID and
+   actual `https://<project>.pages.dev/api/snapshot` URL as repository variables.
+5. Check the initial public snapshot size and the live endpoint before enabling
+   `ENABLE_PUBLIC_COLLECTION=true`. That switch starts hosted collection; it
+   does not use the developer's computer. Keep it unset until the Free check and
+   binding are verified.
+
 The seven-day source-only pilot runs on GitHub-hosted runners. It does not need
 the developer's computer to stay on and does not publish to Cloudflare. After
 the map implementation, source terms, Free account and initial size checks pass,
