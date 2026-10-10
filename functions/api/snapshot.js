@@ -9,7 +9,7 @@ export async function onRequestGet({env}) {
     if (!payload && /^snapshot:[a-f0-9]{64}$/.test(pointer.previous_key || ''))
       payload = await env.PUBLIC_SNAPSHOTS.get(pointer.previous_key, {type:'arrayBuffer'});
     if (!payload) throw new Error('Public snapshot object missing');
-    return new Response(payload, {headers:{'content-type':'application/json; charset=utf-8',
+    return new Response(payload, {encodeBody:'manual', headers:{'content-type':'application/json; charset=utf-8',
       'content-encoding':'gzip',
       'cache-control':'public, max-age=60, stale-while-revalidate=300',
       'x-content-type-options':'nosniff'}});

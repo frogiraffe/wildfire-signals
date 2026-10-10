@@ -15,6 +15,26 @@ test('returns current snapshot with two reads', async () => {
   assert.equal(calls.length,2);
 });
 
+test('precompressed KV body is sent without Worker recompression', async () => {
+  const NativeResponse = globalThis.Response;
+  let encodeBody;
+  globalThis.Response = class extends NativeResponse {
+    constructor(body, init) {
+      encodeBody = init?.encodeBody;
+      super(body, init);
+    }
+  };
+  try {
+    const key = `snapshot:${'f'.repeat(64)}`;
+    const response = await onRequestGet({env:{PUBLIC_SNAPSHOTS:{get:async name =>
+      name === 'current' ? {key} : gzipSync('{"events":[1]}')}}});
+    assert.equal(encodeBody, 'manual');
+    assert.equal(response.headers.get('content-encoding'), 'gzip');
+  } finally {
+    globalThis.Response = NativeResponse;
+  }
+});
+
 test('missing shard and quota error fail closed', async () => {
   const key = `snapshot:${'b'.repeat(64)}`;
   for (const get of [async name => name === 'current' ? {key} : null,
