@@ -64,6 +64,10 @@ jobs:
               binding = response.headers.get("x-public-binding")
               encoding = response.headers.get("content-encoding")
               body = response.read(5 * 1024 * 1024 + 1)
+          print("Snapshot response:", {"status": status, "encoding": encoding,
+                                       "content_type": response.headers.get("content-type"),
+                                       "gzip_magic": body.startswith(b"\x1f\x8b"),
+                                       "body_bytes": len(body)}, flush=True)
           if len(body) > 5 * 1024 * 1024:
               raise RuntimeError("Pages snapshot exceeds the 5 MiB budget")
           if status == 503:
