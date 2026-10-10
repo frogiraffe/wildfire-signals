@@ -91,12 +91,26 @@ def current_pointer(account, namespace, token):
             pointer = json.load(response)
     except HTTPError as exc:
         if exc.code == 404:
+            namespace_url = f"{API}/accounts/{account}/storage/kv/namespaces/{namespace}"
+            details = api_request(namespace_url, token).get("result")
+            if not isinstance(details, dict) or details.get("id") != namespace:
+                raise RuntimeError("Cloudflare KV namespace could not be verified") from exc
             return None
         raise
     if (not isinstance(pointer, dict) or not isinstance(pointer.get("key"), str)
             or not re.fullmatch(r"snapshot:[a-f0-9]{64}", pointer["key"])):
         raise RuntimeError("current snapshot pointer is invalid")
     return pointer
+
+
+def scan_time(value, at):
+    parsed = datetime.fromisoformat(value)
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError("scan timestamp lacks timezone")
+    parsed = parsed.astimezone(timezone.utc)
+    if parsed > at:
+        raise ValueError("scan timestamp is in the future")
+    return parsed
 
 
 def main():
@@ -117,22 +131,19 @@ def main():
     previous = previous_snapshot(snapshot_url)
     force = os.environ.get("FORCE_COLLECTION") == "true"
     pointer = current_pointer(account, namespace, token)
-    try:
-        timestamps = []
-        if previous is not None:
-            timestamps.append(previous["manifest"]["last_scan_at"])
-        if pointer is not None and (previous is None or "last_scan_at" in pointer):
-            timestamps.append(pointer["last_scan_at"])
-        times = []
-        for timestamp in timestamps:
-            parsed = datetime.fromisoformat(timestamp)
-            if parsed.tzinfo is None or parsed.utcoffset() is None:
-                raise ValueError("prior scan timestamp lacks timezone")
-            times.append(parsed.astimezone(timezone.utc))
-        scan_at = max(times)
-        age = at - scan_at
-    except (KeyError, TypeError, ValueError, AttributeError):
-        age = None
+    times = []
+    if previous is not None:
+        try:
+            times.append(scan_time(previous["manifest"]["last_scan_at"], at))
+        except (KeyError, TypeError, ValueError, AttributeError):
+            previous = None  # Invalid cached history must not enter build_snapshot.
+    if pointer is not None and "last_scan_at" in pointer:
+        try:
+            times.append(scan_time(pointer["last_scan_at"], at))
+        except (TypeError, ValueError, AttributeError) as exc:
+            raise RuntimeError("current snapshot pointer timestamp is invalid") from exc
+    scan_at = max(times) if times else None
+    age = at - scan_at if scan_at else None
     if not force:
         if previous is None and pointer is None:
             age = MIN_SCAN_INTERVAL  # Empty namespace: first scheduled run may seed it.

@@ -63,7 +63,22 @@ class FreePlanTests(unittest.TestCase):
         unavailable = HTTPError("https://example.test/current", 503, "unavailable", {}, io.BytesIO())
         try:
             urlopen.side_effect = missing
-            self.assertIsNone(current_pointer("a" * 32, "b" * 32, "token"))
+            with patch("fire_public.cli.api_request", return_value={
+                    "success":True, "result":{"id":"b" * 32}}) as request:
+                self.assertIsNone(current_pointer("a" * 32, "b" * 32, "token"))
+            request.assert_called_once()
+            with patch("fire_public.cli.api_request", return_value={
+                    "success":True, "result":{"id":"c" * 32}}):
+                with self.assertRaisesRegex(RuntimeError, "namespace"):
+                    current_pointer("a" * 32, "b" * 32, "token")
+            namespace_missing = HTTPError("https://example.test/namespace", 404,
+                                          "missing", {}, io.BytesIO())
+            try:
+                with patch("fire_public.cli.api_request", side_effect=namespace_missing):
+                    with self.assertRaises(HTTPError):
+                        current_pointer("a" * 32, "b" * 32, "token")
+            finally:
+                namespace_missing.close()
             urlopen.side_effect = unavailable
             with self.assertRaises(HTTPError):
                 current_pointer("a" * 32, "b" * 32, "token")
@@ -116,16 +131,14 @@ class FreePlanTests(unittest.TestCase):
             self.assertEqual(firms.call_count, 2)
             publish.assert_called_once()
 
-    def test_unverifiable_prior_snapshot_skips_scheduled_collection(self):
+    def test_malformed_public_history_uses_recent_verified_pointer_without_collection(self):
         env = {"CLOUDFLARE_ACCOUNT_ID":"a" * 32,
                "CLOUDFLARE_KV_NAMESPACE_ID":"b" * 32,
                "CLOUDFLARE_API_TOKEN":"test-token", "FIRMS_MAP_KEY":"test-key",
                "PUBLIC_SNAPSHOT_URL":"https://wildfire-signals.pages.dev/api/snapshot"}
         for prior in [{"manifest":{"schema_version":1}},
                       {"manifest":{"schema_version":1,"last_scan_at":"bad-date"}},
-                      {"manifest":{"schema_version":1,"last_scan_at":datetime.now().isoformat()}},
-                      {"manifest":{"schema_version":1,"last_scan_at":(
-                          datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat()}}]:
+                      {"manifest":{"schema_version":1,"last_scan_at":datetime.now().isoformat()}}]:
             with self.subTest(prior=prior), patch.dict(os.environ, env, clear=True), \
                     patch("fire_public.cli.verify_free"), \
                     patch("fire_public.cli.previous_snapshot", return_value=prior), \
@@ -138,12 +151,55 @@ class FreePlanTests(unittest.TestCase):
                     patch("fire_public.cli.publish", return_value="snapshot:test") as publish, \
                     redirect_stdout(io.StringIO()) as output:
                 main()
-                self.assertEqual(json.loads(output.getvalue())["skipped"],
-                                 "unverified_previous_snapshot")
+                self.assertEqual(json.loads(output.getvalue())["skipped"], "recent_snapshot")
                 firms.assert_not_called()
                 nifc.assert_not_called()
                 cwfis.assert_not_called()
                 publish.assert_not_called()
+
+    def test_malformed_public_history_is_excluded_from_recovery_snapshot(self):
+        prior = {"manifest":{"schema_version":1,"last_scan_at":"bad-date"},
+                 "events":[{"event_id":"bad","observed_at":"also-bad"}]}
+        pointer = {"key":"snapshot:" + "a" * 64,
+                   "last_scan_at":(datetime.now(timezone.utc) - timedelta(hours=2)).isoformat()}
+        env = {"CLOUDFLARE_ACCOUNT_ID":"a" * 32,
+               "CLOUDFLARE_KV_NAMESPACE_ID":"b" * 32,
+               "CLOUDFLARE_API_TOKEN":"test-token", "FIRMS_MAP_KEY":"test-key",
+               "PUBLIC_SNAPSHOT_URL":"https://wildfire-signals.pages.dev/api/snapshot"}
+        with patch.dict(os.environ, env, clear=True), \
+                patch("fire_public.cli.verify_free"), \
+                patch("fire_public.cli.previous_snapshot", return_value=prior), \
+                patch("fire_public.cli.current_pointer", return_value=pointer), \
+                patch("fire_public.cli.fetch_firms", return_value=[]), \
+                patch("fire_public.cli.fetch_nifc", return_value=[]), \
+                patch("fire_public.cli.fetch_cwfis", return_value=[]), \
+                patch("fire_public.cli.build_snapshot", return_value={
+                    "events":[], "incidents":[]}) as build, \
+                patch("fire_public.cli.publish", return_value="snapshot:test"), \
+                redirect_stdout(io.StringIO()):
+            main()
+        self.assertIsNone(build.call_args.kwargs["previous"])
+
+    def test_malformed_pointer_timestamp_aborts_even_when_pages_is_valid(self):
+        prior = {"manifest":{"schema_version":1,
+                             "last_scan_at":(datetime.now(timezone.utc) -
+                                             timedelta(hours=2)).isoformat()}}
+        pointer = {"key":"snapshot:" + "a" * 64,"last_scan_at":"bad-date"}
+        env = {"CLOUDFLARE_ACCOUNT_ID":"a" * 32,
+               "CLOUDFLARE_KV_NAMESPACE_ID":"b" * 32,
+               "CLOUDFLARE_API_TOKEN":"test-token", "FIRMS_MAP_KEY":"test-key",
+               "PUBLIC_SNAPSHOT_URL":"https://wildfire-signals.pages.dev/api/snapshot",
+               "FORCE_COLLECTION":"true"}
+        with patch.dict(os.environ, env, clear=True), \
+                patch("fire_public.cli.verify_free"), \
+                patch("fire_public.cli.previous_snapshot", return_value=prior), \
+                patch("fire_public.cli.current_pointer", return_value=pointer), \
+                patch("fire_public.cli.fetch_firms", return_value=[]) as firms, \
+                patch("fire_public.cli.publish") as publish:
+            with self.assertRaisesRegex(RuntimeError, "pointer timestamp"):
+                main()
+        firms.assert_not_called()
+        publish.assert_not_called()
 
     def test_missing_public_snapshot_uses_pointer_cadence_and_recovers(self):
         env = {"CLOUDFLARE_ACCOUNT_ID":"a" * 32,
