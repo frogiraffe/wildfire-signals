@@ -90,6 +90,11 @@ avoiding duplicate FIRMS requests. Observe the live preview for seven days from
 10 October 2026, checking gaps, source freshness, Free quotas, browser behavior
 and real traffic before a 1.0/stable release claim.
 
+The manual `Check live map in browser` GitHub workflow checks desktop and mobile
+Chromium against the public preview. It checks loaded data, source state, map
+canvas and horizontal fit; visual quality and real device interaction still need
+review.
+
 ## Local checks
 
 ```sh
