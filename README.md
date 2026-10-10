@@ -1,7 +1,8 @@
 # Wildfire Signals (pre-release)
 
 This is the public, standalone collector and map. It contains no private repository
-history, credentials, or production data. The service is **not deployed**.
+history or credentials. The [preview map](https://wildfire-signals.pages.dev/)
+is live with hourly hosted collection. It is not a stable 1.0 release.
 
 ## Data meaning
 
@@ -80,30 +81,25 @@ To connect the account without pasting a token into chat:
    The classic KV namespace has already been created and its binding is in
    `wrangler.toml`; confirm it appears in the deployed Pages project. Set the
    actual `https://<project>.pages.dev/api/snapshot` URL as a repository variable.
-5. Check the initial public snapshot size and the live endpoint before enabling
-   `ENABLE_PUBLIC_COLLECTION=true`. That switch starts hosted collection; it
-   does not use the developer's computer. Keep it unset until the Free check and
-   binding are verified.
+5. The Free check, initial snapshot size and live endpoint have been checked.
+   `ENABLE_PUBLIC_COLLECTION=true` is enabled for hosted hourly collection;
+   the developer's computer need not stay on. Each run repeats the Free gate.
 
-The seven-day source-only pilot runs on GitHub-hosted runners. It does not need
-the developer's computer to stay on and does not publish to Cloudflare. After
-the map implementation, source terms, Free account and initial size checks pass,
-deploy a **preview** site and enable its hosted collector. Observe the preview
-for seven days while it is live. Check gaps, source freshness, Free quotas,
-browser behavior and real traffic before a 1.0/stable release claim. The source
-pilot can continue independently; it is not a prerequisite to preview deployment.
+The source-only pilot was disabled after the live hosted collector succeeded,
+avoiding duplicate FIRMS requests. Observe the live preview for seven days from
+10 October 2026, checking gaps, source freshness, Free quotas, browser behavior
+and real traffic before a 1.0/stable release claim.
 
 ## Local checks
 
 ```sh
 python -m unittest discover -s tests -v
-node --test public/*.test.mjs functions/api/*.test.mjs
+node --test tests/js/*.test.mjs
 ```
 
-After the fixed source pilot end plus two hours of scheduling grace, count missing
-and failed scheduled intervals using GitHub's workflow run history. A run delayed
-beyond two hours counts as a gap in its expected hour. This read-only audit does
-not make a release decision on its own:
+Review missing and failed scheduled collection intervals using GitHub's workflow
+run history. The earlier source pilot audit covers only its own fixed window and
+does not make a release decision on its own:
 
 ```sh
 gh run list --workflow source-pilot.yml --limit 200 \
