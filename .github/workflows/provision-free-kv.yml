@@ -1,0 +1,71 @@
+name: Provision Free KV namespace
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  provision:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_FREE_ATTESTED_ACCOUNT_ID: ${{ vars.CLOUDFLARE_FREE_ATTESTED_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Verify Free gate and create classic KV namespace once
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import re
+          from urllib.request import Request, urlopen
+
+          from fire_public.cli import API, HEX_ID, api_request, verify_free
+
+          account = os.environ.get("CLOUDFLARE_ACCOUNT_ID", "")
+          attested = os.environ.get("CLOUDFLARE_FREE_ATTESTED_ACCOUNT_ID", "")
+          token = os.environ.get("CLOUDFLARE_API_TOKEN", "")
+          if not HEX_ID.fullmatch(account) or not token:
+              raise RuntimeError("Cloudflare account ID and token are required")
+          verify_free(account, token, attested_account=attested)
+
+          url = f"{API}/accounts/{account}/storage/kv/namespaces"
+          listing = api_request(url + "?page=1&per_page=1000", token)
+          namespaces = listing.get("result")
+          info = listing.get("result_info") or {}
+          if not isinstance(namespaces, list):
+              raise RuntimeError("KV namespace listing is not a list")
+          if "next_page" in info:
+              complete = info["next_page"] is None or info["next_page"] is False
+          else:
+              complete = (info.get("page") == 1 and
+                          info.get("count") == info.get("total_count") == len(namespaces))
+          if not complete:
+              raise RuntimeError("KV namespace listing is incomplete")
+
+          title = "wildfire-signals-public-snapshots"
+          matches = [item for item in namespaces if item.get("title") == title]
+          if len(matches) > 1:
+              raise RuntimeError("Duplicate KV namespace titles")
+          if matches:
+              namespace = matches[0]
+          else:
+              body = json.dumps({"title": title}).encode()
+              request = Request(url, data=body, headers={
+                  "Authorization": f"Bearer {token}",
+                  "Content-Type": "application/json",
+              }, method="POST")
+              with urlopen(request, timeout=30) as response:
+                  created = json.load(response)
+              if created.get("success") is not True:
+                  raise RuntimeError("KV namespace creation failed")
+              namespace = created.get("result") or {}
+          namespace_id = namespace.get("id")
+          if not isinstance(namespace_id, str) or not re.fullmatch(r"[a-f0-9]{32}", namespace_id):
+              raise RuntimeError("Cloudflare returned an invalid KV namespace ID")
+          print(f"KV_NAMESPACE_ID={namespace_id}")
+          PY
