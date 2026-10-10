@@ -12,7 +12,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 FIRMS_SOURCES = ("VIIRS_NOAA20_NRT", "VIIRS_NOAA21_NRT")
-FIRMS_URL = "https://firms.modaps.eosdis.nasa.gov/api/area/csv/{key}/{source}/world/1"
+FIRMS_URL = "https://firms.modaps.eosdis.nasa.gov/api/area/csv/{key}/{source}/world/2"
 NIFC_URL = ("https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/"
             "WFIGS_Incident_Locations_Current/FeatureServer/0/query")
 CWFIS_URL = "https://geoserver.cwfif.nrcan.gc.ca/geoserver/ows"

@@ -1,8 +1,9 @@
 import unittest
 import gzip
 from datetime import datetime, timezone
+from unittest.mock import patch
 
-from fire_public.collect import (build_snapshot, parse_cwfis_page, parse_firms_csv,
+from fire_public.collect import (build_snapshot, fetch_firms, parse_cwfis_page, parse_firms_csv,
                                  parse_nifc_page, provisional_matches)
 from fire_public.publish import publish
 
@@ -14,6 +15,25 @@ CSV = ("latitude,longitude,acq_date,acq_time,frp\n"
 
 
 class CollectTests(unittest.TestCase):
+    def test_midnight_collection_requests_yesterday_and_keeps_rolling_day(self):
+        at = datetime(2026, 10, 10, 0, 55, tzinfo=timezone.utc)
+        csv = ("latitude,longitude,acq_date,acq_time,frp\n"
+               "36.900,30.700,2026-10-09,2330,5\n"
+               "36.901,30.701,2026-10-08,2330,7\n")
+        urls = []
+
+        def fake_get(url):
+            urls.append(url)
+            return csv.encode()
+
+        with patch("fire_public.collect._get", side_effect=fake_get):
+            events = fetch_firms("test-key", "VIIRS_NOAA20_NRT", at=at)
+
+        self.assertEqual(urls, ["https://firms.modaps.eosdis.nasa.gov/api/area/csv/"
+                                "test-key/VIIRS_NOAA20_NRT/world/2"])
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["detection_count"], 1)
+
     def test_firms_pixels_aggregate_without_fire_confirmation(self):
         events = parse_firms_csv(CSV, "VIIRS_NOAA20_NRT", at=AT)
         self.assertEqual(len(events), 1)
