@@ -31,15 +31,23 @@ def verify_free(account, token):
     payload = api_request(f"{API}/accounts/{account}/subscriptions", token)
     result = payload.get("result")
     info = payload.get("result_info") or {}
-    count, page = info.get("count"), info.get("page")
-    per_page, total_count = info.get("per_page"), info.get("total_count")
-    if (not all(isinstance(value, int) and not isinstance(value, bool)
-                for value in (count, page, per_page, total_count))
-            or page != 1 or per_page < 1 or count != total_count
-            or total_count > per_page):
+    page, per_page = info.get("page"), info.get("per_page")
+    valid_number = lambda value: isinstance(value, int) and not isinstance(value, bool)
+    if (not valid_number(page) or not valid_number(per_page)
+            or page != 1 or per_page < 1):
         raise RuntimeError("cannot verify every Cloudflare subscription page")
-    if not isinstance(result, list) or not result or len(result) != count:
+    if "next_page" in info and "count" not in info and "total_count" not in info:
+        complete = info["next_page"] is None
+    else:
+        count, total_count = info.get("count"), info.get("total_count")
+        complete = (valid_number(count) and valid_number(total_count)
+                    and count == total_count and total_count <= per_page)
+    if not complete:
+        raise RuntimeError("cannot verify every Cloudflare subscription page")
+    if not isinstance(result, list) or not result:
         raise RuntimeError("Cloudflare subscription could not be verified")
+    if "count" in info and len(result) != info["count"]:
+        raise RuntimeError("Cloudflare subscription count mismatch")
     for item in result:
         if (item.get("state") != "Provisioned" or
                 (item.get("rate_plan") or {}).get("id") not in {"free", "partners_free"}

@@ -21,10 +21,30 @@ class FreePlanTests(unittest.TestCase):
         verify_free("a" * 32, "token")
 
     @patch("fire_public.cli.api_request")
+    def test_free_plan_accepted_with_cursor_pagination(self, request):
+        request.return_value = {"result_info": {"page": 1, "per_page": 25, "next_page": None},
+            "result": [{"state": "Provisioned", "rate_plan": {"id": "free"}, "price": 0}]}
+        verify_free("a" * 32, "token")
+
+    @patch("fire_public.cli.api_request")
     def test_second_subscription_page_refused(self, request):
         request.return_value = {"result_info":{"count":1,"page":1,"per_page":20,"total_count":21},
             "result": [{"state": "Provisioned", "rate_plan": {"id": "free"}, "price": 0}]}
         with self.assertRaises(RuntimeError):
+            verify_free("a" * 32, "token")
+
+    @patch("fire_public.cli.api_request")
+    def test_cursor_next_page_refused(self, request):
+        request.return_value = {"result_info": {"page": 1, "per_page": 25, "next_page": 2},
+            "result": [{"state": "Provisioned", "rate_plan": {"id": "free"}, "price": 0}]}
+        with self.assertRaisesRegex(RuntimeError, "cannot verify every"):
+            verify_free("a" * 32, "token")
+
+    @patch("fire_public.cli.api_request")
+    def test_empty_cursor_page_refused(self, request):
+        request.return_value = {"result_info": {"page": 1, "per_page": 25, "next_page": None},
+            "result": []}
+        with self.assertRaisesRegex(RuntimeError, "subscription could not be verified"):
             verify_free("a" * 32, "token")
 
     @patch("fire_public.cli.urlopen")
