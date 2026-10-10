@@ -50,7 +50,9 @@ If the public snapshot cannot be read, scheduled runs use the current KV pointer
 last scan time. An empty namespace can seed itself, and an expired snapshot can
 be replaced on the next scheduled run. If both timestamps are unverifiable,
 scheduled runs skip until readback recovers or an operator manually dispatches
-a repair run. Manual dispatch bypasses this cadence guard, so repeated
+a repair run. Pointers written before this timestamp field was added also need
+one manual repair run if their public snapshot is already unreadable. Manual
+dispatch bypasses this cadence guard, so repeated
 manual runs can exhaust the Free storage quota and leave the map stale; they do
 not activate a paid plan. Each immutable snapshot is gzip
 compressed, capped at 5 MiB and expires in seven days; the current pointer is
