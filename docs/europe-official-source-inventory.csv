@@ -35,7 +35,7 @@ m49,name,iso3,official_feed,licence,individual_event_time,decision,reason
 807,North Macedonia,MKD,,,,research_pending,No official individual-event feed has yet been verified for this area.
 578,Norway,NOR,,,,research_pending,No official individual-event feed has yet been verified for this area.
 616,Poland,POL,,,,research_pending,No official individual-event feed has yet been verified for this area.
-620,Portugal,PRT,https://dados.gov.pt/en/datasets/prociv-ocorrencias-em-aberto,CC BY 4.0,unverified,candidate_endpoint_unverified,ANEPC open-data entry describes current SADO incidents but its metadata was last updated in 2021 and exposes no resource URL; current machine-readable event identity and timestamp remain unverified.
+620,Portugal,PRT,https://dados.gov.pt/en/datasets/prociv-ocorrencias-em-aberto,CC BY 4.0,unverified,candidate_endpoint_unverified,ANEPC open-data entry describes current SADO incidents but its metadata was last updated in 2021 and exposes no resource URL; the linked dashboard configuration contains a temporary-unavailability notice and machine-readable event identity and timestamp remain unverified.
 498,Republic of Moldova,MDA,,,,research_pending,No official individual-event feed has yet been verified for this area.
 642,Romania,ROU,,,,research_pending,No official individual-event feed has yet been verified for this area.
 643,Russian Federation,RUS,,,,research_pending,No official individual-event feed has yet been verified for this area.
