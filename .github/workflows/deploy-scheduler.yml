@@ -35,6 +35,19 @@ jobs:
           PY
       - name: Test backup scheduler
         run: node --test tests/js/scheduler.test.mjs
+      - name: Ensure free Workers subdomain prerequisite
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_WORKERS_DEPLOY_TOKEN }}
+        run: |
+          python -m unittest tests/test_worker_setup.py
+          python - <<'PY'
+          import os
+          from fire_public.worker_setup import ensure_workers_subdomain
+          name = ensure_workers_subdomain(os.environ['CLOUDFLARE_ACCOUNT_ID'],
+                                          os.environ['CLOUDFLARE_API_TOKEN'])
+          print(f'Workers subdomain ready: {name}.workers.dev')
+          PY
       - name: Deploy Worker and its single Cron Trigger
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}

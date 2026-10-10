@@ -122,6 +122,9 @@ without posting their values in issues or chat:
 Run the [Deploy Free backup scheduler workflow](https://github.com/frogiraffe/wildfire-signals/actions/workflows/deploy-scheduler.yml)
 manually from `main`. It tests the Worker, checks the Free gate, and deploys
 `wildfire-signals-scheduler` with no public route and a 15-minute Cron Trigger.
+If the account lacks its free, account-wide `workers.dev` subdomain, the deploy
+workflow creates `wildfire-signals-<account-id>.workers.dev` first. It preserves
+an existing subdomain and keeps this Worker's public `workers.dev` route disabled.
 The token values remain GitHub/Cloudflare secrets. Check the Cloudflare Worker
 Cron execution history and the GitHub collect workflow's dispatch runs. A
 manual collect run defaults to forced repair; the Worker explicitly passes
