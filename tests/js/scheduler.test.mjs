@@ -88,6 +88,27 @@ test('KV failure and recent dispatch marker stop before GitHub call', async () =
   assert.equal(broken.requests.length, 0);
 });
 
+test('invalid or future dispatch marker fails closed', async () => {
+  for (const marker of [
+    { last_dispatch_at: 'bad-date' },
+    { last_dispatch_at: '2026-10-10T12:05:00Z' },
+    { last_dispatch_at: '2026-10-10T11:30:00' },
+    {},
+  ]) {
+    const f = fixture({ key, last_scan_at: '2026-10-10T10:00:00Z' }, marker);
+    await assert.rejects(runSchedule(f.env, now, f.fetchGitHub));
+    assert.equal(f.requests.length, 0);
+    assert.equal(f.writes.length, 0);
+  }
+});
+
+test('GitHub legacy 204 acceptance records the dispatch marker', async () => {
+  const f = fixture({ key, last_scan_at: '2026-10-10T10:00:00Z' });
+  assert.equal(await runSchedule(f.env, now,
+    async () => new Response(null, { status: 204 })), 'dispatched');
+  assert.equal(f.writes.length, 1);
+});
+
 test('failed GitHub dispatch does not write the marker', async () => {
   const f = fixture({ key, last_scan_at: '2026-10-10T10:00:00Z' });
   await assert.rejects(runSchedule(f.env, now, async () => new Response('unavailable', {

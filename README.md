@@ -52,7 +52,8 @@ The GitHub workflow is scheduled at :17 and :47 UTC each hour. A separate
 Cloudflare Workers Free Cron Trigger checks the KV pointer at :05, :20, :35,
 and :50. It dispatches the same GitHub workflow without forcing collection
 only when the latest verified scan is at least 65 minutes old. A one-hour KV
-dispatch marker limits repeated requests if GitHub is slow. The Worker has no
+dispatch marker usually limits repeated requests if GitHub is slow; KV's
+eventual consistency can still permit an extra request. The Worker has no
 public HTTP route and does not download FIRMS data or publish snapshots.
 A run skips provider
 downloads and KV writes if the last successful scan is under 55 minutes old.
