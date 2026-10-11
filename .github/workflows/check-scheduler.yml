@@ -1,6 +1,12 @@
 name: Check backup scheduler receipts
 on:
   workflow_dispatch:
+    inputs:
+      test_dispatch:
+        description: Test scheduler token with a non-forced collect run
+        type: boolean
+        required: true
+        default: false
 permissions:
   contents: read
 jobs:
@@ -61,5 +67,34 @@ jobs:
                            'key_shape_valid': isinstance(value.get('key'), str)
                               and value['key'].startswith('snapshot:')
                               and len(value['key']) == 73}
-              print(json.dumps({key: value}, sort_keys=True))
+          print(json.dumps({key: value}, sort_keys=True))
+          PY
+      - name: Test scheduler GitHub token with non-forced collection
+        if: inputs.test_dispatch == true
+        env:
+          SCHEDULER_GITHUB_TOKEN: ${{ secrets.SCHEDULER_GITHUB_TOKEN }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from urllib.error import HTTPError
+          from urllib.request import Request, urlopen
+
+          url = ('https://api.github.com/repos/frogiraffe/wildfire-signals/'
+                 'actions/workflows/collect.yml/dispatches')
+          body = json.dumps({'ref': 'main',
+                             'inputs': {'force_collection': False}}).encode()
+          request = Request(url, data=body, method='POST', headers={
+              'Accept': 'application/vnd.github+json',
+              'Authorization': f"Bearer {os.environ['SCHEDULER_GITHUB_TOKEN']}",
+              'Content-Type': 'application/json',
+              'User-Agent': 'wildfire-signals-scheduler-check',
+              'X-GitHub-Api-Version': '2026-03-10',
+          })
+          try:
+              with urlopen(request, timeout=20) as response:
+                  print(f'GitHub dispatch HTTP {response.status}')
+          except HTTPError as exc:
+              print(f'GitHub dispatch HTTP {exc.code}')
+              raise
           PY
