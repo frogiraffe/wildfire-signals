@@ -68,11 +68,16 @@ jobs:
           days = Counter()
           sources = Counter()
           multi_source = 0
+          spatial_hours = {}
+          invalid_candidate_times = 0
           for event in events:
               observed = parse(event['observed_at'])
               age = (at-observed).total_seconds()/3600
+              invalid_candidate_times += age < 0 or age > 72
               ages['0-24h' if age < 24 else '24-48h' if age < 48 else '48-72h'] += 1
               days[observed.date().isoformat()] += 1
+              location = (event['latitude'], event['longitude'])
+              spatial_hours.setdefault(location, set()).add(observed.strftime('%Y-%m-%dT%H'))
               for source in event.get('sources', []):
                   sources[source] += 1
               multi_source += len(event.get('sources', [])) > 1
@@ -87,8 +92,13 @@ jobs:
                   updated_72h[row['provider']] += 1
           match_status = Counter(row['status'] for row in matches)
           source_error_scans = Counter()
+          source_errors_by_scan = []
           for snapshot in snapshots:
-              for source in snapshot['manifest'].get('source_errors', []):
+              errors = snapshot['manifest'].get('source_errors', [])
+              if errors:
+                  source_errors_by_scan.append({
+                      'at': snapshot['manifest']['last_scan_at'], 'sources': errors})
+              for source in errors:
                   source_error_scans[source] += 1
           latest_sources = {}
           for row in latest['sources']:
@@ -108,7 +118,15 @@ jobs:
               'scan_interval_max_minutes': max(intervals) if intervals else None,
               'gaps_over_90_minutes': gaps,
               'source_error_snapshot_counts': dict(source_error_scans),
+              'source_errors_by_scan': source_errors_by_scan,
               'latest_manifest': latest['manifest'],
+              'duplicate_candidate_id_count': len(events) - len({row['event_id'] for row in events}),
+              'invalid_candidate_time_count': invalid_candidate_times,
+              'spatial_cell_count': len(spatial_hours),
+              'spatial_cells_observed_2_or_more_hours': sum(len(v) >= 2 for v in spatial_hours.values()),
+              'spatial_cells_observed_6_or_more_hours': sum(len(v) >= 6 for v in spatial_hours.values()),
+              'spatial_cells_observed_24_or_more_hours': sum(len(v) >= 24 for v in spatial_hours.values()),
+              'maximum_observed_hours_for_one_spatial_cell': max(map(len, spatial_hours.values())),
               'candidate_count_by_age': dict(ages),
               'candidate_count_by_observation_day_utc': dict(sorted(days.items())),
               'candidate_count_by_sensor_membership': dict(sources),
