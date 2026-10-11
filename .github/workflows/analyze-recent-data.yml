@@ -19,6 +19,7 @@ jobs:
           from datetime import datetime, timezone
           import gzip
           import json
+          import math
           import os
           import statistics
           from urllib.parse import quote, urlencode
@@ -138,5 +139,31 @@ jobs:
               'matched_candidate_count': len({row['event_id'] for row in matches}),
               'latest_sources': latest_sources,
           }
+          regions = {}
+          for name, center in {'Merauke': (-8.4903, 140.3956),
+                               'Kepi': (-6.52547, 139.326947)}.items():
+              nearby = []
+              for event in events:
+                  lat1, lon1 = map(math.radians, center)
+                  lat2, lon2 = map(math.radians,
+                                   (event['latitude'], event['longitude']))
+                  angle = (math.sin((lat2-lat1)/2)**2 + math.cos(lat1)*math.cos(lat2)
+                           * math.sin((lon2-lon1)/2)**2)
+                  if 12742.0176 * math.asin(math.sqrt(min(1, angle))) <= 50:
+                      nearby.append(event)
+              recent = [row for row in nearby
+                        if 0 <= (at-parse(row['observed_at'])).total_seconds() <= 86400]
+              regions[name] = {
+                  'candidate_cell_hours_72h': len(nearby),
+                  'candidate_cell_hours_24h': len(recent),
+                  'last_observed_at': max((row['observed_at'] for row in nearby),
+                                          default=None),
+                  'source_memberships_24h': dict(Counter(
+                      source for row in recent for source in row['sources'])),
+              }
+          print('REGION_JSON=' + json.dumps({'scan_at': at.isoformat(),
+              'manifest_status': latest['manifest']['data_status'],
+              'source_errors': latest['manifest']['source_errors'],
+              'regions': regions}, sort_keys=True))
           print('ANALYSIS_JSON=' + json.dumps(result, sort_keys=True))
           PY
