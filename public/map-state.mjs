@@ -12,7 +12,13 @@ export const MESSAGES = {
     allKinds:'All', id:'ID', observed:'Observed', received:'Received', sources:'Sources',
     location:'Location', thermal:'Thermal trend', detections:'Detection count', provider:'Provider',
     kind:'Kind', modified:'Updated', aggregation:'Grouping', product:'Product age',
-    failures:'failures', close:'Close details', ambiguous:'Multiple nearby agency records — ambiguous association.'},
+    failures:'failures', close:'Close details', ambiguous:'Multiple nearby agency records — ambiguous association.',
+    areaTitle:'Visible map area', areaScope:'Counts use the map viewport, not a country boundary.',
+    areaCandidates:'Candidate cell-hours', areaLocations:'Observed cells',
+    areaRepeated:'Cells seen in 2+ hours', areaLatest:'Latest observation',
+    areaCompare:'Recent / preceding', areaHours:'hours',
+    areaQuality:'Incomplete source data', areaUnavailable:'No verified snapshot is available.',
+    areaCaveat:'Thermal candidates only. Counts do not measure fire size or spread.'},
   tr: {title:'Yangın Sinyalleri', candidates:'Uydu adayları', incidents:'Kurum olayları',
     timeScope:'Zaman aralığı uydu gözlemlerini süzer. Kurum kayıtları güncel kaynak katmanından gelir; her kaydın kurum güncelleme tarihini kontrol edin.',
     all:'Tüm kaynaklar', time:'Zaman aralığı', source:'Kaynak', status:'Durum',
@@ -26,7 +32,13 @@ export const MESSAGES = {
     allKinds:'Tümü', id:'Kimlik', observed:'Gözlem', received:'Alınma', sources:'Kaynaklar',
     location:'Konum', thermal:'Termal eğilim', detections:'Tespit sayısı', provider:'Kurum',
     kind:'Tür', modified:'Güncelleme', aggregation:'Gruplama', product:'Ürün yaşı',
-    failures:'hata', close:'Ayrıntıları kapat', ambiguous:'Birden çok yakın kurum kaydı — belirsiz ilişki.'}
+    failures:'hata', close:'Ayrıntıları kapat', ambiguous:'Birden çok yakın kurum kaydı — belirsiz ilişki.',
+    areaTitle:'Görünen harita alanı', areaScope:'Sayılar ülke sınırına değil, ekranda görünen alana aittir.',
+    areaCandidates:'Aday hücre-saat', areaLocations:'Gözlenen hücre',
+    areaRepeated:'2+ saatte görülen hücre', areaLatest:'Son gözlem',
+    areaCompare:'Son / önceki', areaHours:'saat',
+    areaQuality:'Eksik kaynak verisi', areaUnavailable:'Doğrulanmış veri görüntüsü yok.',
+    areaCaveat:'Bunlar termal adaylardır; sayılar yangın alanı veya yayılma ölçümü değildir.'}
 };
 
 export function parseState(hash = '') {

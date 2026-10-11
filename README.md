@@ -24,6 +24,14 @@ is live with hourly hosted collection. It is not a stable 1.0 release.
 - Source failures produce `partial` status; a complete upstream outage keeps the
   previous published snapshot.
 
+The map's visible-area analysis summarizes candidate cell-hours, distinct 0.05-degree
+cells, cells observed in multiple hours, the latest observation, and counts in the
+two halves of the selected time window. It uses the current map viewport, not a
+country boundary. The comparison is observation activity, not a measure of fire
+growth. Failed VIIRS sources are shown with the summary; no-data during an outage
+must not be read as no fire. The map does not retain fire incidents or burned-area
+perimeters after the 72-hour candidate window.
+
 NASA FIRMS requires a free MAP_KEY. See <https://firms.modaps.eosdis.nasa.gov/api/area/>.
 NIFC data comes from the [WFIGS current incident layer](https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Incident_Locations_Current/FeatureServer/0).
 Canadian records come from the [CWFIS current active fire layer](https://cwfis.cfs.nrcan.gc.ca/downloads/docs/en/references/cwfif/cwfis-data-placemat.pdf)

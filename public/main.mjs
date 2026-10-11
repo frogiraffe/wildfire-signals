@@ -1,5 +1,6 @@
 import * as maplibregl from 'https://unpkg.com/maplibre-gl@6.13.0/dist/maplibre-gl.mjs';
 import {MESSAGES, parseState, stateHash, visible, effectiveStatus, featureCollection} from './map-state.mjs';
+import {summarizeArea} from './area-analysis.mjs';
 
 const state = parseState(location.hash);
 let snapshot = {manifest:{data_status:'unknown'},events:[],incidents:[],matches:[],sources:[],details:{}};
@@ -82,6 +83,22 @@ function draw() {
   const {events, incidents} = visible(snapshot,state);
   el('candidate-count').textContent = events.length.toLocaleString(state.lang);
   el('incident-count').textContent = incidents.length.toLocaleString(state.lang);
+  const bounds = map.getBounds();
+  const area = summarizeArea({events,sources:snapshot.sources},
+    {west:bounds.getWest(),east:bounds.getEast(),south:bounds.getSouth(),north:bounds.getNorth()},
+    state.hours,new Date());
+  const areaAvailable = snapshot.manifest?.last_scan_at != null;
+  el('area-candidates').textContent = areaAvailable ? area.candidateCount.toLocaleString(state.lang) : '—';
+  el('area-locations').textContent = areaAvailable ? area.locationCount.toLocaleString(state.lang) : '—';
+  el('area-repeated').textContent = areaAvailable ? area.repeatedLocationCount.toLocaleString(state.lang) : '—';
+  el('area-latest').textContent = areaAvailable && area.latestObservedAt
+    ? `${new Date(area.latestObservedAt).toLocaleString(state.lang === 'tr' ? 'tr-TR' : 'en-US',
+      {timeZone:'UTC',dateStyle:'short',timeStyle:'short'})} UTC` : '—';
+  el('area-comparison').textContent = areaAvailable
+    ? `${msg.areaCompare} ${area.comparisonHours} ${msg.areaHours}: ` +
+      `${area.recentCount.toLocaleString(state.lang)} / ${area.earlierCount.toLocaleString(state.lang)}` : '';
+  el('area-quality').textContent = !areaAvailable ? msg.areaUnavailable : area.sourceProblems.length
+    ? `${msg.areaQuality}: ${area.sourceProblems.join(', ')}` : '';
   el('last-scan').textContent = snapshot.manifest?.last_scan_at || '—';
   const sources = el('source-list'); sources.replaceChildren();
   for (const source of snapshot.sources || []) {
@@ -115,7 +132,7 @@ map.on('load', () => {
   }
   draw();
 });
-map.on('moveend',saveState);
+map.on('moveend',() => {saveState();draw();});
 
 for (const key of ['language','hours','source','kind']) el(key).addEventListener('change',event => {
   state[key === 'language' ? 'lang' : key] = key === 'hours' ? Number(event.target.value) : event.target.value;
