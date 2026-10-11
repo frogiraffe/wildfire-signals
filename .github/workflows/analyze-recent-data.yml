@@ -1,0 +1,124 @@
+name: Analyze recent public observations
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_KV_NAMESPACE_ID: ${{ vars.CLOUDFLARE_KV_NAMESPACE_ID }}
+    steps:
+      - name: Analyze retained snapshots without writing data
+        run: |
+          python - <<'PY'
+          from collections import Counter
+          from datetime import datetime, timezone
+          import gzip
+          import json
+          import os
+          import statistics
+          from urllib.parse import quote, urlencode
+          from urllib.request import Request, urlopen
+
+          base = ('https://api.cloudflare.com/client/v4/accounts/'
+                  f"{os.environ['CLOUDFLARE_ACCOUNT_ID']}/storage/kv/namespaces/"
+                  f"{os.environ['CLOUDFLARE_KV_NAMESPACE_ID']}")
+          headers = {'Authorization': f"Bearer {os.environ['CLOUDFLARE_API_TOKEN']}"}
+          query = urlencode({'prefix': 'snapshot:', 'limit': 1000})
+          with urlopen(Request(f'{base}/keys?{query}', headers=headers), timeout=30) as response:
+              listing = json.load(response)
+          keys = listing.get('result')
+          if listing.get('success') is not True or not isinstance(keys, list) or len(keys) >= 1000:
+              raise RuntimeError('Snapshot list is incomplete')
+          snapshots = []
+          for item in keys:
+              name = item.get('name')
+              if not isinstance(name, str) or not name.startswith('snapshot:'):
+                  continue
+              with urlopen(Request(f'{base}/values/{quote(name, safe="")}',
+                                   headers=headers), timeout=45) as response:
+                  raw = response.read(5 * 1024 * 1024 + 1)
+              if len(raw) > 5 * 1024 * 1024:
+                  raise RuntimeError('Snapshot exceeds Free value budget')
+              snapshot = json.loads(gzip.decompress(raw))
+              if snapshot.get('manifest', {}).get('schema_version') != 1:
+                  raise RuntimeError('Unexpected snapshot schema')
+              snapshots.append(snapshot)
+          if not snapshots:
+              raise RuntimeError('No retained snapshots')
+
+          parse = datetime.fromisoformat
+          snapshots.sort(key=lambda row: parse(row['manifest']['last_scan_at']))
+          scans = [parse(row['manifest']['last_scan_at']) for row in snapshots]
+          latest = snapshots[-1]
+          at = scans[-1]
+          intervals = [round((b-a).total_seconds()/60, 1)
+                       for a, b in zip(scans, scans[1:])]
+          gaps = [{'from': a.isoformat(), 'to': b.isoformat(),
+                   'minutes': round((b-a).total_seconds()/60, 1)}
+                  for a, b in zip(scans, scans[1:]) if (b-a).total_seconds() > 90*60]
+          events = latest['events']
+          incidents = latest['incidents']
+          matches = latest['matches']
+          ages = Counter()
+          days = Counter()
+          sources = Counter()
+          multi_source = 0
+          for event in events:
+              observed = parse(event['observed_at'])
+              age = (at-observed).total_seconds()/3600
+              ages['0-24h' if age < 24 else '24-48h' if age < 48 else '48-72h'] += 1
+              days[observed.date().isoformat()] += 1
+              for source in event.get('sources', []):
+                  sources[source] += 1
+              multi_source += len(event.get('sources', [])) > 1
+          providers = Counter(row['provider'] for row in incidents)
+          updated_72h = Counter()
+          unknown_update = Counter()
+          for row in incidents:
+              modified = row.get('modified_at')
+              if not modified:
+                  unknown_update[row['provider']] += 1
+              elif (at-parse(modified)).total_seconds() <= 72*3600:
+                  updated_72h[row['provider']] += 1
+          match_status = Counter(row['status'] for row in matches)
+          source_error_scans = Counter()
+          for snapshot in snapshots:
+              for source in snapshot['manifest'].get('source_errors', []):
+                  source_error_scans[source] += 1
+          latest_sources = {}
+          for row in latest['sources']:
+              latest_sources[row['key']] = {
+                  'status': row['status'],
+                  'last_product_observed_at': row.get('last_product_observed_at'),
+                  'product_age_hours': round(row['product_age_seconds']/3600, 1)
+                      if row.get('product_age_seconds') is not None else None,
+              }
+          result = {
+              'analyzed_at_utc': datetime.now(timezone.utc).isoformat(),
+              'retained_snapshot_count': len(snapshots),
+              'first_scan_at': scans[0].isoformat(),
+              'last_scan_at': at.isoformat(),
+              'scan_interval_median_minutes': round(statistics.median(intervals), 1)
+                  if intervals else None,
+              'scan_interval_max_minutes': max(intervals) if intervals else None,
+              'gaps_over_90_minutes': gaps,
+              'source_error_snapshot_counts': dict(source_error_scans),
+              'latest_manifest': latest['manifest'],
+              'candidate_count_by_age': dict(ages),
+              'candidate_count_by_observation_day_utc': dict(sorted(days.items())),
+              'candidate_count_by_sensor_membership': dict(sources),
+              'multi_source_candidate_count': multi_source,
+              'agency_incident_count_by_provider': dict(providers),
+              'agency_incidents_updated_within_72h': dict(updated_72h),
+              'agency_incidents_without_update_time': dict(unknown_update),
+              'proximity_match_count_by_status': dict(match_status),
+              'matched_candidate_count': len({row['event_id'] for row in matches}),
+              'latest_sources': latest_sources,
+          }
+          print('ANALYSIS_JSON=' + json.dumps(result, sort_keys=True))
+          PY
