@@ -1,5 +1,10 @@
 # Wildfire Signals (pre-release)
 
+**Codex çalışma klasörü:** Bu deponun kök dizini (`wildfire-signals/`).
+Proje için Codex'i bu klasörde açın; [AGENTS.md](AGENTS.md) canlı/yerel çalışma
+sınırlarını açıklar. Harita ve açık veri toplama GitHub Actions ile Cloudflare'da
+çalışır; bu bilgisayarda Docker veya model çalıştırılması gerekmez.
+
 This is the public, standalone collector and map. It contains no private repository
 history or credentials. The [preview map](https://wildfire-signals.pages.dev/)
 is live with hourly hosted collection. It is not a stable 1.0 release.
