@@ -1,6 +1,11 @@
 name: Check live map in browser
 on:
   workflow_dispatch:
+    inputs:
+      hostname:
+        description: Pages hostname to check
+        required: false
+        default: wildfire-signals.pages.dev
 permissions:
   contents: read
 jobs:
@@ -17,4 +22,6 @@ jobs:
       - name: Install Chromium only
         run: npx playwright install chromium --with-deps
       - name: Check desktop and mobile live data
+        env:
+          PAGES_HOST: ${{ inputs.hostname }}
         run: node tests/browser/live-map.mjs
