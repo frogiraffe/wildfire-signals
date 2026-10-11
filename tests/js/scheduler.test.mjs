@@ -47,6 +47,8 @@ test('stale pointer dispatches once without forcing collection', async () => {
   assert.deepEqual(JSON.parse(f.requests[0].options.body),
     { ref: 'main', inputs: { force_collection: false } });
   assert.equal(f.requests[0].options.headers.Authorization, 'Bearer test-secret');
+  assert.equal(f.requests[0].options.headers['User-Agent'],
+    'wildfire-signals-scheduler');
   assert.deepEqual(f.writes, [{ name: 'scheduler:last_dispatch',
     value: { last_dispatch_at: '2026-10-10T12:00:00.000Z' },
     options: { expirationTtl: 3600 } }]);
@@ -132,8 +134,18 @@ test('scheduled failure records a receipt without dispatching', async () => {
   await assert.rejects(runScheduled(f.env, now, f.fetchGitHub), /current pointer is invalid/);
   assert.deepEqual(f.writes, [{
     name: 'scheduler:tick:2026-10-10T12:00:00.000Z',
-    value: { at: '2026-10-10T12:00:00.000Z', outcome: 'error' },
+    value: { at: '2026-10-10T12:00:00.000Z', outcome: 'error',
+      failure: 'invalid_pointer' },
     options: { expirationTtl: 8 * 86400 },
   }]);
   assert.equal(f.requests.length, 0);
+});
+
+test('scheduled GitHub rejection records status without a token or response body', async () => {
+  const f = fixture({ key, last_scan_at: '2026-10-10T10:00:00Z' });
+  await assert.rejects(runScheduled(f.env, now,
+    async () => new Response('possibly sensitive', { status: 403 })),
+    /GitHub dispatch failed: 403/);
+  assert.deepEqual(f.writes[0].value,
+    { at: '2026-10-10T12:00:00.000Z', outcome: 'error', failure: 'github_http_403' });
 });

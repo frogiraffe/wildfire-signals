@@ -42,6 +42,7 @@ export async function runSchedule(env, now = new Date(), fetchGitHub = fetch) {
       Accept: 'application/vnd.github+json',
       Authorization: `Bearer ${env.GITHUB_DISPATCH_TOKEN}`,
       'Content-Type': 'application/json',
+      'User-Agent': 'wildfire-signals-scheduler',
       'X-GitHub-Api-Version': '2026-03-10',
     },
     body: JSON.stringify({ ref: 'main', inputs: { force_collection: false } }),
@@ -61,15 +62,24 @@ export async function runSchedule(env, now = new Date(), fetchGitHub = fetch) {
 
 export async function runScheduled(env, now = new Date(), fetchGitHub = fetch) {
   let outcome = 'error';
+  let failure;
   try {
     outcome = await runSchedule(env, now, fetchGitHub);
     return outcome;
+  } catch (error) {
+    const message = String(error?.message ?? '');
+    const githubStatus = /^GitHub dispatch failed: (\d{3})$/.exec(message);
+    failure = githubStatus ? `github_http_${githubStatus[1]}`
+      : message === 'current pointer is invalid' ? 'invalid_pointer'
+      : message.includes('timestamp') ? 'invalid_timestamp'
+      : 'other_error';
+    throw error;
   } finally {
     // One bounded receipt per Cron invocation makes missed triggers observable.
     // A failed receipt must not prevent a successful dispatch or hide its error.
     try {
       await env.PUBLIC_SNAPSHOTS.put(`scheduler:tick:${now.toISOString()}`,
-        JSON.stringify({ at: now.toISOString(), outcome }),
+        JSON.stringify({ at: now.toISOString(), outcome, ...(failure ? { failure } : {}) }),
         { expirationTtl: 8 * 86400 });
     } catch {
       console.error('scheduler receipt write failed');
