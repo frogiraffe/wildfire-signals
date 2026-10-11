@@ -40,4 +40,26 @@ jobs:
           if not isinstance(receipt, dict) or receipt.get('at') != names[0].split('scheduler:tick:', 1)[1]:
               raise RuntimeError('Latest Cron receipt is malformed')
           print(json.dumps({'latest_receipt': receipt}, sort_keys=True))
+          recent = []
+          for name in names[:12]:
+              with urlopen(Request(f'{base}/values/{quote(name, safe="")}',
+                                   headers=headers), timeout=30) as reply:
+                  recent.append(json.load(reply))
+          print(json.dumps({'recent_receipts': recent}, sort_keys=True))
+          for key in ('current', 'scheduler:last_dispatch'):
+              try:
+                  with urlopen(Request(f'{base}/values/{quote(key, safe="")}',
+                                       headers=headers), timeout=30) as reply:
+                      value = json.load(reply)
+              except Exception as exc:
+                  if getattr(exc, 'code', None) == 404:
+                      value = None
+                  else:
+                      raise
+              if key == 'current' and isinstance(value, dict):
+                  value = {'last_scan_at': value.get('last_scan_at'),
+                           'key_shape_valid': isinstance(value.get('key'), str)
+                              and value['key'].startswith('snapshot:')
+                              and len(value['key']) == 73}
+              print(json.dumps({key: value}, sort_keys=True))
           PY
