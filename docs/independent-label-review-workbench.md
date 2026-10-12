@@ -46,6 +46,39 @@ Queue preparation requires an archived NIFC source batch for every requested yea
 
 ## Stage 2 — Explicit human review records
 
+### Independent reviewer intake
+
+Keep the queue, reviewer packets, votes, coordinator details and final cohort in a private directory outside Git. Generate one packet for each real reviewer, using different output paths:
+
+```bash
+python -m fire_public.review_intake packet --queue /private/wildfire/unadjudicated-queue.json \
+  --reviewer-id person-1 --html /private/wildfire/person-1.html \
+  --vote-template /private/wildfire/person-1-votes.json
+python -m fire_public.review_intake packet --queue /private/wildfire/unadjudicated-queue.json \
+  --reviewer-id person-2 --html /private/wildfire/person-2.html \
+  --vote-template /private/wildfire/person-2-votes.json
+python -m fire_public.review_intake details-template \
+  --queue /private/wildfire/unadjudicated-queue.json \
+  --output /private/wildfire/coordinator-details.json
+```
+
+Give each reviewer only their own HTML brief and JSON vote form. The brief contains unlabeled source leads and provenance links, not the other person's votes. For every case, replace `unreviewed` with `vote` plus `reviewer_label` (`0` or `1`), `independent_evidence_checked=true`, a specific HTTPS `evidence_url`, and timezone-aware `reviewed_at`; or use `abstain` with a meaningful `reason`. The tool checks file hashes and distinct declared reviewer IDs. It cannot prove that two IDs belong to different humans or that they worked independently; the research operator must enforce access separation.
+
+The coordinator completes the separate details form with a documented event/sampling identity, region, prediction time, actual feature cutoff, source availability, final verification time, independent label source and evidence, and the positive event time or third-party negative coverage record. Frame region and decision time are prefilled; no labels or official ignition dates are guessed. The coordinator must investigate source licensing, target geography, registry inclusion, reporting lag, overlapping spatial units and retrospective availability. Vote files contain no coordinator-written label, so coordinator details cannot replace the two independent votes.
+
+```bash
+python -m fire_public.review_intake reconcile \
+  --queue /private/wildfire/unadjudicated-queue.json \
+  --first /private/wildfire/person-1-votes.json \
+  --second /private/wildfire/person-2-votes.json \
+  --details /private/wildfire/coordinator-details.json \
+  --protocol /private/wildfire/protocol.json \
+  --reviews /private/wildfire/reviews.json \
+  --report /private/wildfire/reconciliation.json
+```
+
+Matching votes are structurally checked against the existing label validator. A disagreement or abstention stays `unresolved`, with both original votes preserved in `reviews.json`; the report lists conflict IDs and counts. Never silently change a conflicting vote to produce an agreed label. Resolve a conflict through documented new independent review and regenerate a new immutable vote pair and output paths. `reconcile` does not export a cohort. Continue with `label_review finalize` below, which may refuse export if the remaining agreed cases do not include both valid classes. All commands refuse existing output paths.
+
 Create a private `reviews.json`:
 
 ```json

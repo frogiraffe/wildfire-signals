@@ -64,6 +64,9 @@ source and feature availability times, and only then exports a
 The existing real NIFC CI can now demonstrate an unadjudicated eight-real-source
 queue with explicitly synthetic control units; **no true negative samples or
 measured prediction skill are created by these integration tests**.
+The offline [blind review intake](docs/independent-label-review-workbench.md#independent-reviewer-intake)
+produces private per-reviewer HTML briefs and vote forms, preserves disagreements,
+and passes only matching independently recorded votes to the same cohort gate.
 
 The [official NIFC sampled-source quality audit](docs/nifc-source-quality-audit.md)
 checks stored agency polygon integrity before producing year-by-year field-missingness,
