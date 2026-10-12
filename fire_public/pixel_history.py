@@ -313,11 +313,14 @@ def coverage_report(db_path: str | Path, *, at: str, hours: int = 72,
     cell_hours = set()
     cells = defaultdict(set)
     missing_region = 0
+    latest_observed = None
     for pixel in pixels:
         if region and distance_km(latitude,longitude,pixel["latitude"],pixel["longitude"])>radius_km:
             missing_region+=1
             continue
         by_sensor[pixel["provider"]]+=1
+        if latest_observed is None or pixel["observed_at"] > latest_observed:
+            latest_observed = pixel["observed_at"]
         hour = datetime.fromisoformat(pixel["observed_at"]).replace(
             minute=0,second=0,microsecond=0).isoformat()
         # Match the public map's 0.05-degree spatial bucket and UTC hour.
@@ -333,6 +336,7 @@ def coverage_report(db_path: str | Path, *, at: str, hours: int = 72,
         "pixel_query_truncated":pixels_truncated,"source_state_counts":dict(sorted(states.items())),
         "latest_source_state":latest,"receipt_gaps_over_9_hours":gaps,
         "unique_raw_pixel_observations":sum(by_sensor.values()),
+        "latest_observed_at":latest_observed,
         "aggregation":"0.05 degree spatial cell by UTC hour",
         "candidate_cell_hours":len(cell_hours),"distinct_observed_cells":len(cells),
         "cells_observed_multiple_hours":sum(len(h)>1 for h in cells.values()),
