@@ -19,7 +19,9 @@ NOW="2026-10-13T00:00:00Z"
 
 
 def geo(oid, year, *, source="USFS", acres=11.0, name="Agency polygon",
-        longitude=-120.0, degenerate=False, include_guid=True):
+        longitude=None, degenerate=False, include_guid=True):
+    if longitude is None:
+        longitude = -120.0 + oid * 0.12
     outer=[[longitude,37.0],[longitude+0.02,37.0],
            [longitude+0.02,37.02],[longitude,37.02],[longitude,37.0]]
     if degenerate:
