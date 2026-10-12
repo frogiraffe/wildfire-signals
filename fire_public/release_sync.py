@@ -166,8 +166,10 @@ def discover(*, since: str | None = None, max_releases: int = 8,
                     selected[plan["tag"]] = plan
         if len(selected) >= max_releases or len(rows) < 100:
             break
-    # Prefer older scan first for accurate historical first-receipt ordering.
-    return sorted(selected.values(),key=lambda p:p["tag"])[:max_releases]
+    # Select the latest N dates, then ingest that bounded set oldest-first.
+    # Otherwise a long first API page would accidentally select older releases.
+    newest = sorted(selected.values(),key=lambda p:p["tag"],reverse=True)[:max_releases]
+    return sorted(newest,key=lambda p:p["tag"])
 
 
 def sync_releases(destination: str | Path, *, since: str | None = None,
@@ -200,7 +202,12 @@ def sync_releases(destination: str | Path, *, since: str | None = None,
                     or path.stat().st_size != asset["size"]
                     or hashlib.sha256(path.read_bytes()).hexdigest() != asset["sha256"]):
                     raise ValueError(f"existing release asset hash conflict: {asset['name']}")
-            _validated_scan(final/release["scan_name"])
+            receipt, _ = _validated_scan(final/release["scan_name"])
+            declared = {x["name"]:x["sha256"] for x in receipt["pixel_files"]}
+            actual = {x["name"]:x["sha256"] for x in release["assets"]
+                      if x["name"] != release["scan_name"]}
+            if declared != actual:
+                raise ValueError("existing release differs from scan receipt manifest")
             skipped += 1
             continue
         stage = Path(tempfile.mkdtemp(prefix=".wildfire-sync-",dir=destination))
