@@ -57,6 +57,17 @@ This is an **offline** research workflow requiring downloaded release assets,
 not continuous free cloud storage or validated wildfire event history.
 Downloaded pixel data and SQLite databases must remain outside this public repo.
 
+A separate [retrospective MTBS perimeter benchmark](docs/retrospective-perimeter-benchmark.md)
+now compares an explicitly supplied official-schema burned-area GeoJSON
+reference with historical, checksum-verified raw FIRMS pixel records.
+The offline CLI preserves source file hashes and observation/capture dates,
+handles antimeridian polygons, classifies missing collector receipts and
+excludes prescribed burns. Final perimeters are **post-event reference
+geometry**, never prediction inputs, and unmatched polygons are not non-fire
+labels. Importantly, current research Release assets may be **too recent**
+to overlap published MTBS historical fires. No actual detection accuracy
+has been measured by the bundled synthetic-fixture tests.
+
 The [regional source coverage audit](docs/global-source-coverage-audit.md) is integrated
 into that explorer. It compares the selected circle's NASA FIRMS candidate observations
 and NIFC/CWFIS current agency records with the snapshot's per-source health,
