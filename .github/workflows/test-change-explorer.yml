@@ -1,0 +1,34 @@
+name: Historical evidence change explorer
+on:
+  pull_request:
+    paths:
+      - 'fire_public/change_explorer.py'
+      - 'fire_public/intelligence_workbench.py'
+      - 'tests/test_change_explorer.py'
+      - '.github/workflows/test-change-explorer.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'fire_public/change_explorer.py'
+      - 'fire_public/intelligence_workbench.py'
+      - 'tests/test_change_explorer.py'
+      - '.github/workflows/test-change-explorer.yml'
+permissions:
+  contents: read
+jobs:
+  compare-and-archive-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate compare CLI and neighboring historical data contracts
+        run: |
+          python -m compileall -q fire_public
+          python -m unittest discover -s tests -p 'test_change_explorer.py' -v
+          python -m unittest discover -s tests -p 'test_intelligence_workbench.py' -v
+          python -m unittest discover -s tests -p 'test_historical_context.py' -v
+          python -m unittest discover -s tests -p 'test_receipt_history.py' -v
+          python -m unittest discover -s tests -p 'test_history.py' -v
