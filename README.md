@@ -32,6 +32,18 @@ growth. Failed VIIRS sources are shown with the summary; no-data during an outag
 must not be read as no fire. The map does not retain fire incidents or burned-area
 perimeters after the 72-hour candidate window.
 
+The **global region explorer** lets users select an arbitrary point on the map
+or use the current center, choose a 25/50/100/250 km radius and see candidate
+cell-hours, distinct cells, repeated UTC observations, a six-bin time chart,
+source memberships and up to five inspectable locations within the existing
+6/24/72-hour filter. It works across the international date line and keeps
+the selected region in the shareable URL. It reuses the *current* public
+snapshot in the browser: no extra FIRMS queries, KV writes, location tracking
+or claim of globally validated wildfire probabilities. Counts can be incomplete
+when providers are stale or failed; a chart is **observation activity**, not
+fire growth or burned area. Choose **Use map center** or **Choose on map**
+in the sidebar, then inspect the resulting region panel.
+
 The preview also lists up to five recently observed cells in the visible map area.
 Cells observed in multiple UTC hours appear first; selecting one centers the map
 and opens its underlying observation. This is an investigation queue, not a danger
