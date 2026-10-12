@@ -32,6 +32,13 @@ growth. Failed VIIRS sources are shown with the summary; no-data during an outag
 must not be read as no fire. The map does not retain fire incidents or burned-area
 perimeters after the 72-hour candidate window.
 
+The verified FIRMS SQLite database can also feed the existing
+[Historical Intelligence Workbench](docs/workbench-verified-firms-pixels.md)
+using `--pixel-db` in both `report` and `compare`. Raw VIIRS pixels and
+0.05° candidate cell-hours are labeled separately; agency histories retain
+independent identities, with no double-counting of both satellite archives.
+This is an offline evidence research interface, not a validated forecast.
+
 The next step is the [GitHub research release sync](docs/research-release-sync.md):
 `python -m fire_public.release_sync` discovers recent dated research Releases,
 downloads and SHA-256-verifies their FIRMS pixel assets into per-day atomic
