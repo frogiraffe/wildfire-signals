@@ -64,6 +64,15 @@ source and feature availability times, and only then exports a
 The existing real NIFC CI can now demonstrate an unadjudicated eight-real-source
 queue with explicitly synthetic control units; **no true negative samples or
 measured prediction skill are created by these integration tests**.
+The [independent evidence receipt archive](docs/independent-evidence-receipts.md)
+lets a researcher preserve original privately acquired source documents using
+content-addressed SHA-256 blobs and capture-time receipts. The optional
+`label_review finalize --evidence-store` strict gate checks every adjudicated
+label's reviewer/source URLs, source record IDs and full negative-registry
+coverage window against archived bytes **before cohort export**. The archive
+never fetches arbitrary URLs or claims to authenticate original publishers,
+valid nonfire outcomes, or external reviewer independence.
+
 The [offline interactive reviewer form](docs/offline-reviewer-form.md)
 turns each private independent review packet into a self-contained browser
 interface with explicit per-case votes or abstentions, independent evidence
