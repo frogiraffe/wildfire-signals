@@ -152,6 +152,39 @@ class HistoricalChangeTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             compare_reports(one,elsewhere)
 
+    def test_two_captured_weather_forecast_revisions_are_not_observed_weather(self):
+        from fire_public.weather_pilot import FIELDS
+        wxpath=self.path/"weather.sqlite3"
+        wx=HistoryStore(wxpath)
+        self.addCleanup(wx.close)
+        self.receipt(0)
+        import_receipts(self.store,self.receipts)
+        for issued,captured,wind in [
+                (f"{BASE}T00:00:00Z",f"{BASE}T01:00:00Z",10),
+                (f"{BASE}T06:00:00Z",f"{BASE}T07:00:00Z",20)]:
+            values={"windSpeed":wind,"windDirection":90,"windGust":25,
+                    "temperature":20,"relativeHumidity":40,
+                    "quantitativePrecipitation":0}
+            fields={name:{"uom":unit,"values":[{
+                "validTime":f"{BASE}T00:00:00Z/P1D",
+                "value":values[name]}]} for name,(unit,_) in FIELDS.items()}
+            wx.append({"subject_kind":"weather_forecast_snapshot",
+                       "provider":"nws_grid","source_id":"ABC/1,2",
+                       "record_type":"grid_forecast",
+                       "observed_at":issued,"captured_at":captured,
+                       "source_url":"https://example.org/grid",
+                       "rights_url":"https://example.org/rights",
+                       "payload":{"point":{"latitude":55.0,"longitude":-110.0},
+                                  "source_valid_times":f"{BASE}T00:00:00Z/P1D",
+                                  "fields":fields,
+                                  "evidence_role":"captured_forecast_not_observation"}})
+        result=self.compare(weather_db=wxpath)
+        self.assertEqual(len(result["forecast_receipt_changes"]),1)
+        forecast=result["forecast_receipt_changes"][0]
+        self.assertEqual(forecast["before"]["captured_at"],f"{BASE}T01:00:00+00:00")
+        self.assertEqual(forecast["after"]["captured_at"],f"{BASE}T07:00:00+00:00")
+        self.assertIn("NOT measurements",forecast["note"])
+
     def test_html_escapes_archived_source_text(self):
         self.receipt(0,name="<img src=x onerror=alert(1)>")
         self.receipt(6,name="<script>alert(1)</script>",agency_status="UC")
