@@ -88,8 +88,8 @@ export function analyzeRegion(snapshot, region, hours, source = 'all', now = new
     const cellKey = lat + ',' + lon;
     let cell = cells.get(cellKey);
     if (!cell) {
-      cell = {latitude:lat,longitude:lon,hours:new Set(),latest:-Infinity,
-        eventId:null,sensors:new Set()};
+      cell = {latitude:lat,longitude:lon,hours:new Set(),hourSensors:new Set(),
+        latest:-Infinity,eventId:null,sensors:new Set()};
       cells.set(cellKey,cell);
     }
     if (!cell.hours.has(hour)) {
@@ -97,9 +97,13 @@ export function analyzeRegion(snapshot, region, hours, source = 'all', now = new
       bins[Math.min(5,Math.floor((observed - begin) / ((hours / 6) * 3_600_000)))].count++;
     }
     cell.hours.add(hour);
-    for (const sensor of event.sources || []) {
+    for (const sensor of new Set(event.sources || [])) {
       cell.sensors.add(sensor);
-      sources.set(sensor,(sources.get(sensor) || 0) + 1);
+      const membership = `${hour}:${sensor}`;
+      if (!cell.hourSensors.has(membership)) {
+        cell.hourSensors.add(membership);
+        sources.set(sensor,(sources.get(sensor) || 0) + 1);
+      }
     }
     if (observed > cell.latest) {
       cell.latest = observed;
