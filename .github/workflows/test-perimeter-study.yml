@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'fire_public/official_perimeters.py'
+      - 'fire_public/mtbs_pilot.py'
+      - 'tests/test_mtbs_pilot.py'
       - 'fire_public/perimeter_study.py'
       - 'fire_public/perimeter_quality.py'
       - 'fire_public/official_lead_refresh.py'
@@ -20,6 +22,8 @@ on:
     branches: [main]
     paths:
       - 'fire_public/official_perimeters.py'
+      - 'fire_public/mtbs_pilot.py'
+      - 'tests/test_mtbs_pilot.py'
       - 'fire_public/perimeter_study.py'
       - 'fire_public/perimeter_quality.py'
       - 'fire_public/official_lead_refresh.py'
@@ -50,6 +54,7 @@ jobs:
           python -m unittest discover -s tests -p 'test_perimeter_study.py' -v
           python -m unittest discover -s tests -p 'test_perimeter_quality.py' -v
           python -m unittest discover -s tests -p 'test_official_perimeters.py' -v
+          python -m unittest discover -s tests -p 'test_mtbs_pilot.py' -v
           python -m unittest discover -s tests -p 'test_workbench_official_perimeters.py' -v
           python -m unittest discover -s tests -p 'test_official_live_probe.py' -v
           python -m unittest discover -s tests -p 'test_official_lead_refresh.py' -v
@@ -130,6 +135,13 @@ jobs:
             --official-context-store /tmp/wildfire-nifc-multiyear/private-context-store \
             --reviewer-id ci-fixture-not-a-real-reviewer \
             --html /tmp/wildfire-nifc-multiyear/offline-reviewed-context.html
+          python -m fire_public.mtbs_pilot \
+            --year 2017 --year 2018 \
+            --records-per-year 4 \
+            --seed wildfire-mtbs-ci-v1 \
+            --nifc-db /tmp/wildfire-nifc-multiyear/nifc-2017-2018.sqlite3 \
+            --nifc-at "$(python -c "import json;print(json.load(open('/tmp/wildfire-nifc-multiyear/study.json'))['decision_at'])")" \
+            --output-dir /tmp/wildfire-nifc-multiyear/mtbs-real-public-source
           python - <<'PY'
           import json
           from pathlib import Path
@@ -174,6 +186,22 @@ jobs:
           assert context['valid_binary_outcomes_created']==0
           assert context['valid_negative_labels_created']==0
           assert context['transport_claim']=='direct_pinned_official_https'
+          mtbs_root=root/'mtbs-real-public-source'
+          mtbs=json.loads((mtbs_root/'sample-summary.json').read_text())
+          pairs=json.loads((mtbs_root/'nifc-proximity-candidates.json').read_text())
+          assert mtbs['source_transport']=='direct_fixed_usfs_https'
+          assert mtbs['sampled_source_points']==8
+          assert mtbs['years']==[2017,2018]
+          assert mtbs['negative_fire_labels_created']==0
+          assert mtbs['outcome_independence_established'] is False
+          assert pairs['nifc_sampled_source_polygons']==8
+          assert pairs['nonmatches_count_as_absent_fires'] is False
+          assert pairs['negative_fire_labels_created']==0
+          import hashlib
+          for year in mtbs['source_years']:
+            for src in year['raw_source_files']:
+              original=(mtbs_root/src['filename']).read_bytes()
+              assert hashlib.sha256(original).hexdigest()==src['sha256']
           assert len(context['case_findings'])==8
           assert (root/'offline-reviewed-context.html').is_file()
           import hashlib
@@ -200,6 +228,7 @@ jobs:
             /tmp/wildfire-nifc-multiyear/source-context-audit.json
             /tmp/wildfire-nifc-multiyear/offline-reviewed-context.html
             /tmp/wildfire-nifc-multiyear/private-context-store/
+            /tmp/wildfire-nifc-multiyear/mtbs-real-public-source/
             /tmp/wildfire-nifc-multiyear/live-source-responses/
             /tmp/wildfire-nifc-multiyear/live.log
           if-no-files-found: warn
