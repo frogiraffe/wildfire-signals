@@ -112,9 +112,28 @@ def prepare_queue(perimeter_db: Path, *, at: str, years: list[int],
         })
     if len(cases) > MAX_SOURCE_CANDIDATES:
         raise ValueError("bounded source candidate limit exceeded")
-    ranked = sorted(by_id, key=lambda item: (
-        hashlib.sha256(f"{seed}:{item}".encode("utf-8")).digest(), item))
-    chosen = ranked[:max_controls]
+    # Balanced region-id round robin avoids selecting all controls from a
+    # high-volume stratum when frame sizes differ. Still NOT representative:
+    # it depends entirely on the supplied independent sampling frame.
+    groups: dict[str, list[str]] = {}
+    for identity, item in by_id.items():
+        groups.setdefault(item["region_id"], []).append(identity)
+    for region, identities in groups.items():
+        identities.sort(key=lambda identity: (
+            hashlib.sha256(f"{seed}:{region}:{identity}".encode()).digest(),identity))
+    ordered_regions = sorted(groups, key=lambda region: (
+        hashlib.sha256(f"{seed}:region:{region}".encode()).digest(), region))
+    chosen = []
+    while len(chosen) < max_controls:
+        any_available = False
+        for region in ordered_regions:
+            if groups[region]:
+                any_available = True
+                chosen.append(groups[region].pop(0))
+                if len(chosen) >= max_controls:
+                    break
+        if not any_available:
+            break
     for identity in sorted(chosen):
         item = by_id[identity]
         cases.append({
@@ -143,6 +162,11 @@ def prepare_queue(perimeter_db: Path, *, at: str, years: list[int],
             "provenance": frame["frame_provenance"],
             "input_sha256": _sha(frame_path),
             "population_units": len(slots), "sampled_units": len(chosen),
+            "selection_strategy": "seeded_hash_region_round_robin",
+            "population_by_region": dict(sorted(Counter(
+                item["region_id"] for item in by_id.values()).items())),
+            "selected_by_region": dict(sorted(Counter(
+                by_id[identity]["region_id"] for identity in chosen).items())),
             "seed": seed,
         },
         "cases": cases,
@@ -182,8 +206,12 @@ def _review_decision(case: dict, entry: dict, horizon: float) -> dict | None:
     if primary_id == secondary_id:
         raise ValueError("two distinct human reviewers required")
     for reviewer in (primary, secondary):
-        if reviewer.get("agrees_with_label") is not True or not _url(reviewer.get("evidence_url")):
-            raise ValueError("both reviewers need independent positive evidence links")
+        if (reviewer.get("agrees_with_label") is not True
+                or type(reviewer.get("reviewer_label")) is not int
+                or reviewer["reviewer_label"] != label
+                or reviewer.get("independent_evidence_checked") is not True
+                or not _url(reviewer.get("evidence_url"))):
+            raise ValueError("both reviewers must independently vote for label and cite evidence")
     timestamp = _utc(_text(entry.get("decision_at"), "prediction decision time"))
     feature_at = _utc(_text(entry.get("feature_cutoff_at"), "feature issue-time cutoff"))
     available = _utc(_text(entry.get("label_available_at"), "source label availability"))
