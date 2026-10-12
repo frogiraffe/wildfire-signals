@@ -32,6 +32,14 @@ growth. Failed VIIRS sources are shown with the summary; no-data during an outag
 must not be read as no fire. The map does not retain fire incidents or burned-area
 perimeters after the 72-hour candidate window.
 
+The next step is the [GitHub research release sync](docs/research-release-sync.md):
+`python -m fire_public.release_sync` discovers recent dated research Releases,
+downloads and SHA-256-verifies their FIRMS pixel assets into per-day atomic
+directories, imports complete sets into local SQLite, and generates worldwide
+point-in-time source coverage reports. It has strict network/download budgets,
+does not enable or run any public collector, and does not claim that missing
+observations mean no wildfires. The researcher owns the local backup.
+
 The opt-in daily FIRMS research Releases can now be **verified and imported to a
 persistent local SQLite pixel archive** via
 [`fire_public.pixel_history`](docs/global-firms-pixel-archive.md). It validates
