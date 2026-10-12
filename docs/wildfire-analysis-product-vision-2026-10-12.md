@@ -22,7 +22,7 @@ Taslak PR'daki kayıt ayrıntısı artık bu dört soruyu birlikte gösterir. İ
 | Girdi | Üründeki görevi | Şimdiki durum |
 | --- | --- | --- |
 | NASA FIRMS uydu tespitleri | Erken aday sinyali ve zaman dizisi | NOAA-20/21 0,05° hücre/saat adayları toplanıyor; yangın doğrulaması değil. |
-| Resmî olay kayıtları ve yangın çevreleri | Olay kimliği, durum ve bağımsız değerlendirme etiketi | NIFC/CWFIS olayları ayrı toplanıyor; küresel kapsam ve çevre geçmişi yok. |
+| Resmî olay kayıtları ve yangın çevreleri | Olay kimliği, durum ve bağımsız değerlendirme etiketi | NIFC/CWFIS olayları ayrı toplanıyor; [ABD olayında kimlikle eşleşen WFIGS katmanından çizilmiş çevre](us-perimeter-context-pilot-2026-10-12.md) gösterilebilir. Çevre geçmişi ve küresel kapsam yok. |
 | Hava durumu ve tahmini | Oluşma koşulu, yayılım ve sonlanım girdisi | [ABD NIFC olay ayrıntısında 6/12/24 saatlik tahmini hava değişimi ve tek noktalı yerel NWS arşiv pilotu](us-weather-context-pilot-2026-10-12.md) var; sürekli model girdisi arşivi, Kanada/Türkiye kapsamı ve hava etkisi değerlendirmesi yok. |
 | Yakıt/bitki, arazi örtüsü, topoğrafya ve kuraklık | Yayılım ve oluşma modellerinin yerel girdileri | Açık depoda bütünleşik katman yok; çözünürlük, lisans ve güncellik araştırılacak. |
 | Yıldırım, insan etkinliği ve müdahale/containment geçmişi | Tutuşma ve sonlanım tahmini için olası girdiler | Kapsam ve güvenilirlik bölgeye göre araştırılacak; eksikse model hedefi daraltılacak. |

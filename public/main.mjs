@@ -3,11 +3,13 @@ import {MESSAGES, parseState, stateHash, visible, effectiveStatus, featureCollec
 import {summarizeArea, investigationLeads} from './area-analysis.mjs';
 import {incidentTimeline} from './incident-timeline.mjs';
 import {fetchNwsWeather, forecastChanges} from './weather-context.mjs';
+import {fetchNifcPerimeter} from './perimeter-context.mjs';
 import {recordAnalysis} from './analysis-answers.mjs';
 
 const state = parseState(location.hash);
 let snapshot = {manifest:{data_status:'unknown'},events:[],incidents:[],matches:[],sources:[],details:{}};
 let weatherController = null;
+let perimeterController = null;
 const el = id => document.getElementById(id);
 const map = new maplibregl.Map({container:'map',
   style:'https://tiles.openfreemap.org/styles/liberty', center:[state.lon,state.lat], zoom:state.zoom,
@@ -37,6 +39,52 @@ function saveState() {
 function stopWeatherRequest() {
   weatherController?.abort();
   weatherController = null;
+}
+
+function stopPerimeterRequest() {
+  perimeterController?.abort();
+  perimeterController = null;
+  map.getSource('nifc-perimeter')?.setData({type:'FeatureCollection',features:[]});
+}
+
+function showPerimeter(box, incident, msg) {
+  if (incident.provider !== 'nifc_wfigs') return;
+  const section = document.createElement('section'); section.className = 'perimeter-context';
+  const heading = document.createElement('h3'); heading.textContent = msg.perimeterTitle;
+  const scope = document.createElement('p'); scope.textContent = msg.perimeterScope;
+  const content = document.createElement('div'); content.setAttribute('role','status');
+  content.textContent = msg.perimeterLoading;
+  section.append(heading,scope,content); box.append(section);
+  const controller = new AbortController(); perimeterController = controller;
+  const timeout = setTimeout(() => controller.abort(),12_000);
+  fetchNifcPerimeter(incident.official_id,{signal:controller.signal})
+    .then(result => {
+      if (perimeterController !== controller || el('detail').hidden) return;
+      section.dataset.perimeterState = result.status;
+      if (result.status !== 'mapped') {
+        content.textContent = msg.perimeterNotListed; return;
+      }
+      map.getSource('nifc-perimeter')?.setData(result.geojson);
+      content.replaceChildren();
+      const meta = document.createElement('p');
+      meta.textContent = `${msg.perimeterMappedAt}: ${result.observedAt} · ` +
+        `${msg.perimeterReceived}: ${result.receivedAt}`;
+      content.append(meta);
+      if (result.stale) {
+        const warning = document.createElement('p'); warning.textContent = msg.perimeterStale;
+        content.append(warning);
+      }
+      const source = document.createElement('a'); source.href = result.sourceUrl;
+      source.textContent = 'NIFC WFIGS'; source.target = '_blank';
+      source.rel = 'noopener noreferrer'; content.append(source);
+    })
+    .catch(() => {
+      if (perimeterController === controller && !el('detail').hidden) {
+        section.dataset.perimeterState = 'unavailable';
+        content.textContent = msg.perimeterUnavailable;
+      }
+    })
+    .finally(() => clearTimeout(timeout));
 }
 
 function renderWeather(container, forecast, msg) {
@@ -165,6 +213,7 @@ function showAnalysis(box, kind, item, msg) {
 
 function showRecord(kind, id) {
   stopWeatherRequest();
+  stopPerimeterRequest();
   const msg = MESSAGES[state.lang];
   const item = kind === 'candidate' ? snapshot.events.find(x => x.event_id === id)
     : snapshot.incidents.find(x => `${x.provider}:${x.official_id}` === id);
@@ -206,6 +255,7 @@ function showRecord(kind, id) {
   }
   showAnalysis(box,kind,item,msg);
   el('detail').hidden = false;
+  if (kind === 'incident') showPerimeter(box,item,msg);
   if (kind === 'incident') showWeather(box,item,msg);
   if (kind === 'incident') {
     const heading = document.createElement('h3'); heading.textContent = msg.timelineTitle;
@@ -317,6 +367,11 @@ function draw() {
 }
 
 map.on('load', () => {
+  map.addSource('nifc-perimeter',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+  map.addLayer({id:'nifc-perimeter-fill',type:'fill',source:'nifc-perimeter',
+    paint:{'fill-color':'#f28b4b','fill-opacity':0.18}});
+  map.addLayer({id:'nifc-perimeter-line',type:'line',source:'nifc-perimeter',
+    paint:{'line-color':'#f28b4b','line-width':2}});
   map.addSource('candidates',{type:'geojson',data:featureCollection([],'candidate'),cluster:true,clusterRadius:42});
   map.addSource('incidents',{type:'geojson',data:featureCollection([],'incident'),cluster:true,clusterRadius:42});
   for (const [source,color] of [['candidates','#f19b53'],['incidents','#5dc2c7']]) {
@@ -344,9 +399,11 @@ for (const key of ['language','hours','source','kind']) el(key).addEventListener
 el('share').addEventListener('click',async () => {
   saveState(); await navigator.clipboard.writeText(location.href);
 });
-el('detail-close').addEventListener('click',() => {stopWeatherRequest();el('detail').hidden = true;});
+el('detail-close').addEventListener('click',() => {
+  stopWeatherRequest(); stopPerimeterRequest(); el('detail').hidden = true;
+});
 window.addEventListener('keydown',event => {if (event.key === 'Escape') {
-  stopWeatherRequest(); el('detail').hidden = true;
+  stopWeatherRequest(); stopPerimeterRequest(); el('detail').hidden = true;
 }});
 window.addEventListener('hashchange',() => {Object.assign(state,parseState(location.hash));map.jumpTo({center:[state.lon,state.lat],zoom:state.zoom});draw();});
 

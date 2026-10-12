@@ -22,6 +22,9 @@
 .detail ol time,.detail ol span{display:block}
 .detail ol time{color:#a9c2c8;font-variant-numeric:tabular-nums}
 .weather-context{margin-top:20px;padding-top:4px;border-top:1px solid #36515c}
+.perimeter-context{margin-top:20px;padding-top:4px;border-top:1px solid #36515c}
+.perimeter-context p{font-size:12px;line-height:1.5}
+.perimeter-context a{font-size:12px;color:#9edbd5}
 .weather-context ol{list-style:none;padding:0;margin:10px 0}
 .weather-context li{padding:9px 0;border-bottom:1px solid #34505d}
 .weather-context li strong,.weather-context li span{display:block;font-size:12px;line-height:1.5}

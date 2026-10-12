@@ -23,7 +23,8 @@ const server = createServer(async (request,response) => {
   }
   const name = request.url === '/' ? 'index.html' : request.url.slice(1);
   if (!['index.html','style.css','main.mjs','map-state.mjs','area-analysis.mjs',
-    'incident-timeline.mjs','weather-context.mjs','analysis-answers.mjs'].includes(name)) {
+    'incident-timeline.mjs','weather-context.mjs','perimeter-context.mjs',
+    'analysis-answers.mjs'].includes(name)) {
     response.writeHead(404).end(); return;
   }
   response.setHeader('Content-Type',name.endsWith('.css') ? 'text/css'
@@ -131,11 +132,22 @@ try {
   await incidentPage.close();
 
   activeSnapshot = {...snapshot,events:[],incidents:[{kind:'agency_incident',
-    provider:'nifc_wfigs',official_id:'US-1',name:'US test event',incident_kind:'WF',
+    provider:'nifc_wfigs',official_id:'{548A8D28-1A04-48EE-9011-ABA023175D43}',
+    name:'US test event',incident_kind:'WF',
     latitude:39.7456,longitude:-97.0892,modified_at:new Date().toISOString()}],
     details:{incident_history:{}}};
   const weatherPage = await browser.newPage({viewport:{width:1366,height:768}});
   const weatherCalls = [];
+  const perimeterCalls = [];
+  await weatherPage.route('https://services3.arcgis.com/**/WFIGS_Interagency_Perimeters_Current/**',route => {
+    perimeterCalls.push(route.request().url());
+    return route.fulfill({status:200,contentType:'application/geo+json',body:JSON.stringify({
+      type:'FeatureCollection',features:[{type:'Feature',properties:{
+        poly_IRWINID:'{548A8D28-1A04-48EE-9011-ABA023175D43}',
+        attr_IncidentTypeCategory:'WF',poly_PolygonDateTime:Date.now()-3_600_000},
+      geometry:{type:'Polygon',coordinates:[[
+        [-97.1,39.7],[-97.0,39.7],[-97.0,39.8],[-97.1,39.8],[-97.1,39.7]]]}}]})});
+  });
   await weatherPage.route('https://api.weather.gov/**',route => {
     weatherCalls.push(route.request().url());
     const from = new Date(Date.now()-3_600_000).toISOString();
@@ -165,7 +177,15 @@ try {
     await weatherPage.waitForTimeout(500);
   }
   await weatherPage.locator('.weather-context').getByText('Rüzgâr: 20 km/h').first().waitFor();
+  await weatherPage.locator('.perimeter-context[data-perimeter-state="mapped"]').waitFor();
   assert.equal(weatherCalls.length,2);
+  assert.equal(perimeterCalls.length,1);
+  assert.match(await weatherPage.locator('.perimeter-context').textContent(),
+    /Kurumun haritaladığı yangın çevresi.*gelecekteki yayılım alanı değildir.*Kaynakta çizilme/s);
+  if (process.env.SCREENSHOT_DIR) {
+    await weatherPage.locator('.perimeter-context').scrollIntoViewIfNeeded();
+    await weatherPage.screenshot({path:`${process.env.SCREENSHOT_DIR}/perimeter-context.png`});
+  }
   const weatherDetail = await weatherPage.locator('.weather-context').textContent();
   assert.match(weatherDetail,/Hamle: 35 km\/h/);
   assert.match(weatherDetail,/Tahmini yağış: 0 mm/);

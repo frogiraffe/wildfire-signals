@@ -1,0 +1,7 @@
+# ABD NIFC yangın çevresi görünümü
+
+Seçilen `nifc_wfigs` olayının IRWIN kimliği geçerli biçimdeyse tarayıcı, [NIFC WFIGS Current Perimeters katmanına](https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Interagency_Perimeters_Current/FeatureServer/0) yalnızca bu kimlik ve `WF` türü için bir sorgu gönderir. Uygulama yanıtı 1 MiB, 10 poligon kaydı ve 15.000 köşe ile sınırlar; kimlik, tür, tarih ve koordinatları doğrular. Aynı olay için yalnızca en yeni kaynak tarihindeki geometri haritada gösterilir. İstek seçime özeldir; Workers KV'ye çevre yazılmaz.
+
+Olay noktasındaki işaret ile turuncu poligon farklı kanıtlardır. Poligon **kurumun çizdiği geçmiş çevredir**; şu an yanan alan, gelecekteki yayılım veya kesin yanmış alan ölçümü değildir. Kaynak poligon tarihi ve tarayıcının alma saati ayrı görünür. Kaynak tarihi 48 saatten eskiyse belirgin uyarı verilir. Boş yanıt, başarısız istek ve geçersiz poligon ayrı durumlar olarak ele alınır; hiçbiri “yangın sınırı yok” sonucu üretmez.
+
+12 Ekim 2026'daki canlı kaynak denemesinde örnek `{548A8D28-1A04-48EE-9011-ABA023175D43}` kimliği için GeoJSON poligonu döndü; kaynak tarihi **21 Temmuz 2026** idi ve görünüm bunu eski olarak işaretledi. Bu örnek aktif yangın veya güncel çevre doğrulaması değildir. Aynı tarihte yerel Chromium, bu kaynağı tarayıcıdan okuyup poligonu `mapped`, `stale` olarak ayrıştırdı. Kullanıcıya gösterilen çevre geçmişi birikmiyor; gerçek zaman serisi ve yayılım doğrulaması için ileri tarihli, sürümlü çevre arşivi gerekiyor.

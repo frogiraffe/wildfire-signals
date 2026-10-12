@@ -58,6 +58,11 @@ requests this only when an incident is opened. It is not a weather observation a
 the fire or a fire-spread prediction. A separate one-point local archive pilot
 checks forecast receipt times and offline replay; the browser requests are not
 archived model inputs. Canada and Türkiye do not yet have weather context.
+For an exact-ID US NIFC incident, the draft preview can also show a bounded
+[agency mapped perimeter](docs/us-perimeter-context-pilot-2026-10-12.md) directly
+from WFIGS, with its source date and a warning when old. It is a reported past
+boundary, not the current burning area or a future spread forecast. Missing
+perimeters remain unknown; no perimeter history is collected by the map.
 
 The local [decision-time evidence audit](docs/decision-time-evidence-audit-2026-10-12.md)
 reads an explicitly selected agency event and NWS forecast from separate SQLite
