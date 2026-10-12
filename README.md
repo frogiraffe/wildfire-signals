@@ -54,6 +54,17 @@ separate from current incident IDs, satellite thermal candidates and weather
 evidence; it reports when polygon versions were actually archived rather than
 claiming the original fire year was a prospective source-availability date.
 
+The [independent label review workbench](docs/independent-label-review-workbench.md)
+closes the research handoff from archived real NIFC polygons and a separately
+documented region-time sampling frame into a deterministic **unlabeled review
+queue**. It refuses pseudo-negative labels, requires two agreeing human reviewers
+plus an additional independent negative-window coverage attestor, checks event,
+source and feature availability times, and only then exports a
+`labeled_evaluation`-compatible private cohort with source SHA-256 provenance.
+The existing real NIFC CI can now demonstrate an unadjudicated eight-real-source
+queue with explicitly synthetic control units; **no true negative samples or
+measured prediction skill are created by these integration tests**.
+
 The [official NIFC sampled-source quality audit](docs/nifc-source-quality-audit.md)
 checks stored agency polygon integrity before producing year-by-year field-missingness,
 reported acreage, vertex/degenerate-geometry and exact duplicate-shape review
