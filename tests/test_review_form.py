@@ -71,6 +71,34 @@ class OfflineReviewFormTests(unittest.TestCase):
         self.assertNotEqual(subprocess.run(bad,capture_output=True).returncode,0)
         self.assertEqual(len(json.loads(self.queue.read_text())["cases"]),2)
 
+    def test_verified_official_context_annotates_only_source_lead(self):
+        import base64
+        rechecked={
+            "queue_sha256":hashlib.sha256(self.queue.read_bytes()).hexdigest(),
+            "official_source_context_consistent":True,
+            "valid_binary_outcomes_created":0,
+            "case_findings":[{
+                "case_id":"official:2018:1",
+                "source_record_status":"same_content_as_archived",
+                "fresh_feature_sha256":"a"*64,
+                "context_captured_at":"2026-10-13T12:00:00+00:00",
+                "independent_outcome_verified":False,
+            }],
+        }
+        output=render_form(self.queue,"reviewer-a",official_context_audit=rechecked)
+        payload=output.split("const packed = '",1)[1].split("';",1)[0]
+        data=json.loads(base64.b64decode(payload).decode())
+        self.assertEqual(len(data["cases"]),2)
+        self.assertEqual(data["cases"][0]["official_context"]["fresh_feature_sha256"],"a"*64)
+        self.assertIsNone(data["cases"][1]["official_context"])
+        self.assertIn("independent occurrence/nonfire outcome NOT verified",output)
+        rejected=dict(rechecked,queue_sha256="0"*64)
+        with self.assertRaisesRegex(ValueError,"exact review queue"):
+            render_form(self.queue,"reviewer-a",official_context_audit=rejected)
+        rejected=dict(rechecked,valid_binary_outcomes_created=1)
+        with self.assertRaisesRegex(ValueError,"exact review queue"):
+            render_form(self.queue,"reviewer-a",official_context_audit=rejected)
+
     def test_existing_review_intake_accepts_identical_vote_schema(self):
         digest=hashlib.sha256(self.queue.read_bytes()).hexdigest()
         votes={

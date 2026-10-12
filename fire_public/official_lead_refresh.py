@@ -232,8 +232,14 @@ def main() -> None:
     parser.add_argument("--max-leads",type=int,default=8)
     parser.add_argument("--json",type=Path,required=True)
     parser.add_argument("--source-dir",type=Path,required=True)
+    parser.add_argument("--context-store",type=Path,
+                        help="Optional PRIVATE immutable original NIFC context store (NOT outcome receipts)")
     args=parser.parse_args()
     report,blobs=verify_leads(args.queue,args.perimeter_db,max_leads=args.max_leads)
+    if args.context_store is not None:
+        from .official_context_archive import archive_context
+        summary=archive_context(args.queue,report,blobs,args.context_store)
+        report["official_context_store_run_sha256"]=summary["archive_run_sha256"]
     write_evidence(args.json,args.source_dir,report,blobs,
                    input_files=(args.queue,args.perimeter_db))
     print(json.dumps({"official_leads":report["reviewed_official_leads"],

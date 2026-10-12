@@ -64,6 +64,14 @@ source and feature availability times, and only then exports a
 The existing real NIFC CI can now demonstrate an unadjudicated eight-real-source
 queue with explicitly synthetic control units; **no true negative samples or
 measured prediction skill are created by these integration tests**.
+The [immutable official NIFC context archive](docs/official-source-context-archive.md)
+now links real fixed-endpoint source refresh responses to the exact historical
+review queue in a separate SHA-256-verified `official-context/` namespace.
+Offline audit replays original government GeoJSON and detects altered source
+bytes; the private reviewer form can optionally display source revision/capture
+status without pre-filling outcomes. These records **never enter independent
+positive/negative label receipts** or imply valid nonfire data.
+
 The [official NIFC lead source reconciliation](docs/official-lead-source-reconciliation.md)
 directly re-queries the pinned US government ArcGIS HTTPS layer for archived
 review-queue perimeter identities, compares original and fresh source feature
