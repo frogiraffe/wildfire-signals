@@ -163,7 +163,7 @@ export function createRegionExplorer({map,state,getSnapshot,saveState,showRecord
 
   byId('coverage-download').addEventListener('click',() => {
     if(!lastCoverage)return;
-    const report=new Blob([JSON.stringify(lastCoverage,null,2)+'\\n'],
+    const report=new Blob([JSON.stringify(lastCoverage,null,2)+'\n'],
       {type:'application/json'});
     const url=URL.createObjectURL(report);
     const link=document.createElement('a');
