@@ -375,8 +375,8 @@ def main() -> None:
     created = []
     try:
         for path, body in zip(outputs, serialized):
-            created.append(path)
             _write_new(path, body)
+            created.append(path)
     except Exception:
         # Never leave a partially exported cohort that might be mistaken for a
         # complete reviewed evidence dataset when a later file cannot be saved.
