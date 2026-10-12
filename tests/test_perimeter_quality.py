@@ -125,7 +125,7 @@ class OfficialQualityTests(unittest.TestCase):
         self.assertIn("NIFC official source sample quality",exported)
         self.assertNotIn("<script>alert(1)</script>",exported)
         self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt;",exported)
-        self.assertIn("Negative sampling ready: <strong>No</strong>",exported)
+        self.assertIn("Independent negative sampling ready: <strong>No</strong>",exported)
 
     def test_column_span_and_degenerate_coordinate_rules(self):
         width, wrapped=_lon_span([179.9,-179.9,179.9,-179.9])
@@ -146,7 +146,7 @@ class OfficialQualityTests(unittest.TestCase):
         self.assertEqual(done.returncode,0,done.stderr)
         self.assertEqual(json.loads(output.read_text())["sampled_polygons_total"],5)
         self.assertEqual(json.loads(done.stdout)["negative_labels_created"],0)
-        self.assertIn("Negative sampling ready",website.read_text())
+        self.assertIn("Independent negative sampling ready",website.read_text())
         self.assertNotEqual(subprocess.run(cmd,capture_output=True).returncode,0)
         unsafe=cmd[:]
         unsafe[unsafe.index("--json")+1]=str(self.db)
