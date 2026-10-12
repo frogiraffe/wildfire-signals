@@ -1,10 +1,63 @@
 import {analyzeRegion,circleBoundary,normalLongitude,validRegion} from './region-explorer.mjs';
+import {regionCoverageAudit} from './coverage-audit.mjs';
 
 // UI controller only; all statistical and geographic calculations remain pure and testable.
 export function createRegionExplorer({map,state,getSnapshot,saveState,showRecord,messages}) {
   const byId = id => document.getElementById(id);
   let picking = false;
+  let lastCoverage = null;
   const picker = byId('region-pick');
+
+  function drawCoverage(audit,msg) {
+    const statuses = {
+      complete_request:msg.coverageCompleteRequest,failed:msg.coverageFailed,
+      deferred:msg.coverageDeferred,partial:msg.coveragePartial,
+      unreported:msg.coverageUnreported,snapshot_partial:msg.coverageSnapshotPartial,
+      stale_snapshot:msg.coverageStaleSnapshot,
+      snapshot_unavailable:msg.coverageSnapshotUnavailable,
+      not_a_snapshot_source:msg.coverageNotMonitored
+    };
+    const scopeText = {
+      world_request:msg.coverageScopeWorld,us_agency:msg.coverageScopeUS,
+      canada_agency:msg.coverageScopeCA,us_on_demand:msg.coverageScopeOnDemand
+    };
+    const kinds = {
+      satellite:msg.coverageKindSatellite,agency:msg.coverageKindAgency,
+      weather:msg.coverageKindWeather,perimeter:msg.coverageKindPerimeter
+    };
+    const snapshotStates={
+      unavailable:msg.coverageStatusUnavailable,stale:msg.coverageStatusStale,
+      partial:msg.coverageStatusPartial,current:msg.coverageStatusCurrent
+    };
+    byId('coverage-snapshot-status').textContent =
+      `${snapshotStates[audit.snapshotState]} · ${msg.coverageDisclaimer}`;
+    const list=byId('coverage-source-list');list.replaceChildren();
+    for (const source of audit.rows) {
+      const li=document.createElement('li');
+      const title=document.createElement('strong');title.textContent=source.key;
+      const meta=document.createElement('span');meta.textContent =
+        `${kinds[source.kind]} · ${scopeText[source.scope]}`;
+      const status=document.createElement('span');status.className='coverage-source-status';
+      status.textContent=statuses[source.status]||msg.coverageUnreported;
+      const count=document.createElement('span');count.className='coverage-source-count';
+      count.textContent=`${msg.coverageObserved}: ${source.observedInCircle===null
+        ? msg.coverageNotMeasured : source.observedInCircle===0
+          ? msg.coverageNoRecords : source.observedInCircle.toLocaleString(state.lang)}`;
+      const details=document.createElement('small');
+      const age=source.productAgeSeconds===null?'—':
+        `${Math.round(source.productAgeSeconds/60)} min`;
+      details.textContent=`${msg.coverageAge}: ${age} · ${msg.coverageFailures}: ` +
+        `${source.consecutiveFailures??'—'}`;
+      const links=document.createElement('span');
+      links.className='coverage-source-links';
+      const reference=document.createElement('a');reference.href=source.url;
+      reference.textContent=msg.coverageProvenance;reference.target='_blank';
+      reference.rel='noopener noreferrer';
+      links.append(reference);
+      li.append(title,meta,status,count,details,links);
+      list.append(li);
+    }
+  }
 
   function currentRegion() {
     const region = {latitude:state.regionLat,longitude:state.regionLon,
@@ -34,6 +87,7 @@ export function createRegionExplorer({map,state,getSnapshot,saveState,showRecord
     map.getCanvas().classList.toggle('region-pick-mode',picking);
     byId('region-radius').value = String(state.radiusKm);
     byId('region-results').hidden = !region;
+    lastCoverage = null;
     byId('region-clear').disabled = !region;
     byId('region-location').textContent = region
       ? `${region.latitude.toFixed(4)}°, ${region.longitude.toFixed(4)}° · ${region.radiusKm} km`
@@ -44,6 +98,8 @@ export function createRegionExplorer({map,state,getSnapshot,saveState,showRecord
     if (!region) return;
 
     const result = analyzeRegion(getSnapshot(),region,state.hours,state.source);
+    lastCoverage=regionCoverageAudit(getSnapshot(),region,{hours:state.hours});
+    drawCoverage(lastCoverage,msg);
     const missing = !result.available;
     const quality = {current:msg.regionQualityCurrent,stale:msg.regionQualityStale,
       partial:msg.regionQualityPartial,unavailable:msg.regionQualityUnavailable};
@@ -105,6 +161,17 @@ export function createRegionExplorer({map,state,getSnapshot,saveState,showRecord
     byId('region-empty').hidden = missing || result.candidateCellHours > 0;
   }
 
+  byId('coverage-download').addEventListener('click',() => {
+    if(!lastCoverage)return;
+    const report=new Blob([JSON.stringify(lastCoverage,null,2)+'\\n'],
+      {type:'application/json'});
+    const url=URL.createObjectURL(report);
+    const link=document.createElement('a');
+    link.href=url;link.download='wildfire-region-coverage.json';
+    document.body.append(link);
+    link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+  });
   picker.addEventListener('click',() => {picking = !picking;draw();});
   byId('region-center').addEventListener('click',() => {
     const center = map.getCenter(); setRegion(center.lat,center.lng);
