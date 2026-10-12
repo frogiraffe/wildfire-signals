@@ -151,6 +151,7 @@ def audit_quality(db: str | Path, *, at: str, years: list[int],
                     "fire_year": year,
                     "source_object_id": value["source_object_id"],
                     "source_global_id": value["source_global_id"],
+                    "name": value["name"],
                     "flags": value["flags"],
                 })
             all_geometry[value["geometry_sha256"]].append({
@@ -264,6 +265,7 @@ def render_quality_html(audit: dict) -> str:
     issues = "".join(
         "<li>" + esc(row["fire_year"]) + " / " +
         esc(row["source_object_id"]) + " — " +
+        esc(row["name"]) + " — " +
         esc(", ".join(row["flags"])) + "</li>"
         for row in audit["flagged_source_records"])
     duplicated = "".join(
