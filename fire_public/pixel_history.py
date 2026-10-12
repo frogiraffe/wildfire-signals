@@ -307,7 +307,10 @@ def coverage_report(db_path: str | Path, *, at: str, hours: int = 72,
         by_sensor[pixel["provider"]]+=1
         hour = datetime.fromisoformat(pixel["observed_at"]).replace(
             minute=0,second=0,microsecond=0).isoformat()
-        cell = (round(pixel["latitude"],4),round(pixel["longitude"],4))
+        # Match the public map's 0.05-degree spatial bucket and UTC hour.
+        # This is a candidate aggregation, not a physical wildfire boundary.
+        cell = (math.floor(pixel["latitude"] * 20),
+                math.floor(pixel["longitude"] * 20))
         cells[cell].add(hour)
         cell_hours.add((cell,hour))
     return {"schema_version":1,"decision_at":cutoff,"window_hours":hours,
@@ -317,6 +320,7 @@ def coverage_report(db_path: str | Path, *, at: str, hours: int = 72,
         "pixel_query_truncated":pixels_truncated,"source_state_counts":dict(sorted(states.items())),
         "latest_source_state":latest,"receipt_gaps_over_9_hours":gaps,
         "unique_raw_pixel_observations":sum(by_sensor.values()),
+        "aggregation":"0.05 degree spatial cell by UTC hour",
         "candidate_cell_hours":len(cell_hours),"distinct_observed_cells":len(cells),
         "cells_observed_multiple_hours":sum(len(h)>1 for h in cells.values()),
         "pixel_counts_by_sensor":dict(sorted(by_sensor.items())),
