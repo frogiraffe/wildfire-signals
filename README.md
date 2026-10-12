@@ -54,6 +54,13 @@ separate from current incident IDs, satellite thermal candidates and weather
 evidence; it reports when polygon versions were actually archived rather than
 claiming the original fire year was a prospective source-availability date.
 
+An additional [live NIFC provider contract probe](docs/nifc-live-source-contract.md)
+validates the official ArcGIS layer's current schema and queries exactly one
+real historical polygon, archiving source hashes, source metadata and actual
+retrieval timestamps for an independent CI integration check. This explicit
+bounded read-only test is distinct from mocked offline regression fixtures.
+It does **not** provide valid fire-negative labels or a global forecast.
+
 An opt-in [official US historical perimeter evidence importer](docs/official-historical-perimeters.md)
 now retrieves bounded, year-specific NIFC IFPH GeoJSON directly from the public
 read-only ArcGIS source. The research SQLite archive versions source attributes

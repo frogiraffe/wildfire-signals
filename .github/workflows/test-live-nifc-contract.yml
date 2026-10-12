@@ -1,0 +1,71 @@
+name: Live official NIFC ArcGIS read-only contract verification
+on:
+  pull_request:
+    paths:
+      - 'fire_public/official_live_probe.py'
+      - 'fire_public/official_perimeters.py'
+      - 'tests/test_official_live_probe.py'
+      - '.github/workflows/test-live-nifc-contract.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'fire_public/official_live_probe.py'
+      - 'fire_public/official_perimeters.py'
+      - 'tests/test_official_live_probe.py'
+      - '.github/workflows/test-live-nifc-contract.yml'
+permissions:
+  contents: read
+jobs:
+  offline-contract-regressions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: |
+          python -m compileall -q fire_public
+          python -m unittest discover -s tests -p 'test_official_live_probe.py' -v
+          python -m unittest discover -s tests -p 'test_official_perimeters.py' -v
+
+  live-read-only-provider:
+    needs: offline-contract-regressions
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Query real NIFC metadata, one ID and one polygon (bounded)
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p /tmp/wildfire-nifc-live-evidence
+          python -m fire_public.official_live_probe \
+            --db /tmp/wildfire-nifc-live-evidence/perimeter-sample.sqlite3 \
+            --year 2018 \
+            --output /tmp/wildfire-nifc-live-evidence/source-contract.json \
+            2>&1 | tee /tmp/wildfire-nifc-live-evidence/check.log
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('/tmp/wildfire-nifc-live-evidence/source-contract.json').read_text())
+          assert r['status']=='live_provider_contract_verified', r['status']
+          assert r['verified_retrieved_records']==1
+          assert r['negative_labels_created']==0 and not r['model_ready']
+          assert r['retrieval']['subset_only']
+          print('Genuine provider response checked, raw source attributes archived in local SQLite.')
+          PY
+      - name: Archive bounded real-provider validation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nifc-real-provider-contract
+          path: |
+            /tmp/wildfire-nifc-live-evidence/source-contract.json
+            /tmp/wildfire-nifc-live-evidence/perimeter-sample.sqlite3
+            /tmp/wildfire-nifc-live-evidence/check.log
+          if-no-files-found: warn
+          retention-days: 7
