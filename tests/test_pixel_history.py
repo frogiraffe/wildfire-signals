@@ -36,7 +36,9 @@ def pixel(source, *, when=FIRST, latitude=0.0, longitude=179.9, ident="one"):
             "source_record_id":f"{source}:{digest}","content_sha256":digest,
             "source_fields":fields,"candidate_id":"firms-"+digest[:20],
             "observed_at":when.isoformat(),"received_at":None,
-            "latitude":latitude,"longitude":longitude,"frp_mw":8.1}
+            "latitude":latitude,"longitude":longitude,"frp_mw":8.1,
+            "source_url":"https://firms.modaps.eosdis.nasa.gov/api/area/",
+            "rights_url":"https://www.earthdata.nasa.gov/engage/open-data-services-software/data-use-policy"}
 
 
 def make_release(directory, at, items, states=None):
