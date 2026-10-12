@@ -23,6 +23,9 @@ def _same_scope(a: dict, b: dict) -> None:
         raise ValueError("Both as-of reports must have the same geographical scope")
     if a["satellite_evidence"]["window_hours"] != b["satellite_evidence"]["window_hours"]:
         raise ValueError("Both satellite windows must have equal duration")
+    if a["satellite_evidence"].get("origin","agency_history") != b[
+            "satellite_evidence"].get("origin","agency_history"):
+        raise ValueError("Satellite evidence provenance must be the same")
 
 
 def _event_diff(before: dict | None, after: dict | None) -> dict:
@@ -162,9 +165,11 @@ def compare_reports(before: dict, after: dict) -> dict:
 def compare_archive(path: str | Path, *, earlier_at: str, later_at: str,
                     latitude: float | None = None, longitude: float | None = None,
                     radius_km: float | None = None, limit: int = 200,
-                    satellite_hours: int = 72, weather_db: str | Path | None = None) -> dict:
+                    satellite_hours: int = 72, weather_db: str | Path | None = None,
+                    pixel_db: str | Path | None = None) -> dict:
     kwargs = dict(latitude=latitude,longitude=longitude,radius_km=radius_km,
-                  limit=limit,satellite_hours=satellite_hours,weather_db=weather_db)
+                  limit=limit,satellite_hours=satellite_hours,weather_db=weather_db,
+                  pixel_db=pixel_db)
     before = build_workbench(path,at=earlier_at,**kwargs)
     after = build_workbench(path,at=later_at,**kwargs)
     return compare_reports(before,after)
