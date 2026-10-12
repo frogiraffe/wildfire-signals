@@ -117,13 +117,13 @@ class MTBSRealTransportFixtureTests(unittest.TestCase):
         self.assertEqual(obj["id"],70)
         self.assertEqual(permitted.calls,3)
         self.assertEqual(wait.call_count,2)
-        self.assertEqual([x.args[0] for x in wait.call_args_list],[2,4])
+        self.assertEqual([x.args[0] for x in wait.call_args_list],[3,6])
         exhausted=Opener(delay_count=100)
         with patch("fire_public.mtbs_pilot.build_opener",return_value=exhausted),patch(
                 "fire_public.mtbs_pilot.sleep") as wait:
             with self.assertRaises(URLError):
                 _json_http("https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_MTBS_01/MapServer/70",{"f":"json"})
-        self.assertEqual(exhausted.calls,3)
+        self.assertEqual(exhausted.calls,5)
         permanent=Opener(permanent=True)
         with patch("fire_public.mtbs_pilot.build_opener",return_value=permanent),patch(
                 "fire_public.mtbs_pilot.sleep") as wait:
