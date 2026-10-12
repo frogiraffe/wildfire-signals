@@ -7,6 +7,10 @@ import tempfile
 import unittest
 from datetime import datetime,timezone
 from pathlib import Path
+from socket import EAI_AGAIN, EAI_NONAME, gaierror
+from unittest.mock import patch
+from urllib.error import URLError
+from fire_public.mtbs_pilot import _json_http
 
 from fire_public.mtbs_pilot import (
     BASE, YEARS, _parse_feature, _schema, compare_archived_nifc,
@@ -87,6 +91,46 @@ class MTBSRealTransportFixtureTests(unittest.TestCase):
                              sample_per_year=4,seed="real-repro-fixture",
                              get=self.service,clock=lambda:"2026-10-13T12:00:00Z",
                              **kwargs)
+
+    def test_public_usfs_temporary_dns_retries_are_bounded_and_fail_closed(self):
+        class FakeResponse:
+            def __enter__(self): return self
+            def __exit__(self,*args): return False
+            def read(self,limit):
+                return b'{"id":70,"name":"2018 Fire Occurrence Locations"}'
+        class Opener:
+            def __init__(self,delay_count=2,permanent=False):
+                self.calls=0
+                self.delay_count=delay_count
+                self.permanent=permanent
+            def open(self,request,timeout):
+                self.calls+=1
+                if self.permanent:
+                    raise URLError(gaierror(EAI_NONAME,"Permanent resolution failure"))
+                if self.calls<=self.delay_count:
+                    raise URLError(gaierror(EAI_AGAIN,"Temporary DNS failure"))
+                return FakeResponse()
+        permitted=Opener()
+        with patch("fire_public.mtbs_pilot.build_opener",return_value=permitted),patch(
+                "fire_public.mtbs_pilot.sleep") as wait:
+            obj,raw=_json_http("https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_MTBS_01/MapServer/70",{"f":"json"})
+        self.assertEqual(obj["id"],70)
+        self.assertEqual(permitted.calls,3)
+        self.assertEqual(wait.call_count,2)
+        self.assertEqual([x.args[0] for x in wait.call_args_list],[3,6])
+        exhausted=Opener(delay_count=100)
+        with patch("fire_public.mtbs_pilot.build_opener",return_value=exhausted),patch(
+                "fire_public.mtbs_pilot.sleep") as wait:
+            with self.assertRaises(URLError):
+                _json_http("https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_MTBS_01/MapServer/70",{"f":"json"})
+        self.assertEqual(exhausted.calls,5)
+        permanent=Opener(permanent=True)
+        with patch("fire_public.mtbs_pilot.build_opener",return_value=permanent),patch(
+                "fire_public.mtbs_pilot.sleep") as wait:
+            with self.assertRaises(URLError):
+                _json_http("https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_MTBS_01/MapServer/70",{"f":"json"})
+            wait.assert_not_called()
+        self.assertEqual(permanent.calls,1)
 
     def test_two_year_source_sample_original_bytes_and_fire_type(self):
         report,raw=self.sample()

@@ -11,6 +11,9 @@ import argparse
 import hashlib
 import json
 import math
+from socket import EAI_AGAIN, gaierror
+from time import sleep
+from urllib.error import URLError
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlencode
@@ -36,8 +39,20 @@ def _json_http(url: str, params: dict) -> tuple[dict,bytes]:
     request=Request(url+"?"+urlencode(params),headers={
         "User-Agent":"WildfireSignals-MTBS-Research/1",
         "Accept":"application/json"})
-    with build_opener(_RejectRedirects()).open(request,timeout=45) as response:
-        raw=response.read(MAX_BYTES+1)
+    # USDA's public DNS intermittently returns EAI_AGAIN from GitHub runners.
+    # Retry *only* that explicitly temporary resolver fault, not HTTP errors,
+    # schema changes, bad permissions, permanent DNS failures or rate limits.
+    # Five bounded calls at most with a 45-second total sleep budget; all attempts preserve the same exact URL.
+    for attempt in range(5):
+        try:
+            with build_opener(_RejectRedirects()).open(request,timeout=45) as response:
+                raw=response.read(MAX_BYTES+1)
+            break
+        except URLError as error:
+            if (attempt==4 or not isinstance(error.reason,gaierror)
+                    or error.reason.errno!=EAI_AGAIN):
+                raise
+            sleep(3*(2**attempt))
     if not raw or len(raw)>MAX_BYTES:
         raise ValueError("MTBS source response empty or over 4 MiB budget")
     result=json.loads(raw)

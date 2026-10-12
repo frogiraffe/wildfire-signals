@@ -5,6 +5,8 @@ on:
       - 'fire_public/official_perimeters.py'
       - 'fire_public/mtbs_pilot.py'
       - 'fire_public/mtbs_region_study.py'
+      - 'fire_public/mtbs_match_review.py'
+      - 'tests/test_mtbs_match_review.py'
       - 'tests/test_mtbs_region_study.py'
       - 'tests/test_mtbs_pilot.py'
       - 'fire_public/perimeter_study.py'
@@ -26,6 +28,8 @@ on:
       - 'fire_public/official_perimeters.py'
       - 'fire_public/mtbs_pilot.py'
       - 'fire_public/mtbs_region_study.py'
+      - 'fire_public/mtbs_match_review.py'
+      - 'tests/test_mtbs_match_review.py'
       - 'tests/test_mtbs_region_study.py'
       - 'tests/test_mtbs_pilot.py'
       - 'fire_public/perimeter_study.py'
@@ -60,6 +64,7 @@ jobs:
           python -m unittest discover -s tests -p 'test_official_perimeters.py' -v
           python -m unittest discover -s tests -p 'test_mtbs_pilot.py' -v
           python -m unittest discover -s tests -p 'test_mtbs_region_study.py' -v
+          python -m unittest discover -s tests -p 'test_mtbs_match_review.py' -v
           python -m unittest discover -s tests -p 'test_workbench_official_perimeters.py' -v
           python -m unittest discover -s tests -p 'test_official_live_probe.py' -v
           python -m unittest discover -s tests -p 'test_official_lead_refresh.py' -v
@@ -258,6 +263,10 @@ jobs:
             --seed wildfire-region-2018-v1 \
             --output-dir /tmp/wildfire-real-same-region \
             | tee /tmp/wildfire-real-same-region-cli.log
+          python -m fire_public.mtbs_match_review packet \
+            --study-dir /tmp/wildfire-real-same-region \
+            --reviewer-id ci-synthetic-researcher \
+            --html /tmp/wildfire-real-same-region-pair-review.html
           python - <<'PY'
           import hashlib, json
           from pathlib import Path
@@ -272,6 +281,7 @@ jobs:
           assert r["negative_labels_created"]==0
           assert r["same_fire_event_identifications_verified"]==0
           assert r["forecast_model_skill_measured"] is False
+          assert Path("/tmp/wildfire-real-same-region-pair-review.html").exists()
           for entry in r["raw_source_files"]:
             data=(root/entry["filename"]).read_bytes()
             assert hashlib.sha256(data).hexdigest()==entry["sha256"]
@@ -288,5 +298,6 @@ jobs:
           path: |
             /tmp/wildfire-real-same-region/
             /tmp/wildfire-real-same-region-cli.log
+            /tmp/wildfire-real-same-region-pair-review.html
           if-no-files-found: warn
           retention-days: 7

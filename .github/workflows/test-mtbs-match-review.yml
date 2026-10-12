@@ -1,0 +1,48 @@
+name: Offline MTBS NIFC Pair Reviewer
+on:
+  pull_request:
+    paths:
+      - 'fire_public/mtbs_match_review.py'
+      - 'tests/test_mtbs_match_review.py'
+      - 'tests/browser/mtbs-match-review-local.mjs'
+      - '.github/workflows/test-mtbs-match-review.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'fire_public/mtbs_match_review.py'
+      - 'tests/test_mtbs_match_review.py'
+      - 'tests/browser/mtbs-match-review-local.mjs'
+      - '.github/workflows/test-mtbs-match-review.yml'
+permissions:
+  contents: read
+jobs:
+  integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify original provider bytes, source IDs, hypotheses and CLI
+        run: |
+          python -m compileall -q fire_public
+          python -m unittest discover -s tests -p 'test_mtbs_match_review.py' -v
+          python -m unittest discover -s tests -p 'test_mtbs_region_study.py' -v
+  browser:
+    needs: integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Exercise file-based pair review, geometry, mobile UI, JSON and CLI validator
+        run: node tests/browser/mtbs-match-review-local.mjs
