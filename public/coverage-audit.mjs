@@ -92,7 +92,7 @@ export function regionCoverageAudit(snapshot,region,{hours=72,now=new Date()}={}
 
     const byKind=source.kind==='satellite'?candidates:
       source.kind==='agency'?incidents:null;
-    const observed=byKind?.get(source.key).size??0;
+    const observed=byKind?.get(source.key)?.size??0;
     const count=collected&&snapshotAvailable?observed:null;
     const latest=source.kind==='satellite'?candidateLatest.get(source.key):
       source.kind==='agency'?incidentLatest.get(source.key):null;
