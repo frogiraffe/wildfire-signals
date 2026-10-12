@@ -81,10 +81,12 @@ function draw() {
   notice.textContent = dataStatus === 'fresh' ? '' : msg[['stale','partial'].includes(dataStatus) ? dataStatus : 'unknown'];
   notice.classList.toggle('show', dataStatus !== 'fresh');
   const {events, incidents} = visible(snapshot,state);
+  const analysisEvents = state.kind === 'incident'
+    ? visible(snapshot,{...state,kind:'candidate'}).events : events;
   el('candidate-count').textContent = events.length.toLocaleString(state.lang);
   el('incident-count').textContent = incidents.length.toLocaleString(state.lang);
   const bounds = map.getBounds();
-  const area = summarizeArea({events,sources:snapshot.sources},
+  const area = summarizeArea({events:analysisEvents,sources:snapshot.sources},
     {west:bounds.getWest(),east:bounds.getEast(),south:bounds.getSouth(),north:bounds.getNorth()},
     state.hours,new Date());
   const areaAvailable = snapshot.manifest?.last_scan_at != null;
@@ -100,13 +102,15 @@ function draw() {
   el('area-quality').textContent = !areaAvailable ? msg.areaUnavailable : area.sourceProblems.length
     ? `${msg.areaQuality}: ${area.sourceProblems.join(', ')}` : '';
   const leadList = el('lead-list'); leadList.replaceChildren();
-  const leads = areaAvailable ? investigationLeads({events},
+  const leads = areaAvailable ? investigationLeads({events:analysisEvents},
     {west:bounds.getWest(),east:bounds.getEast(),south:bounds.getSouth(),north:bounds.getNorth()},
     state.hours,new Date()) : [];
-  el('lead-quality').textContent = dataStatus === 'stale' ? msg.leadStale
-    : area.sourceProblems.length ? msg.leadSatellitePartial
-    : dataStatus === 'partial' ? msg.leadPartial
-    : dataStatus === 'unknown' ? msg.leadUnknown : '';
+  const leadWarnings = [];
+  if (dataStatus === 'stale') leadWarnings.push(msg.leadStale);
+  if (area.sourceProblems.length) leadWarnings.push(msg.leadSatellitePartial);
+  else if (dataStatus === 'partial') leadWarnings.push(msg.leadPartial);
+  if (dataStatus === 'unknown') leadWarnings.push(msg.leadUnknown);
+  el('lead-quality').textContent = leadWarnings.join(' ');
   el('lead-empty').hidden = leads.length > 0;
   for (const lead of leads) {
     const row = document.createElement('li');
@@ -195,3 +199,5 @@ try {
   console.error('Public snapshot unavailable',error);
 }
 draw();
+setInterval(() => {if (!document.hidden) draw();},60_000);
+document.addEventListener('visibilitychange',() => {if (!document.hidden) draw();});

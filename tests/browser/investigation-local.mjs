@@ -68,6 +68,36 @@ try {
   await partial.goto(`http://127.0.0.1:${server.address().port}/#lang=tr&lat=-6&lon=145&zoom=7`);
   await partial.locator('#lead-quality').getByText('Bazı uydu kaynakları başarısız').waitFor();
   await partial.close();
+  activeSnapshot = {...activeSnapshot,manifest:{...activeSnapshot.manifest,
+    last_scan_at:new Date(Date.now()-3*3_600_000).toISOString()}};
+  const combined = await browser.newPage();
+  await combined.goto(`http://127.0.0.1:${server.address().port}/#lang=tr&kind=incident&lat=-6&lon=145&zoom=7`);
+  await combined.locator('#lead-list button').first().waitFor();
+  const warnings = await combined.locator('#lead-quality').textContent();
+  assert.match(warnings,/Veri görüntüsü eski/);
+  assert.match(warnings,/Bazı uydu kaynakları başarısız/);
+  await combined.close();
+
+  activeSnapshot = {...snapshot,manifest:{...snapshot.manifest,
+    last_scan_at:new Date(Date.now()-89*60_000).toISOString()}};
+  const aging = await browser.newPage();
+  await aging.clock.install();
+  await aging.goto(`http://127.0.0.1:${server.address().port}/#lang=tr&lat=-6&lon=145&zoom=7`);
+  await aging.locator('#lead-list button').first().waitFor();
+  assert.equal(await aging.locator('#lead-quality').textContent(),'');
+  await aging.clock.fastForward(2*60_000);
+  await aging.locator('#lead-quality').getByText('Veri görüntüsü eski').waitFor();
+  await aging.close();
+
+  activeSnapshot = {...snapshot,events:[{...snapshot.events[1],
+    observed_at:new Date(Date.now()-11*3_600_000-59*60_000).toISOString()}]};
+  const expiring = await browser.newPage();
+  await expiring.clock.install();
+  await expiring.goto(`http://127.0.0.1:${server.address().port}/#lang=tr&lat=-6&lon=145&zoom=7`);
+  await expiring.locator('#lead-list button').first().waitFor();
+  await expiring.clock.fastForward(2*60_000);
+  await expiring.locator('#lead-empty:visible').waitFor();
+  await expiring.close();
 } finally {
   await browser.close();
   await new Promise(resolve => server.close(resolve));
