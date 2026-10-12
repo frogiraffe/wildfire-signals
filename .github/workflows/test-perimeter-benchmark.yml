@@ -1,0 +1,31 @@
+name: Retrospective perimeter and thermal evidence benchmark
+on:
+  pull_request:
+    paths:
+      - 'fire_public/perimeter_benchmark.py'
+      - 'tests/test_perimeter_benchmark.py'
+      - '.github/workflows/test-perimeter-benchmark.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'fire_public/perimeter_benchmark.py'
+      - 'tests/test_perimeter_benchmark.py'
+      - '.github/workflows/test-perimeter-benchmark.yml'
+permissions:
+  contents: read
+jobs:
+  offline-real-schema-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile and benchmark official-schema geometric reference fixtures
+        run: |
+          python -m compileall -q fire_public
+          python -m unittest discover -s tests -p 'test_perimeter_benchmark.py' -v
+          python -m unittest discover -s tests -p 'test_pixel_history.py' -v
+          python -m unittest discover -s tests -p 'test_release_sync.py' -v
+          python -m unittest discover -s tests -p 'test_historical_context.py' -v
