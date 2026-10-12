@@ -28,6 +28,8 @@ Taslak PR'daki kayıt ayrıntısı artık bu dört soruyu birlikte gösterir. İ
 | Yıldırım, insan etkinliği ve müdahale/containment geçmişi | Tutuşma ve sonlanım tahmini için olası girdiler | Kapsam ve güvenilirlik bölgeye göre araştırılacak; eksikse model hedefi daraltılacak. |
 | Tarihsel yangın olayları ve çevreleri | Eğitim, geçmişe dönük sınama ve karşılaştırma | Mevcut 72 saatlik harita saklaması bunun için yeterli değil. |
 
+Kanada için CWFIS'in [`m3_polygons_current` katmanı](https://cwfis.cfs.nrcan.gc.ca/downloads/CWFIS_DataServices_HowtoAccessDailyMaps%26DataLayers.pdf) uydu sıcak noktalarından türetilen **tahmini** çevredir; kurumun bir olaya çizdiği doğrulanmış çevre yerine konmaz. CWFIS [SSS](https://cwfis.cfs.nrcan.gc.ca/en/faq), güncel sezon yangın çevreleri için yerel yangın yönetim kurumlarına başvurulmasını söyler. Kanada olay-çevre eşlemesi il/bölge kaynakları doğrulanmadan açılmaz.
+
 ## Zorunlu derin analiz işlevleri
 
 - **Hava etkisi ve senaryoları:** aynı yangın için rüzgâr yönü/hızı/hamlesi, sıcaklık, bağıl nem ve yağışın zamanla değişimini gerçek gözlemlerle açıklayıp 6/12/24 saatlik alternatif hava senaryolarını karşılaştır. Senaryo çıktısını gerçekleşecek hava tahmini veya nedensel kanıt olarak sunma; girdinin kaynağı, üretim saati ve değiştirilen varsayım görünsün.
