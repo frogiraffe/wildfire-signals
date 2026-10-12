@@ -75,10 +75,9 @@ def holdout_split(
     test_events = {r["event_id"] for r in test}
     leaked = train_events & test_events
     if leaked:
+        before = len(train)
         train = [r for r in train if r["event_id"] not in leaked]
-        excluded["repeated_test_event_removed_from_training"] += sum(
-            r["event_id"] in leaked for r in items if
-            _utc(r["decision_at"]) < threshold)
+        excluded["repeated_test_event_removed_from_training"] += before - len(train)
     return {
         "train": train, "test": test,
         "excluded_by_reason": dict(sorted(excluded.items())),
