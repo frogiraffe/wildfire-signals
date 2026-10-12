@@ -43,7 +43,8 @@ def _readonly(path: Path) -> sqlite3.Connection:
     return db
 
 
-def study_report(db_path: str | Path, *, at: str, years: list[int]) -> tuple[dict, dict]:
+def study_report(db_path: str | Path, *, at: str, years: list[int],
+                 required_batches: dict[int, str] | None = None) -> tuple[dict, dict]:
     """Rebuild deterministic report and source-preserving GeoJSON using local DB only.
 
     Selects the latest saved *batch* per year available by cutoff, rather
@@ -60,15 +61,17 @@ def study_report(db_path: str | Path, *, at: str, years: list[int]) -> tuple[dic
                 "perimeter_sample_metadata"}.issubset(tables):
             raise ValueError("archive does not contain traceable NIFC sampled batches")
         for year in year_ids:
+            batch_filter = (" AND f.batch_id=?" if required_batches is not None else "")
+            lookup = (year, decision, required_batches[year]) if (
+                required_batches is not None) else (year, decision)
             fetch = db.execute("""
                 SELECT f.batch_id, f.captured_at, f.total_service_ids, f.selected_ids,
                        f.ids_sha256,f.subset_only,m.selection_mode,
                        m.selection_seed,m.selected_ids_sha256
                 FROM perimeter_fetches f JOIN perimeter_sample_metadata m
                   ON m.batch_id=f.batch_id
-                WHERE f.fire_year=? AND f.captured_at<=?
-                ORDER BY f.captured_at DESC,f.batch_id DESC LIMIT 1
-            """, (year, decision)).fetchone()
+                WHERE f.fire_year=? AND f.captured_at<=?""" + batch_filter +
+                " ORDER BY f.captured_at DESC,f.batch_id DESC LIMIT 1", lookup).fetchone()
             if fetch is None:
                 samples.append({
                     "fire_year": year, "archive_status": "not_captured_by_decision",
@@ -211,7 +214,9 @@ def run_study(db_path: str | Path, *, years: list[int],
             selection_mode="hash", selection_seed=seed, get_json=get_json,
             clock=lambda: captured)
         results.append(outcome)
-    report, geo = study_report(db_path, at=captured, years=list(year_ids))
+    chosen = {r["fire_year"]: r["batch_id"] for r in results}
+    report, geo = study_report(db_path, at=captured, years=list(year_ids),
+                               required_batches=chosen)
     # Identify the batches from THIS run, even if a user already has other
     # research snapshots from other processes in the same archive.
     expected = {r["fire_year"]:r["batch_id"] for r in results}
