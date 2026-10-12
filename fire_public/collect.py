@@ -20,6 +20,7 @@ MAX_RESPONSE_BYTES = 50 * 1024 * 1024
 MAX_CSV_ROWS = 250_000
 MAX_NIFC_PAGES = 10
 PAGE_SIZE = 1000
+MAX_TIMELINE_INCIDENTS = 2000
 
 
 class SourceDeferred(RuntimeError):
@@ -268,10 +269,36 @@ def build_snapshot(firms: dict[str, list[dict]], incidents: list[dict], *,
                         if failed else 0})
     if errors and len(errors) == len(FIRMS_SOURCES) + 2:
         raise RuntimeError("all public sources failed; preserve last published snapshot")
+    prior_history = ((previous or {}).get("details") or {}).get("incident_history") or {}
+    history = {}
+    for incident in incidents:
+        key = f"{incident['provider']}:{incident['official_id']}"
+        entries = [row for row in prior_history.get(key, [])
+                   if isinstance(row, dict) and row.get("seen_at", "") >= cutoff.isoformat()]
+        status = incident.get("agency_status")
+        source_modified = incident.get("modified_at")
+        if not entries or (entries[-1].get("agency_status") != status
+                           or entries[-1].get("source_modified_at") != source_modified):
+            entries.append({"change": "record_changed" if entries else "first_seen",
+                            "seen_at": at.isoformat(), "source_modified_at": source_modified,
+                            "agency_status": status})
+        history[key] = entries[-5:]
+    for key, entries in prior_history.items():
+        provider = key.split(":", 1)[0]
+        if key not in history and provider in errors:
+            valid = [row for row in entries if isinstance(row, dict)
+                     and row.get("seen_at", "") >= cutoff.isoformat()]
+            if valid:
+                history[key] = valid[-5:]
+    if len(history) > MAX_TIMELINE_INCIDENTS:
+        recent_keys = sorted(history, key=lambda key: (history[key][-1]["seen_at"], key),
+                             reverse=True)[:MAX_TIMELINE_INCIDENTS]
+        history = {key: history[key] for key in recent_keys}
     status = "partial" if errors else "fresh"
     event_list = sorted(events.values(), key=lambda item: item["observed_at"], reverse=True)
     return {"manifest":{"schema_version":1,"generated_at":at.isoformat(),
         "last_scan_at":at.isoformat(),"data_status":status,"candidate_count":len(event_list),
         "incident_count":len(incidents),"truncated":False,"source_errors":sorted(errors)},
         "events":event_list,"incidents":incidents,
-        "matches":provisional_matches(event_list, incidents),"sources":sources,"details":{}}
+        "matches":provisional_matches(event_list, incidents),"sources":sources,
+        "details":{"incident_history":history}}

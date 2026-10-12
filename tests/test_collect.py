@@ -118,6 +118,28 @@ class CollectTests(unittest.TestCase):
         self.assertEqual(gzip.decompress(calls[0][1])[:1],b'{')
         self.assertEqual(calls[1][0], "current")
 
+    def test_agency_record_timeline_tracks_seen_changes_not_fire_growth(self):
+        first = {"kind": "agency_incident", "provider": "cwfis", "official_id": "CA-1",
+                 "name": "Example", "incident_kind": "active_wildland_fire",
+                 "latitude": 52.0, "longitude": -115.0,
+                 "modified_at": "2026-10-12T11:00:00+00:00", "agency_status": "UC",
+                 "last_seen_at": AT.isoformat()}
+        initial = build_snapshot({}, [first], at=AT)
+        key = "cwfis:CA-1"
+        self.assertEqual(initial["details"]["incident_history"][key][0]["change"], "first_seen")
+        unchanged = build_snapshot({}, [{**first, "last_seen_at": AT.replace(hour=13).isoformat()}],
+                                   at=AT.replace(hour=13), previous=initial)
+        self.assertEqual(len(unchanged["details"]["incident_history"][key]), 1)
+        updated = build_snapshot({}, [{**first, "agency_status": "BH",
+            "modified_at": "2026-10-12T13:30:00+00:00"}],
+            at=AT.replace(hour=14), previous=unchanged)
+        history = updated["details"]["incident_history"][key]
+        self.assertEqual([item["change"] for item in history], ["first_seen", "record_changed"])
+        self.assertEqual([item["agency_status"] for item in history], ["UC", "BH"])
+        failed = build_snapshot({}, [], at=AT.replace(hour=15), previous=updated,
+                                errors={"cwfis": "TimeoutError"})
+        self.assertEqual(failed["details"]["incident_history"][key], history)
+
     def test_nearby_agency_point_is_only_provisional(self):
         events = [{"event_id":"e1", "latitude":36.9, "longitude":30.7,
                    "observed_at":AT.isoformat()}]

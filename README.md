@@ -39,6 +39,14 @@ ranking or fire confirmation. Source failures and stale data are shown beside it
 The [observation investigation slice](docs/analysis-product-2026-10-12.md)
 is only an early step toward the [wildfire analysis product objective](docs/wildfire-analysis-product-vision-2026-10-12.md).
 
+Agency incident details can show a short timeline of source record changes seen
+in rolling public snapshots. It is not a fire perimeter or spread history; an
+unavailable source never proves that a fire ended. The separate
+[historical evidence pilot](docs/historical-evidence-pilot-2026-10-12.md)
+stores a small official US/Canada sample with capture times and checksum-verified
+raw responses for later model research. This pilot is local and does not add a
+long-term collector or public forecasts.
+
 NASA FIRMS requires a free MAP_KEY. See <https://firms.modaps.eosdis.nasa.gov/api/area/>.
 NIFC data comes from the [WFIGS current incident layer](https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Incident_Locations_Current/FeatureServer/0).
 Canadian records come from the [CWFIS current active fire layer](https://cwfis.cfs.nrcan.gc.ca/downloads/docs/en/references/cwfif/cwfis-data-placemat.pdf)

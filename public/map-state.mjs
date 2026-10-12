@@ -25,7 +25,13 @@ export const MESSAGES = {
     leadStale:'Snapshot is stale; recent observations may be missing.',
     leadPartial:'Some sources failed; check the source states below.',
     leadSatellitePartial:'Some satellite sources failed; this list may be incomplete.',
-    leadUnknown:'No verified snapshot is available.'},
+    leadUnknown:'No verified snapshot is available.',
+    timelineTitle:'Agency record change history',
+    timelineScope:'Changes seen in recent public snapshots. This is not a history of fire spread.',
+    timelineEmpty:'No record changes are retained for this incident.',
+    timelineFirst:'First seen here',timelineChanged:'Source record changed',
+    timelineSourceDate:'Source update',agencyStatus:'Agency status',
+    statusOC:'Out of control',statusBH:'Being held',statusUC:'Under control'},
   tr: {title:'Yangın Sinyalleri', candidates:'Uydu adayları', incidents:'Kurum olayları',
     timeScope:'Zaman aralığı uydu gözlemlerini süzer. Kurum kayıtları güncel kaynak katmanından gelir; her kaydın kurum güncelleme tarihini kontrol edin.',
     all:'Tüm kaynaklar', time:'Zaman aralığı', source:'Kaynak', status:'Durum',
@@ -52,7 +58,13 @@ export const MESSAGES = {
     leadStale:'Veri görüntüsü eski; yakın zamanlı gözlemler eksik olabilir.',
     leadPartial:'Bazı kaynaklar başarısız; aşağıdaki kaynak durumlarını kontrol edin.',
     leadSatellitePartial:'Bazı uydu kaynakları başarısız; liste eksik olabilir.',
-    leadUnknown:'Doğrulanmış veri görüntüsü yok.'}
+    leadUnknown:'Doğrulanmış veri görüntüsü yok.',
+    timelineTitle:'Kurum kaydı değişim geçmişi',
+    timelineScope:'Yakın tarihli veri görüntülerinde görülen değişiklikler. Yangının yayılma geçmişi değildir.',
+    timelineEmpty:'Bu olay için saklanan kayıt değişimi yok.',
+    timelineFirst:'Burada ilk görüldü',timelineChanged:'Kaynak kaydı değişti',
+    timelineSourceDate:'Kaynak güncellemesi',agencyStatus:'Kurum durumu',
+    statusOC:'Kontrol dışı',statusBH:'Sınırları içinde tutuluyor',statusUC:'Kontrol altında'}
 };
 
 export function parseState(hash = '') {

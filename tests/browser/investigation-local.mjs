@@ -22,7 +22,8 @@ const server = createServer(async (request,response) => {
     return;
   }
   const name = request.url === '/' ? 'index.html' : request.url.slice(1);
-  if (!['index.html','style.css','main.mjs','map-state.mjs','area-analysis.mjs'].includes(name)) {
+  if (!['index.html','style.css','main.mjs','map-state.mjs','area-analysis.mjs',
+    'incident-timeline.mjs'].includes(name)) {
     response.writeHead(404).end(); return;
   }
   response.setHeader('Content-Type',name.endsWith('.css') ? 'text/css'
@@ -98,6 +99,30 @@ try {
   await expiring.clock.fastForward(2*60_000);
   await expiring.locator('#lead-empty:visible').waitFor();
   await expiring.close();
+
+  const firstSeen = new Date(Date.now()-2*3_600_000).toISOString();
+  const changed = new Date(Date.now()-3_600_000).toISOString();
+  activeSnapshot = {...snapshot,events:[],incidents:[{kind:'agency_incident',provider:'cwfis',
+    official_id:'CA-1',name:'Test fire',incident_kind:'active_wildland_fire',
+    latitude:-6,longitude:145,modified_at:changed,agency_status:'BH'}],
+    details:{incident_history:{'cwfis:CA-1':[
+      {change:'first_seen',seen_at:firstSeen,agency_status:'OC',source_modified_at:firstSeen},
+      {change:'record_changed',seen_at:changed,agency_status:'BH',source_modified_at:changed}]}}};
+  const incidentPage = await browser.newPage({viewport:{width:1366,height:768}});
+  await incidentPage.goto(`http://127.0.0.1:${server.address().port}/#lang=tr&kind=incident&lat=-6&lon=145&zoom=7`);
+  await incidentPage.locator('#incident-count').getByText('1').waitFor();
+  const mapBox = await incidentPage.locator('#map canvas.maplibregl-canvas').boundingBox();
+  for (let attempt=0;attempt<30 && !await incidentPage.locator('#detail').isVisible();attempt++) {
+    await incidentPage.mouse.click(mapBox.x+mapBox.width/2,mapBox.y+mapBox.height/2);
+    await incidentPage.waitForTimeout(500);
+  }
+  await incidentPage.locator('#detail:visible').waitFor();
+  const detail = await incidentPage.locator('#detail-content').textContent();
+  assert.match(detail,/Kurum kaydı değişim geçmişi/);
+  assert.match(detail,/Kontrol dışı/);
+  assert.match(detail,/Sınırları içinde tutuluyor/);
+  assert.match(detail,/Yangının yayılma geçmişi değildir/);
+  await incidentPage.close();
 } finally {
   await browser.close();
   await new Promise(resolve => server.close(resolve));

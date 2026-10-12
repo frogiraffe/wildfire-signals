@@ -16,3 +16,8 @@
 .investigation li button strong{font-size:12px}
 .investigation li button span,.investigation li button time{color:#b7cbd0}
 .investigation #lead-empty[hidden]{display:none}
+.detail h3{font-size:14px;margin:20px 0 6px}
+.detail ol{padding-left:20px;font-size:12px;line-height:1.45}
+.detail ol li{padding:6px 0;border-bottom:1px solid #34505d}
+.detail ol time,.detail ol span{display:block}
+.detail ol time{color:#a9c2c8;font-variant-numeric:tabular-nums}

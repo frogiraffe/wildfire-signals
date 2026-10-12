@@ -1,6 +1,7 @@
 import * as maplibregl from 'https://unpkg.com/maplibre-gl@6.13.0/dist/maplibre-gl.mjs';
 import {MESSAGES, parseState, stateHash, visible, effectiveStatus, featureCollection} from './map-state.mjs';
 import {summarizeArea, investigationLeads} from './area-analysis.mjs';
+import {incidentTimeline} from './incident-timeline.mjs';
 
 const state = parseState(location.hash);
 let snapshot = {manifest:{data_status:'unknown'},events:[],incidents:[],matches:[],sources:[],details:{}};
@@ -49,7 +50,8 @@ function showRecord(kind, id) {
     [msg.thermal, item.thermal_pixel_trend?.direction || '—'],
     [msg.detections, item.detection_count ?? '—'], [msg.aggregation,item.aggregation || '—']]
     : [[msg.id, item.official_id], [msg.provider, item.provider], [msg.kind, item.incident_kind],
-      [msg.modified, item.modified_at || item.last_seen_at], [msg.location, `${item.latitude}, ${item.longitude}`]];
+      [msg.modified, item.modified_at || item.last_seen_at], [msg.location, `${item.latitude}, ${item.longitude}`],
+      ...(item.agency_status ? [[msg.agencyStatus, msg[`status${item.agency_status}`] || item.agency_status]] : [])];
   const list = document.createElement('dl');
   for (const [label,value] of rows) {
     const dt = document.createElement('dt'), dd = document.createElement('dd');
@@ -68,6 +70,33 @@ function showRecord(kind, id) {
       list.append(row);
     }
     box.append(list);
+  }
+  if (kind === 'incident') {
+    const heading = document.createElement('h3'); heading.textContent = msg.timelineTitle;
+    const scope = document.createElement('p'); scope.textContent = msg.timelineScope;
+    box.append(heading,scope);
+    const timeline = incidentTimeline(snapshot,item);
+    if (!timeline.length) {
+      const empty = document.createElement('p'); empty.textContent = msg.timelineEmpty;
+      box.append(empty);
+    } else {
+      const list = document.createElement('ol');
+      for (const entry of timeline) {
+        const row = document.createElement('li');
+        const time = document.createElement('time');
+        time.dateTime = entry.seen_at;
+        time.textContent = `${new Date(entry.seen_at).toLocaleString(
+          state.lang === 'tr' ? 'tr-TR' : 'en-US',
+          {timeZone:'UTC',dateStyle:'short',timeStyle:'short'})} UTC`;
+        const description = document.createElement('span');
+        const change = entry.change === 'first_seen' ? msg.timelineFirst : msg.timelineChanged;
+        const agencyStatus = entry.agency_status
+          ? ` · ${msg.agencyStatus}: ${msg[`status${entry.agency_status}`] || entry.agency_status}` : '';
+        description.textContent = `${change}${agencyStatus}`;
+        row.append(time,description); list.append(row);
+      }
+      box.append(list);
+    }
   }
   el('detail').hidden = false;
   el('detail-close').focus();
