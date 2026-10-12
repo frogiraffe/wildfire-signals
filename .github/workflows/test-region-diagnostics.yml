@@ -1,0 +1,29 @@
+name: Global region diagnostics tests
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'fire_public/region_diagnostics.py'
+      - 'tests/test_region_diagnostics.py'
+      - '.github/workflows/test-region-diagnostics.yml'
+  pull_request:
+    paths:
+      - 'fire_public/region_diagnostics.py'
+      - 'tests/test_region_diagnostics.py'
+      - '.github/workflows/test-region-diagnostics.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile and unit-test global diagnostics
+        run: |
+          python -m compileall -q fire_public/region_diagnostics.py
+          python -m unittest discover -s tests -p 'test_region_diagnostics.py' -v
