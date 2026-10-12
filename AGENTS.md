@@ -9,3 +9,11 @@ Bu klasör `frogiraffe/wildfire-signals` herkese açık Git deposudur ve Wildfir
 - Kullanıcı ücretsiz kullanım istiyor. Workers Paid, R2, ücretli eklenti veya büyük GitHub runner açma. Mevcut Free kapılarını ve kota sınırlarını koru.
 - Eski özel geliştirme deposu `../fire-antalya`; etkin v3 çalışma ağacı `../fire-antalya-v300-worktree`. Orada çok sayıda kullanıcıya ait kirli değişiklik ve büyük yerel veri bulunur. Özel kodu, veri tabanını, anahtarları veya geçmişi bu açık depoya kopyalama; silme, sıfırlama veya topluca taşıma yapma. Özel model çalışması istenirse depoların sınırını açıkça belirt.
 - Bu klasörün kaynağı ve dağıtım ayarları için `README.md` ile `.github/workflows/` dosyalarını oku. Güncel durumu yalnızca kontrol edilmiş veriye dayanarak bildir.
+
+## Küresel ürün ve otonom geliştirme politikası
+
+Zorunlu mühendislik çalışma politikası: [docs/ENGINEERING_POLICY.md](docs/ENGINEERING_POLICY.md). Bir göreve başlamadan önce bunu ve güncel ürün vizyonunu oku. US/Kanada/Türkiye ilk doğrulama alanlarıdır; ürünü bu ülkelere kilitleme. Küresel uydu görünürlüğü ile dünya çapında doğrulanmış yangın veya tahmin kapsamını karıştırma. Her bölge için kanıt kapsamını ve eksikliğini açıkça göster.
+
+Kod görevlerinde yalnızca audit/plan üreterek durma: geri alınabilir, yerel ve test edilebilir en büyük anlamlı parçayı implemente et. Deneysel veri/model yazılımını üretime hazır bilimsel sonuçlardan ayrı tut. Eksik kaynak yüzünden hiçbir şey yapılamıyor varsayma; fixture, offline örnek ve küçük gerçek veri deneyi geliştir, sınırlamaları açıkla. Testleri gerçekten çalıştır ve sonucu bildir. İlgili mevcut kodu yeniden yazmadan önce incele.
+
+Yetki: lokal/branch üzerinde geri alınabilir kod, test, analitik pilot, model baseline ve UI geliştirme serbest. Ücret, gizli anahtar, yıkıcı veri işlemi, force push veya kontrolsüz canlı dağıtım izinsiz yapılmaz. Var olan branch'leri incelemeden birleştirme ya da silme; main için PR ve CI kontrolünü tercih et.
