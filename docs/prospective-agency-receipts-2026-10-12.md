@@ -13,3 +13,11 @@ python -m fire_public.receipt_audit /path/to/extracted-artifacts
 ```
 
 Denetim dosya özetini ve boyutunu kontrol eder, dokuz saati aşan alım boşluklarını, başarısız ve ertelenmiş kurum kaynaklarını ayrı ayrı ve tekrar görülen olay kimliklerini sayar. Bir olayın sonraki aktif katmanda görünmemesini **söndü** etiketi saymaz. GitHub artefaktı ve içindeki saatler tek başına bağımsız, değiştirilemez zaman kanıtı değildir. Bu küçük kohortta hava, yakıt, arazi, çevre, müdahale ve doğrulanmış sonuç etiketleri henüz yoktur; eğitim veya olasılık yayımlama kapısı geçilmemiştir.
+
+İndirilen dosyaları, Git dışındaki yerel SQLite araştırma arşivine aktar:
+
+```bash
+python -m fire_public.receipt_history --receipts /path/to/extracted-artifacts --db /path/outside/repo/agency-history.sqlite3
+```
+
+Aktarım her taramanın saatini ve kaynak durumunu ayrı saklar; yalnızca `complete` kurum kaynağındaki olayları yeni gözlem olarak ekler. `failed` veya `deferred` taramasında haritaya taşınan eski olay, yeni kurum teyidi sayılmaz. Aynı dosyaları yeniden aktarmak idempotenttir; aynı tarama saatine ait içerik değişirse aktarım reddedilir. `incident_at(store, provider, source_id, at=...)` belirli karar anında `listed`, `source_unavailable`, `not_listed_in_complete_scan` veya `no_receipt_yet` döndürür. Son iki durumun hiçbiri yangının söndüğünü kanıtlamaz. Bu arşiv GitHub artefaktlarının 90 gün sonra silinmesini önlemez; dışa aktarım ve yedekleme hâlâ gereklidir.

@@ -71,6 +71,9 @@ can create bounded GitHub Actions artifacts from successful collector snapshots
 at four UTC hours per day. It is disabled until `ENABLE_ANALYSIS_ARCHIVE=true` is
 set after integration; 90-day artifacts are temporary research evidence, not a
 durable training archive.
+Downloaded receipts can be imported into a local SQLite research archive with
+`python -m fire_public.receipt_history --receipts DIR --db /path/outside/repo/history.sqlite3`.
+As-of queries keep source outages and missing listings separate from a fire outcome.
 
 NASA FIRMS requires a free MAP_KEY. See <https://firms.modaps.eosdis.nasa.gov/api/area/>.
 NIFC data comes from the [WFIGS current incident layer](https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Incident_Locations_Current/FeatureServer/0).
