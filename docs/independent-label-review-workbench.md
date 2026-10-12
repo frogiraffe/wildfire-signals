@@ -44,6 +44,25 @@ The sampled frame region distribution is a *selection policy within an already s
 
 Queue preparation requires an archived NIFC source batch for every requested year by `--at`. It rejects frame units whose decision time is later than that cutoff and exact duplicate region/coordinate/decision units even when they have different IDs. These checks prevent obvious denominator duplication and future-unit selection; they do not establish that the externally supplied frame is exhaustive or that nearby overlapping units are independent. The original source batch was captured retrospectively and must never be treated as a feature available at the historical decision time.
 
+### Sampling and review attrition audit
+
+Run the offline audit on an unreviewed queue, then rerun with review decisions and the protocol after reconciliation:
+
+```bash
+python -m fire_public.sampling_audit \
+  --queue /private/wildfire/unadjudicated-queue.json \
+  --json /private/wildfire/sampling-audit.json \
+  --html /private/wildfire/sampling-audit.html
+python -m fire_public.sampling_audit \
+  --queue /private/wildfire/unadjudicated-queue.json \
+  --reviews /private/wildfire/reviews.json \
+  --protocol /private/wildfire/protocol.json \
+  --json /private/wildfire/review-attrition.json \
+  --html /private/wildfire/review-attrition.html
+```
+
+The JSON and readable HTML keep **published NIFC source IDs**, **archived NIFC leads**, **enumerated independent frame units**, and **selected frame units** as separate denominators. Per-region selection fractions describe this supplied frame only. With review decisions, the audit validates each adjudicated record's timing/evidence structure using the same rule as cohort export and counts positive, negative, unresolved and excluded cases by source kind and frame region. It rejects contradictory queue count metadata and missing review decisions. It does not compute a fire prevalence, calibration or detection-accuracy estimate: official perimeter sampling, independently supplied frame coverage, and post-review attrition provide no known population inclusion probabilities. Example CI frame units remain synthetic even when the eight NIFC leads come from real source responses.
+
 ## Stage 2 — Explicit human review records
 
 ### Independent reviewer intake

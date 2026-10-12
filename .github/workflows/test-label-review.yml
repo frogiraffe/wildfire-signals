@@ -4,20 +4,24 @@ on:
     paths:
       - 'fire_public/label_review.py'
       - 'fire_public/review_intake.py'
+      - 'fire_public/sampling_audit.py'
       - 'fire_public/labeled_evaluation.py'
       - 'fire_public/perimeter_study.py'
       - 'tests/test_label_review.py'
       - 'tests/test_review_intake.py'
+      - 'tests/test_sampling_audit.py'
       - '.github/workflows/test-label-review.yml'
   push:
     branches: [main]
     paths:
       - 'fire_public/label_review.py'
       - 'fire_public/review_intake.py'
+      - 'fire_public/sampling_audit.py'
       - 'fire_public/labeled_evaluation.py'
       - 'fire_public/perimeter_study.py'
       - 'tests/test_label_review.py'
       - 'tests/test_review_intake.py'
+      - 'tests/test_sampling_audit.py'
       - '.github/workflows/test-label-review.yml'
 permissions:
   contents: read
@@ -35,6 +39,7 @@ jobs:
           python -m compileall -q fire_public
           python -m unittest discover -s tests -p 'test_label_review.py' -v
           python -m unittest discover -s tests -p 'test_review_intake.py' -v
+          python -m unittest discover -s tests -p 'test_sampling_audit.py' -v
           python -m unittest discover -s tests -p 'test_labeled_evaluation.py' -v
           python -m unittest discover -s tests -p 'test_perimeter_study.py' -v
           python -m unittest discover -s tests -p 'test_evaluation_splits.py' -v

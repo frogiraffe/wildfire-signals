@@ -67,6 +67,10 @@ measured prediction skill are created by these integration tests**.
 The offline [blind review intake](docs/independent-label-review-workbench.md#independent-reviewer-intake)
 produces private per-reviewer HTML briefs and vote forms, preserves disagreements,
 and passes only matching independently recorded votes to the same cohort gate.
+Its [sampling and attrition audit](docs/independent-label-review-workbench.md#sampling-and-review-attrition-audit)
+exports private HTML/JSON with separate NIFC source and independent frame denominators,
+review losses and an explicit prohibition on interpreting selected-case counts as
+population fire prevalence.
 
 The [official NIFC sampled-source quality audit](docs/nifc-source-quality-audit.md)
 checks stored agency polygon integrity before producing year-by-year field-missingness,
