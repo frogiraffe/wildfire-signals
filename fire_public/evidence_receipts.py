@@ -156,6 +156,8 @@ def _store_receipts(store: Path) -> tuple[dict, str]:
         if len(blob) != size or hashlib.sha256(blob).hexdigest() != data_sha:
             raise ValueError("source snapshot SHA-256 or byte length mismatch")
         r["receipt_id"] = claimed_id
+        if path.read_bytes() != _canonical(r):
+            raise ValueError("source receipt content integrity mismatch: noncanonical bytes")
         receipts[claimed_id] = r
         signature.update(_canonical(r))
     return receipts, signature.hexdigest()
