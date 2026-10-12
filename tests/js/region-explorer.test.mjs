@@ -46,8 +46,8 @@ test('Tracks distinct cell-hours, independent sensor memberships and chronology'
   const r=analyzeRegion(snapshot(sameCell),region,24,'all',now);
   assert.equal(r.candidateCellHours,2);
   assert.equal(r.distinctCells,1);
-  assert.equal(r.recurringCells,2 > 1 ? 1 : 0);
-  assert.deepEqual(r.bins.map(b=>b.count),[0,0,0,1,0,1]);
+  assert.equal(r.recurringCells,1);
+  assert.deepEqual(r.bins.map(b=>b.count),[0,0,0,0,1,1]);
   assert.equal(r.leads[0].observedHours,2);
   assert.equal(r.leads[0].eventId,'a');
   assert.equal(r.sensors.length,2);
