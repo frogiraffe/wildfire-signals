@@ -6,6 +6,10 @@ on:
       - 'fire_public/perimeter_study.py'
       - 'fire_public/perimeter_quality.py'
       - 'fire_public/official_lead_refresh.py'
+      - 'fire_public/official_context_archive.py'
+      - 'fire_public/review_form.py'
+      - 'tests/test_official_context_archive.py'
+      - 'tests/test_review_form.py'
       - 'tests/test_official_lead_refresh.py'
       - 'tests/test_perimeter_study.py'
       - 'tests/test_perimeter_quality.py'
@@ -19,6 +23,10 @@ on:
       - 'fire_public/perimeter_study.py'
       - 'fire_public/perimeter_quality.py'
       - 'fire_public/official_lead_refresh.py'
+      - 'fire_public/official_context_archive.py'
+      - 'fire_public/review_form.py'
+      - 'tests/test_official_context_archive.py'
+      - 'tests/test_review_form.py'
       - 'tests/test_official_lead_refresh.py'
       - 'tests/test_perimeter_study.py'
       - 'tests/test_perimeter_quality.py'
@@ -45,6 +53,9 @@ jobs:
           python -m unittest discover -s tests -p 'test_workbench_official_perimeters.py' -v
           python -m unittest discover -s tests -p 'test_official_live_probe.py' -v
           python -m unittest discover -s tests -p 'test_official_lead_refresh.py' -v
+          python -m unittest discover -s tests -p 'test_official_context_archive.py' -v
+          python -m unittest discover -s tests -p 'test_review_form.py' -v
+          python -m unittest discover -s tests -p 'test_evidence_receipts.py' -v
 
   real-multi-year-nifc:
     needs: offline-study
@@ -102,12 +113,23 @@ jobs:
             --at "$(python -c "import json;print(json.load(open('/tmp/wildfire-nifc-multiyear/study.json'))['decision_at'])")" \
             --year 2017 --year 2018 --max-controls 2 \
             --output /tmp/wildfire-nifc-multiyear/unadjudicated-queue.json
+          mkdir -p /tmp/wildfire-nifc-multiyear/private-context-store
           python -m fire_public.official_lead_refresh \
             --queue /tmp/wildfire-nifc-multiyear/unadjudicated-queue.json \
             --perimeter-db /tmp/wildfire-nifc-multiyear/nifc-2017-2018.sqlite3 \
             --max-leads 8 \
             --json /tmp/wildfire-nifc-multiyear/official-lead-reconciliation.json \
-            --source-dir /tmp/wildfire-nifc-multiyear/live-source-responses
+            --source-dir /tmp/wildfire-nifc-multiyear/live-source-responses \
+            --context-store /tmp/wildfire-nifc-multiyear/private-context-store
+          python -m fire_public.official_context_archive \
+            --queue /tmp/wildfire-nifc-multiyear/unadjudicated-queue.json \
+            --store /tmp/wildfire-nifc-multiyear/private-context-store \
+            --output /tmp/wildfire-nifc-multiyear/source-context-audit.json
+          python -m fire_public.review_form \
+            --queue /tmp/wildfire-nifc-multiyear/unadjudicated-queue.json \
+            --official-context-store /tmp/wildfire-nifc-multiyear/private-context-store \
+            --reviewer-id ci-fixture-not-a-real-reviewer \
+            --html /tmp/wildfire-nifc-multiyear/offline-reviewed-context.html
           python - <<'PY'
           import json
           from pathlib import Path
@@ -145,6 +167,15 @@ jobs:
           assert refresh['transport']=='direct_pinned_official_https'
           assert refresh['independent_outcomes_verified']==0
           assert refresh['independently_verified_negative_labels']==0
+          context=json.loads((root/'source-context-audit.json').read_text())
+          assert context['official_source_context_consistent']
+          assert context['official_leads']==8
+          assert context['verified_raw_source_pages']==2
+          assert context['valid_binary_outcomes_created']==0
+          assert context['valid_negative_labels_created']==0
+          assert context['transport_claim']=='direct_pinned_official_https'
+          assert len(context['case_findings'])==8
+          assert (root/'offline-reviewed-context.html').is_file()
           import hashlib
           for source in refresh['source_response_evidence']:
             path=root/'live-source-responses'/source['filename']
@@ -166,6 +197,9 @@ jobs:
             /tmp/wildfire-nifc-multiyear/unadjudicated-queue.json
             /tmp/wildfire-nifc-multiyear/synthetic-frame.json
             /tmp/wildfire-nifc-multiyear/official-lead-reconciliation.json
+            /tmp/wildfire-nifc-multiyear/source-context-audit.json
+            /tmp/wildfire-nifc-multiyear/offline-reviewed-context.html
+            /tmp/wildfire-nifc-multiyear/private-context-store/
             /tmp/wildfire-nifc-multiyear/live-source-responses/
             /tmp/wildfire-nifc-multiyear/live.log
           if-no-files-found: warn
