@@ -1,0 +1,30 @@
+name: Official historical perimeters research integration
+on:
+  pull_request:
+    paths:
+      - 'fire_public/official_perimeters.py'
+      - 'tests/test_official_perimeters.py'
+      - '.github/workflows/test-official-perimeters.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'fire_public/official_perimeters.py'
+      - 'tests/test_official_perimeters.py'
+      - '.github/workflows/test-official-perimeters.yml'
+permissions:
+  contents: read
+jobs:
+  historical-geometries:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify official ArcGIS GeoJSON parser and archive replay without external dependencies
+        run: |
+          python -m compileall -q fire_public
+          python -m unittest discover -s tests -p 'test_official_perimeters.py' -v
+          python -m unittest discover -s tests -p 'test_intelligence_workbench.py' -v
+          python -m unittest discover -s tests -p 'test_labeled_evaluation.py' -v
