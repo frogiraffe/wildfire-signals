@@ -1,0 +1,29 @@
+name: Independently labeled research evaluation
+on:
+  pull_request:
+    paths:
+      - 'fire_public/labeled_evaluation.py'
+      - 'tests/test_labeled_evaluation.py'
+      - '.github/workflows/test-labeled-evaluation.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'fire_public/labeled_evaluation.py'
+      - 'tests/test_labeled_evaluation.py'
+      - '.github/workflows/test-labeled-evaluation.yml'
+permissions:
+  contents: read
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m compileall -q fire_public
+      - run: python -m unittest discover -s tests -p 'test_labeled_evaluation.py' -v
+      - run: python -m unittest discover -s tests -p 'test_historical_baseline.py' -v
+      - run: python -m unittest discover -s tests -p 'test_evaluation_splits.py' -v
+      - run: python -m unittest discover -s tests -p 'test_model_evaluation.py' -v
