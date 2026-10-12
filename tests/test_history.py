@@ -1,6 +1,7 @@
 """Historical evidence must be replayable without future information."""
 import tempfile
 import unittest
+import sqlite3
 from pathlib import Path
 
 from fire_public.history import HistoryStore, archive_snapshot
@@ -71,6 +72,63 @@ class HistoryStoreTests(unittest.TestCase):
                          "satellite_candidate")
         self.assertEqual(self.store.as_of("2026-10-02T00:00:00Z", "nifc_wfigs:cell-1"), [])
 
+    def test_agency_observations_share_a_stable_event_identity_without_linking_candidates(self):
+        agency = {"subject_kind": "agency_incident", "provider": "cwfis",
+                  "source_id": "CA-1", "record_type": "incident_status",
+                  "observed_at": "2026-10-01T12:00:00Z",
+                  "captured_at": "2026-10-01T13:00:00Z",
+                  "source_url": "https://example.org/record",
+                  "rights_url": "https://example.org/terms", "payload": {"status": "UC"}}
+        self.store.append(agency)
+        self.store.append({**agency, "captured_at": "2026-10-02T13:00:00Z",
+                           "record_type": "perimeter_observation",
+                           "payload": {"geometry": "example"}})
+        event_id = self.store.fire_event_for("cwfis", "CA-1")
+        self.assertTrue(event_id.startswith("fire_event:"))
+        self.assertEqual(self.store.fire_event_for("cwfis", "CA-1",
+                         at="2026-10-01T12:59:00Z"), None)
+        self.assertEqual(len(self.store.as_of_event("2026-10-02T14:00:00Z", event_id)), 2)
+        self.store.append({**agency, "subject_kind": "satellite_candidate",
+                           "provider": "firms", "source_id": "cell-1",
+                           "record_type": "thermal_observation"})
+        self.assertIsNone(self.store.fire_event_for("firms", "cell-1"))
+        self.assertEqual(len(self.store.as_of_event("2026-10-02T14:00:00Z", event_id)), 2)
+
+    def test_existing_archive_backfills_event_identity_on_open(self):
+        record = {"subject_kind": "agency_incident", "provider": "cwfis",
+                  "source_id": "CA-2", "record_type": "incident_status",
+                  "observed_at": "2026-10-01T12:00:00Z",
+                  "captured_at": "2026-10-01T13:00:00Z",
+                  "source_url": "https://example.org/record",
+                  "rights_url": "https://example.org/terms", "payload": {"status": "UC"}}
+        self.store.append(record)
+        self.store.connection.execute("DROP TABLE fire_event_sources")
+        self.store.connection.execute("DROP TABLE fire_events")
+        self.store.connection.execute("PRAGMA user_version = 0")
+        self.store.connection.commit()
+        reopened = HistoryStore(self.path)
+        self.addCleanup(reopened.close)
+        event_id = reopened.fire_event_for("cwfis", "CA-2")
+        self.assertEqual(len(reopened.as_of_event("2026-10-02T00:00:00Z", event_id)), 1)
+
+    def test_failed_event_link_insert_cannot_leave_orphan_observation(self):
+        record = {"subject_kind": "agency_incident", "provider": "cwfis",
+                  "source_id": "CA-3", "record_type": "incident_status",
+                  "observed_at": "2026-10-01T12:00:00Z",
+                  "captured_at": "2026-10-01T13:00:00Z",
+                  "source_url": "https://example.org/record",
+                  "rights_url": "https://example.org/terms", "payload": {"status": "UC"}}
+        self.store.connection.execute("""
+            CREATE TRIGGER reject_event BEFORE INSERT ON fire_events
+            BEGIN SELECT RAISE(FAIL, 'injected failure'); END
+        """)
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.store.append(record)
+        self.store.connection.execute("DROP TRIGGER reject_event")
+        self.store.connection.commit()
+        self.assertEqual(self.store.as_of("2026-10-02T00:00:00Z", "cwfis:CA-3"), [])
+        self.assertIsNone(self.store.fire_event_for("cwfis", "CA-3"))
+
     def test_rejects_naive_or_inconsistent_times_and_nonfinite_payload(self):
         record = {"subject_kind": "agency_incident", "provider": "cwfis",
                   "source_id": "x", "record_type": "incident_status",
@@ -126,6 +184,7 @@ class HistoryStoreTests(unittest.TestCase):
                                                  "firms": "https://example.org/terms"})
         self.assertEqual(self.store.as_of("2026-10-03T00:00:00Z", "cwfis:CA-1"), [])
         self.assertEqual(self.store.scan_gaps(), [])
+        self.assertIsNone(self.store.fire_event_for("cwfis", "CA-1"))
 
 
 if __name__ == "__main__":

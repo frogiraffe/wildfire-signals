@@ -23,6 +23,11 @@ def _timestamp(value: str) -> str:
     return parsed.astimezone(timezone.utc).isoformat()
 
 
+def _fire_event_id(provider: str, source_id: str) -> str:
+    identity = json.dumps([provider, source_id], separators=(",", ":"))
+    return "fire_event:" + hashlib.sha256(identity.encode()).hexdigest()[:24]
+
+
 class HistoryStore:
     """A small pilot archive. Never place its database in Git or Workers KV."""
 
@@ -49,6 +54,21 @@ class HistoryStore:
             ON observations(event_key, captured_at)
         """)
         self.connection.execute("""
+            CREATE TABLE IF NOT EXISTS fire_events (
+                event_id TEXT PRIMARY KEY,
+                first_captured_at TEXT NOT NULL
+            )
+        """)
+        self.connection.execute("""
+            CREATE TABLE IF NOT EXISTS fire_event_sources (
+                provider TEXT NOT NULL,
+                source_id TEXT NOT NULL,
+                event_id TEXT NOT NULL REFERENCES fire_events(event_id),
+                first_captured_at TEXT NOT NULL,
+                PRIMARY KEY (provider, source_id)
+            )
+        """)
+        self.connection.execute("""
             CREATE TABLE IF NOT EXISTS scan_runs (
                 id TEXT PRIMARY KEY,
                 scan_at TEXT NOT NULL,
@@ -57,6 +77,24 @@ class HistoryStore:
                 manifest_json TEXT NOT NULL
             )
         """)
+        if self.connection.execute("PRAGMA user_version").fetchone()[0] < 1:
+            # Pilot archives created before event identities can be opened directly.
+            old_sources = self.connection.execute("""
+                SELECT provider, source_id, MIN(captured_at) AS first_captured_at
+                FROM observations WHERE subject_kind = 'agency_incident'
+                GROUP BY provider, source_id
+            """).fetchall()
+            for row in old_sources:
+                event_id = _fire_event_id(row["provider"], row["source_id"])
+                self.connection.execute("""
+                    INSERT OR IGNORE INTO fire_events (event_id, first_captured_at) VALUES (?, ?)
+                """, (event_id, row["first_captured_at"]))
+                self.connection.execute("""
+                    INSERT OR IGNORE INTO fire_event_sources
+                    (provider, source_id, event_id, first_captured_at) VALUES (?, ?, ?, ?)
+                """, (row["provider"], row["source_id"], event_id, row["first_captured_at"]))
+            self.connection.execute("PRAGMA user_version = 1")
+            self.connection.commit()
 
     def close(self) -> None:
         self.connection.close()
@@ -83,17 +121,65 @@ class HistoryStore:
         digest = hashlib.sha256(json.dumps(identity, sort_keys=True, ensure_ascii=False,
                                            separators=(",", ":")).encode()).hexdigest()
         event_key = f"{record['provider']}:{record['source_id']}"
-        self.connection.execute("""
-            INSERT OR IGNORE INTO observations
-            (id, subject_kind, event_key, provider, source_id, record_type,
-             observed_at, captured_at, source_url, rights_url, payload_json)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (digest, record["subject_kind"], event_key, record["provider"],
-              record["source_id"], record["record_type"], observed, captured,
-              record["source_url"], record["rights_url"], payload))
+        started_transaction = not self.connection.in_transaction
+        if started_transaction:
+            self.connection.execute("BEGIN")
+        self.connection.execute("SAVEPOINT append_record")
+        try:
+            self.connection.execute("""
+                INSERT OR IGNORE INTO observations
+                (id, subject_kind, event_key, provider, source_id, record_type,
+                 observed_at, captured_at, source_url, rights_url, payload_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (digest, record["subject_kind"], event_key, record["provider"],
+                  record["source_id"], record["record_type"], observed, captured,
+                  record["source_url"], record["rights_url"], payload))
+            if record["subject_kind"] == "agency_incident":
+                # A source-specific event is a stable anchor, not proof that another
+                # provider or a nearby satellite cell describes the same fire.
+                event_id = _fire_event_id(record["provider"], record["source_id"])
+                self.connection.execute("""
+                    INSERT INTO fire_events (event_id, first_captured_at) VALUES (?, ?)
+                    ON CONFLICT(event_id) DO UPDATE SET
+                        first_captured_at = MIN(first_captured_at, excluded.first_captured_at)
+                """, (event_id, captured))
+                self.connection.execute("""
+                    INSERT INTO fire_event_sources
+                    (provider, source_id, event_id, first_captured_at) VALUES (?, ?, ?, ?)
+                    ON CONFLICT(provider, source_id) DO UPDATE SET
+                        first_captured_at = MIN(first_captured_at, excluded.first_captured_at)
+                """, (record["provider"], record["source_id"], event_id, captured))
+        except Exception:
+            self.connection.execute("ROLLBACK TO SAVEPOINT append_record")
+            self.connection.execute("RELEASE SAVEPOINT append_record")
+            if started_transaction:
+                self.connection.rollback()
+            raise
+        self.connection.execute("RELEASE SAVEPOINT append_record")
         if commit:
             self.connection.commit()
         return digest
+
+    def fire_event_for(self, provider: str, source_id: str, *, at: str | None = None) -> str | None:
+        """Find the agency incident's event; candidate observations have no automatic link."""
+        cutoff = _timestamp(at) if at is not None else None
+        row = self.connection.execute("""
+            SELECT event_id FROM fire_event_sources
+            WHERE provider = ? AND source_id = ? AND (? IS NULL OR first_captured_at <= ?)
+        """, (provider, source_id, cutoff, cutoff)).fetchone()
+        return row["event_id"] if row else None
+
+    def as_of_event(self, at: str, event_id: str) -> list[dict]:
+        cutoff = _timestamp(at)
+        rows = self.connection.execute("""
+            SELECT o.* FROM observations o
+            JOIN fire_event_sources s ON s.provider = o.provider AND s.source_id = o.source_id
+            WHERE s.event_id = ? AND s.first_captured_at <= ?
+              AND o.subject_kind = 'agency_incident'
+              AND o.captured_at <= ? AND o.observed_at <= ?
+            ORDER BY o.captured_at, o.observed_at, o.id
+        """, (event_id, cutoff, cutoff, cutoff)).fetchall()
+        return [{**dict(row), "payload": json.loads(row["payload_json"])} for row in rows]
 
     def as_of(self, at: str, event_key: str) -> list[dict]:
         cutoff = _timestamp(at)
@@ -142,11 +228,12 @@ def archive_snapshot(store: HistoryStore, snapshot: dict, *, captured_at: str,
                         "observed_at": candidate["observed_at"], "captured_at": captured,
                         "source_url": source_url, "rights_url": rights_by_provider["firms"],
                         "payload": candidate})
-    before = store.connection.total_changes
+    before = store.connection.execute("SELECT COUNT(*) FROM observations").fetchone()[0]
     try:
         for record in records:
             store.append(record, commit=False)
-        added_observations = store.connection.total_changes - before
+        added_observations = (store.connection.execute("SELECT COUNT(*) FROM observations")
+                              .fetchone()[0] - before)
         raw_manifest = json.dumps(manifest, sort_keys=True, ensure_ascii=False,
                                   separators=(",", ":"), allow_nan=False)
         digest = hashlib.sha256((scan_at + source_url + raw_manifest).encode()).hexdigest()
