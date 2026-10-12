@@ -1,0 +1,34 @@
+name: Independent evidence source receipts and strict cohort gate
+on:
+  pull_request:
+    paths:
+      - 'fire_public/evidence_receipts.py'
+      - 'fire_public/label_review.py'
+      - 'tests/test_evidence_receipts.py'
+      - '.github/workflows/test-evidence-receipts.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'fire_public/evidence_receipts.py'
+      - 'fire_public/label_review.py'
+      - 'tests/test_evidence_receipts.py'
+      - '.github/workflows/test-evidence-receipts.yml'
+permissions:
+  contents: read
+jobs:
+  source-to-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check source byte receipts, reviewer linkage, negative-window scope and strict export
+        run: |
+          python -m compileall -q fire_public
+          python -m unittest discover -s tests -p 'test_evidence_receipts.py' -v
+          python -m unittest discover -s tests -p 'test_label_review.py' -v
+          python -m unittest discover -s tests -p 'test_review_intake.py' -v
+          python -m unittest discover -s tests -p 'test_sampling_audit.py' -v
+          python -m unittest discover -s tests -p 'test_labeled_evaluation.py' -v
