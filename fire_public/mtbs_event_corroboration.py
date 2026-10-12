@@ -19,6 +19,8 @@ from urllib.parse import urlsplit
 from .evidence_receipts import _archive_new
 from .label_review import _utc
 from .mtbs_match_review import load_study, _url, _bounded_file
+from .mtbs_pilot import BASE as MTBS_BASE
+from .official_perimeters import SERVICE as NIFC_SERVICE
 from .mtbs_pair_reconcile import reconcile
 
 MAX_DOCUMENT = 5 * 1024 * 1024
@@ -58,6 +60,8 @@ def _source_meta(meta: dict, case: dict) -> dict:
     rights = meta.get("rights_url")
     if not _url(source_url) or not _url(rights):
         raise ValueError("source and rights must be bounded public HTTPS URLs")
+    if (source_url.startswith(MTBS_BASE) or source_url.startswith(NIFC_SERVICE)):
+        raise ValueError("original NIFC/MTBS source cannot masquerade as third-party corroboration")
     claim = meta.get("relation_claim")
     if claim not in CLAIMS:
         raise ValueError("third-party source must declare same/different/uncertain claim")
@@ -155,8 +159,9 @@ def capture(study_dir: Path, store: Path, metadata: Path, document: Path,
     rid = _digest(_canonical(claim))
     receipt = {**claim, "receipt_id": rid}
     base = store / "event-corroboration"
-    if base.is_symlink():
-        raise ValueError("event corroboration archive cannot be symlinked")
+    if (base.is_symlink() or (base / "blobs").is_symlink() or
+            (base / "receipts").is_symlink()):
+        raise ValueError("event corroboration archive parents cannot be symlinked")
     _archive_new(base / "blobs" / (blob_digest + ".bin"), bytes_data)
     _archive_new(base / "receipts" / (rid + ".json"), _canonical(receipt))
     return receipt
@@ -165,7 +170,8 @@ def capture(study_dir: Path, store: Path, metadata: Path, document: Path,
 def _archive(store: Path, study_sha: str, by_id: dict[str, dict]) -> list[dict]:
     base = store / "event-corroboration"
     receipts = base / "receipts"
-    if (store.is_symlink() or base.is_symlink() or receipts.is_symlink()):
+    if (store.is_symlink() or base.is_symlink() or receipts.is_symlink() or
+            (base / "blobs").is_symlink()):
         raise ValueError("source archive symlink not permitted")
     if not receipts.exists():
         return []
