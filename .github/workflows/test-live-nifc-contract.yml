@@ -65,6 +65,7 @@ jobs:
           name: nifc-real-provider-contract
           path: |
             /tmp/wildfire-nifc-live-evidence/source-contract.json
+            /tmp/wildfire-nifc-live-evidence/perimeter-sample.sqlite3
             /tmp/wildfire-nifc-live-evidence/check.log
           if-no-files-found: warn
           retention-days: 7
