@@ -196,3 +196,44 @@ def archived_weather_context(weather_db: str | Path, incidents: list[dict],
         "archive_row_limit_reached": truncated,
         "event_contexts": results,
     }
+
+
+def archived_release_pixel_evidence(pixel_db: str | Path, *, at: str,
+                                    hours: int = 72,
+                                    region: dict | None = None) -> dict:
+    """Adapt verified raw FIRMS Release SQLite to Workbench evidence format.
+
+    This replaces (does not add to) candidate totals from the separate agency
+    HistoryStore, to avoid double-counting satellite information.
+    """
+    from .pixel_history import coverage_report
+    params = {"at": at, "hours": hours}
+    if region is not None:
+        params.update(latitude=region["latitude"],longitude=region["longitude"],
+                      radius_km=region["radius_km"])
+    report = coverage_report(pixel_db, **params)
+    return {
+        "evidence_kind": "satellite_thermal_candidate",
+        "origin": "verified_release_pixel_sqlite",
+        "window_hours": hours,
+        "available_archive_records": report["unique_raw_pixel_observations"],
+        "observation_unit": "raw_viirs_pixels",
+        "candidate_cell_hours": report["candidate_cell_hours"],
+        "aggregation": report["aggregation"],
+        "distinct_observed_cells": report["distinct_observed_cells"],
+        "cells_observed_in_multiple_hours": report["cells_observed_multiple_hours"],
+        "latest_observed_at": report["latest_observed_at"],
+        "source_memberships": report["pixel_counts_by_sensor"],
+        "scan_count": report["completed_scan_receipts"],
+        "source_state_counts": report["source_state_counts"],
+        "latest_source_state": report["latest_source_state"],
+        "receipt_gaps_over_9_hours": report["receipt_gaps_over_9_hours"],
+        "missing_location_records": 0,
+        "outside_selected_region": report["pixels_outside_region"],
+        "row_limit_reached": (
+            report["scan_query_truncated"] or report["pixel_query_truncated"]),
+        "no_fire_inference": True,
+        "note": "Research Release raw thermal pixels, grouped into 0.05° cell-hours. "
+                "Not independently verified fires; missing scans and source failures "
+                "never establish no fire. No cross-source event identity inference.",
+    }

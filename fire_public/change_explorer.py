@@ -23,6 +23,9 @@ def _same_scope(a: dict, b: dict) -> None:
         raise ValueError("Both as-of reports must have the same geographical scope")
     if a["satellite_evidence"]["window_hours"] != b["satellite_evidence"]["window_hours"]:
         raise ValueError("Both satellite windows must have equal duration")
+    if a["satellite_evidence"].get("origin","agency_history") != b[
+            "satellite_evidence"].get("origin","agency_history"):
+        raise ValueError("Satellite evidence provenance must be the same")
 
 
 def _event_diff(before: dict | None, after: dict | None) -> dict:
@@ -137,14 +140,23 @@ def compare_reports(before: dict, after: dict) -> dict:
         },
         "sources":states,
         "satellite": {
+            "origin":sat_after.get("origin","agency_history"),
+            "observation_unit":sat_after.get("observation_unit","candidate_cell_hours"),
             "earlier":{k:sat_before[k] for k in
                        ("available_archive_records","distinct_observed_cells",
-                        "cells_observed_in_multiple_hours","row_limit_reached")},
+                        "cells_observed_in_multiple_hours","row_limit_reached")} |
+                      ({"candidate_cell_hours":sat_before["candidate_cell_hours"]}
+                       if "candidate_cell_hours" in sat_before else {}),
             "later":{k:sat_after[k] for k in
                      ("available_archive_records","distinct_observed_cells",
-                      "cells_observed_in_multiple_hours","row_limit_reached")},
+                      "cells_observed_in_multiple_hours","row_limit_reached")} |
+                    ({"candidate_cell_hours":sat_after["candidate_cell_hours"]}
+                     if "candidate_cell_hours" in sat_after else {}),
             "window_hours":sat_before["window_hours"],
-            "note":"Two rolling windows of available thermal candidates, NOT burned-area, ignition or spread measurements.",
+            "note":("These counts are RAW VIIRS thermal pixels with separately aggregated "
+                    "0.05-degree candidate cell-hours, NOT burned area, ignition or spread."
+                    if sat_after.get("origin")=="verified_release_pixel_sqlite" else
+                    "Two rolling windows of available thermal candidates, NOT burned-area, ignition or spread measurements."),
         },
         "forecast_receipt_changes":weather_changes,
         "warnings":[
@@ -162,9 +174,11 @@ def compare_reports(before: dict, after: dict) -> dict:
 def compare_archive(path: str | Path, *, earlier_at: str, later_at: str,
                     latitude: float | None = None, longitude: float | None = None,
                     radius_km: float | None = None, limit: int = 200,
-                    satellite_hours: int = 72, weather_db: str | Path | None = None) -> dict:
+                    satellite_hours: int = 72, weather_db: str | Path | None = None,
+                    pixel_db: str | Path | None = None) -> dict:
     kwargs = dict(latitude=latitude,longitude=longitude,radius_km=radius_km,
-                  limit=limit,satellite_hours=satellite_hours,weather_db=weather_db)
+                  limit=limit,satellite_hours=satellite_hours,weather_db=weather_db,
+                  pixel_db=pixel_db)
     before = build_workbench(path,at=earlier_at,**kwargs)
     after = build_workbench(path,at=later_at,**kwargs)
     return compare_reports(before,after)
@@ -225,8 +239,10 @@ th{color:#bed1d8}summary{cursor:pointer;font-weight:650}
     output.append(f"<p>Rolling {esc(result['satellite']['window_hours'])}-hour windows. "
                   f"{esc(result['satellite']['note'])}</p>")
     output.append("<table><thead><tr><th>Measure</th><th>Earlier</th><th>Later</th></tr></thead><tbody>")
-    for k in ("available_archive_records","distinct_observed_cells",
-              "cells_observed_in_multiple_hours"):
+    for k in ("available_archive_records","candidate_cell_hours",
+              "distinct_observed_cells","cells_observed_in_multiple_hours"):
+        if k not in result["satellite"]["earlier"] or k not in result["satellite"]["later"]:
+            continue
         output.append(f"<tr><td>{esc(k.replace('_',' '))}</td>"
                       f"<td>{esc(result['satellite']['earlier'][k])}</td>"
                       f"<td>{esc(result['satellite']['later'][k])}</td></tr>")

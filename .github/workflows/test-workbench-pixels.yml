@@ -1,0 +1,38 @@
+name: Workbench archived FIRMS pixels integration
+on:
+  pull_request:
+    paths:
+      - 'fire_public/pixel_history.py'
+      - 'fire_public/historical_context.py'
+      - 'fire_public/intelligence_workbench.py'
+      - 'fire_public/change_explorer.py'
+      - 'tests/test_workbench_pixel_integration.py'
+      - '.github/workflows/test-workbench-pixels.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'fire_public/pixel_history.py'
+      - 'fire_public/historical_context.py'
+      - 'fire_public/intelligence_workbench.py'
+      - 'fire_public/change_explorer.py'
+      - 'tests/test_workbench_pixel_integration.py'
+      - '.github/workflows/test-workbench-pixels.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify point-in-time agency and raw research pixel archive integration
+        run: |
+          python -m compileall -q fire_public
+          python -m unittest discover -s tests -p 'test_workbench_pixel_integration.py' -v
+          python -m unittest discover -s tests -p 'test_pixel_history.py' -v
+          python -m unittest discover -s tests -p 'test_intelligence_workbench.py' -v
+          python -m unittest discover -s tests -p 'test_change_explorer.py' -v
+          python -m unittest discover -s tests -p 'test_historical_context.py' -v
