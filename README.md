@@ -124,6 +124,17 @@ negative wildfire labels. The existing bounded *real-source* multi-year CI
 now produces both quality reports from its already captured dataset, without
 more government API requests.
 
+The [private third-party incident evidence dossiers](docs/mtbs-independent-event-evidence.md)
+now create a case-by-case *empty* verification checklist from actual NIFC–MTBS
+research candidates. Researchers can privately archive original external incident
+documents by exact SHA-256, bind their declared source identities, original
+incident record IDs and dates to a genuine candidate, and audit two distinct
+reviewers' HTTPS citations, publication/capture chronology and declared upstream
+lineages. The publicly tested real 2018 source pipeline publishes **only the
+empty checklist**, not invented external source documents or reviewer votes.
+Even two structurally complete declared sources are **not authenticated
+independent event identity or nonfire labels**.
+
 The [source-verified MTBS–NIFC research work triage](docs/mtbs-candidate-research-triage.md)
 now produces deterministic coordinator JSON, formula-safe CSV and static HTML
 priorities from the original government source records, region source-ID
