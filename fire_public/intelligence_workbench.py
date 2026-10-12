@@ -18,6 +18,7 @@ from urllib.parse import quote
 
 from .history import _timestamp
 from .region_diagnostics import distance_km
+from .historical_context import archived_candidates, archived_weather_context
 
 MAX_EVENTS = 500
 MAX_EVIDENCE_PER_EVENT = 100
@@ -103,7 +104,8 @@ def _availability(source: dict, source_id: str) -> str:
 
 def build_workbench(path: str | Path, *, at: str, latitude: float | None = None,
                     longitude: float | None = None, radius_km: float | None = None,
-                    limit: int = 200) -> dict:
+                    limit: int = 200, weather_db: str | Path | None = None,
+                    satellite_hours: int = 72) -> dict:
     """Read real archives with explicit decision-time and optional global circle.
 
     All coordinate inputs are required together. Lack of an official observation
@@ -197,8 +199,18 @@ def build_workbench(path: str | Path, *, at: str, latitude: float | None = None,
                 "timeline": timeline,
             })
         rendered = entries[:limit]
+        satellite = archived_candidates(db, at=cutoff, hours=satellite_hours,
+            region={"latitude":latitude,"longitude":longitude,"radius_km":radius_km}
+            if region_given else None)
+        weather = archived_weather_context(weather_db, rendered, at=cutoff) if weather_db is not None else None
+        if weather is not None:
+            by_event = {r["event_id"]:r["forecast"] for r in weather["event_contexts"]}
+            for item in rendered:
+                item["weather_context"] = by_event[item["event_id"]]
         summary = {
-            "schema_version": 1, "decision_at": cutoff,
+            "schema_version": 2, "decision_at": cutoff,
+            "satellite_evidence": satellite,
+            "weather_evidence": weather,
             "scope": {"type": "circle", "latitude": latitude, "longitude": longitude,
                       "radius_km": radius_km} if region_given else {"type": "archive"},
             "agency_identities_in_archive": len(identities),
@@ -266,6 +278,24 @@ th{color:#a9cdd1}summary{cursor:pointer;font-weight:650}
     if report["truncated"]:
         lines.append("<p class='critical'>Results truncated by the requested display limit.</p>")
     lines.append("</section>")
+    satellite = report.get("satellite_evidence")
+    if satellite:
+        lines.append("<section class='panel'><h2>Archived satellite candidates (not confirmed fires)</h2>")
+        lines.append(f"<p>Window: {esc(satellite['window_hours'])} hours. "
+                     f"Archive records: {esc(satellite['available_archive_records'])}; "
+                     f"observed cells: {esc(satellite['distinct_observed_cells'])}; "
+                     f"repeated cells: {esc(satellite['cells_observed_in_multiple_hours'])}.</p>")
+        lines.append(f"<p>Latest observation: {esc(satellite['latest_observed_at'])}; "
+                     f"truncated evidence query: {esc(satellite['row_limit_reached'])}</p>")
+        lines.append(f"<p class='critical'>{esc(satellite['note'])}</p></section>")
+    weather = report.get("weather_evidence")
+    if weather:
+        lines.append("<section class='panel'><h2>Captured NWS forecast evidence</h2>")
+        lines.append(f"<p>{esc(weather['scope'])}. Captured eligible forecast receipts: "
+                     f"{esc(weather['eligible_archive_forecasts'])}.</p>")
+        if weather["archive_row_limit_reached"]:
+            lines.append("<p class='critical'>Weather archive query limit reached; results may be incomplete.</p>")
+        lines.append("</section>")
     lines.append("<section class='panel'><h2>Event evidence and capture timeline</h2>")
     if not report["incidents"]:
         lines.append("<p>No matching incident evidence was available by this decision time.</p>")
@@ -278,6 +308,18 @@ th{color:#a9cdd1}summary{cursor:pointer;font-weight:650}
         if item["location"]:
             lines.append(f"<p>Location: {esc(item['location']['latitude'])}, "
                          f"{esc(item['location']['longitude'])}</p>")
+        if item.get("weather_context") is not None:
+            forecast = item["weather_context"]
+            lines.append(f"<p>Point-in-time NWS forecast: <b>{esc(forecast['status'])}</b></p>")
+            if forecast["status"] == "available_forecast":
+                lines.append(f"<p>NWS grid {esc(forecast['source_id'])} · "
+                             f"received {esc(forecast['captured_at'])} · "
+                             f"point distance {esc(forecast['distance_km'])} km</p>")
+                for name,measurement in forecast["values"].items():
+                    lines.append(f"<p>{esc(name)}: {esc(measurement['value'])} "
+                                 f"{esc(measurement['unit'])} "
+                                 f"({esc(measurement['valid_time'])})</p>")
+                lines.append("<p class='muted'>Forecast context, not on-site weather measurement, wildfire probability, or spread estimate.</p>")
         if item["evidence_truncated"]:
             lines.append("<p class='critical'>Only the 100 most recent evidence entries are displayed.</p>")
         lines.append("<table><thead><tr><th>Captured (UTC)</th><th>Source observation</th>"
@@ -309,6 +351,8 @@ def main() -> None:
     report.add_argument("--longitude",type=float)
     report.add_argument("--radius-km",type=float)
     report.add_argument("--limit",type=int,default=200)
+    report.add_argument("--satellite-hours",type=int,choices=(6,24,72),default=72)
+    report.add_argument("--weather-db",type=Path,help="Optional captured NWS forecast HistoryStore archive")
     report.add_argument("--json",type=Path)
     report.add_argument("--html",type=Path)
     report.add_argument("--overwrite",action="store_true")
@@ -334,7 +378,8 @@ def main() -> None:
         if any(p.exists() for p in targets) and not args.overwrite:
             parser.error("output already exists; specify --overwrite to replace")
         result = build_workbench(args.db,at=args.at,latitude=args.latitude,
-                                 longitude=args.longitude,radius_km=args.radius_km,limit=args.limit)
+                                 longitude=args.longitude,radius_km=args.radius_km,limit=args.limit,
+                                 satellite_hours=args.satellite_hours,weather_db=args.weather_db)
         for path,value in ((args.json,json.dumps(result,indent=2,ensure_ascii=False)+"\n"),
                            (args.html,render_html(result))):
             if path is not None:
