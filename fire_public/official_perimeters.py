@@ -139,6 +139,12 @@ def _create(db: sqlite3.Connection) -> None:
         attributes_json TEXT NOT NULL,
         PRIMARY KEY(batch_id,source_identity)
     );
+    CREATE TABLE IF NOT EXISTS perimeter_sample_metadata (
+        batch_id TEXT PRIMARY KEY REFERENCES perimeter_fetches(batch_id),
+        selection_mode TEXT NOT NULL,
+        selection_seed TEXT NOT NULL,
+        selected_ids_sha256 TEXT NOT NULL
+    );
     CREATE INDEX IF NOT EXISTS perimeter_lookup
         ON perimeter_versions(fire_year,source_identity);
     CREATE INDEX IF NOT EXISTS perimeter_capture
@@ -147,7 +153,8 @@ def _create(db: sqlite3.Connection) -> None:
 
 
 def sync_year(database: str | Path, *, year: int, max_records: int = 100,
-              get_json=_fetch, clock=None) -> dict:
+              get_json=_fetch, clock=None, selection_mode: str = "first",
+              selection_seed: str = "wildfire-signals-v1") -> dict:
     """Retrieve a stable set of official object IDs, fetch full GeoJSON pages.
 
     All pages are checked before any DB rows are committed. An explicit cap
@@ -157,6 +164,11 @@ def sync_year(database: str | Path, *, year: int, max_records: int = 100,
         raise ValueError("historical NIFC IFPH supports requested study years only through 2019")
     if type(max_records) is not int or not 1 <= max_records <= MAX_RECORDS:
         raise ValueError(f"max_records must be 1..{MAX_RECORDS}")
+    if selection_mode not in ("first", "hash"):
+        raise ValueError("selection_mode must be first or hash")
+    if (not isinstance(selection_seed, str) or not 1 <= len(selection_seed) <= 128
+            or not selection_seed.isascii() or not selection_seed.isprintable()):
+        raise ValueError("selection_seed must be 1..128 printable ASCII characters")
     ids_response = get_json({"f": "json", "where": f"FIRE_YEAR_INT = {year}",
                              "returnIdsOnly": "true"})
     ids = ids_response.get("objectIds")
@@ -164,7 +176,15 @@ def sync_year(database: str | Path, *, year: int, max_records: int = 100,
             any(type(x) is not int or x < 0 for x in ids) or len(ids) != len(set(ids))):
         raise ValueError("official ID response malformed, duplicated or too large")
     ids = sorted(ids)
-    wanted = ids[:max_records]
+    if selection_mode == "hash":
+        # Deterministic equal-probability ordering of published source IDs,
+        # never a representative sample of all historical wildfire events.
+        ranked = sorted(ids, key=lambda oid: (
+            hashlib.sha256(f"{selection_seed}:{year}:{oid}".encode()).digest(), oid))
+        wanted = sorted(ranked[:max_records])
+    else:
+        wanted = ids[:max_records]
+    selected_ids_digest = hashlib.sha256(_canonical(wanted).encode()).hexdigest()
     selected = []
     for index in range(0, len(wanted), PAGE_SIZE):
         subset = wanted[index:index + PAGE_SIZE]
@@ -188,7 +208,9 @@ def sync_year(database: str | Path, *, year: int, max_records: int = 100,
     now = clock() if clock is not None else datetime.now(timezone.utc).isoformat()
     captured = _timestamp(now)
     ids_digest = hashlib.sha256(_canonical(ids).encode()).hexdigest()
-    signature = _canonical([captured, year, ids_digest, [(r[0], r[5]) for r in selected]])
+    signature = _canonical([captured, year, ids_digest, selected_ids_digest,
+                            selection_mode, selection_seed,
+                            [(r[0], r[5]) for r in selected]])
     batch_id = hashlib.sha256(signature.encode()).hexdigest()
     db_path = Path(database)
     if db_path.exists() and (db_path.is_symlink() or not db_path.is_file()):
@@ -210,6 +232,10 @@ def sync_year(database: str | Path, *, year: int, max_records: int = 100,
                  feature_sha256,geometry_json,attributes_json)
                 VALUES(?,?,?,?,?,?,?,?,?)""",
                 [(batch_id,*r) for r in selected])
+            db.execute("""INSERT OR IGNORE INTO perimeter_sample_metadata
+                (batch_id,selection_mode,selection_seed,selected_ids_sha256)
+                VALUES(?,?,?,?)""",
+                (batch_id,selection_mode,selection_seed,selected_ids_digest))
             db.commit()
         except Exception:
             db.rollback()
@@ -218,6 +244,10 @@ def sync_year(database: str | Path, *, year: int, max_records: int = 100,
             "official_source":SERVICE,"rights_url":RIGHTS_URL,
             "total_source_ids":len(ids),"fetched_perimeters":len(selected),
             "subset_only":len(selected)<len(ids), "ids_sha256":ids_digest,
+            "selected_ids_sha256":selected_ids_digest,
+            "selection_mode":selection_mode,"selection_seed":selection_seed,
+            "sample_fraction_of_published_ids":(
+                round(len(selected)/len(ids), 6) if ids else None),
             "data_complete_for_fire_occurrence":False,
             "retrospective_not_as_of_features":True,
             "source_scope":"US retrospective interagency perimeter history through 2019"}
@@ -367,6 +397,8 @@ def main() -> None:
     sync.add_argument("--db",required=True,type=Path)
     sync.add_argument("--year",required=True,type=int)
     sync.add_argument("--max-records",type=int,default=100)
+    sync.add_argument("--selection-mode",choices=("first","hash"),default="first")
+    sync.add_argument("--selection-seed",default="wildfire-signals-v1")
     view=actions.add_parser("report",help="Inspect archived perimeter evidence as-of capture time")
     view.add_argument("--db",required=True,type=Path)
     view.add_argument("--at",required=True)
@@ -379,8 +411,9 @@ def main() -> None:
     view.add_argument("--geojson",type=Path)
     args=parser.parse_args()
     if args.action=="sync":
-        print(json.dumps(sync_year(args.db,year=args.year,max_records=args.max_records),
-                         sort_keys=True))
+        print(json.dumps(sync_year(args.db,year=args.year,max_records=args.max_records,
+                         selection_mode=args.selection_mode,
+                         selection_seed=args.selection_seed), sort_keys=True))
         return
     payload=report(args.db,at=args.at,year=args.year,latitude=args.latitude,
                    longitude=args.longitude,radius_km=args.radius_km,limit=args.limit)
