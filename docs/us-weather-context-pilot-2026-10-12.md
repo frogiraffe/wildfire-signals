@@ -16,4 +16,17 @@ NWS, API verisinin ücretsiz ve her amaçla kullanılabilir olduğunu, ancak kö
 
 ## Model verisi için açık kapı
 
-Bu tarayıcı isteği tarihsel eğitim arşivine yazılmaz. NWS kaynak güncelleme zamanı, uygulamanın o tahmini geçmişte **aldığını kanıtlamaz**. Gelecekteki model örneği için tahmin yanıtı ham özet, kaynak sürümü, üretim/güncelleme, alım ve geçerlilik saatleriyle ayrıca saklanmalı ve karar anında erişilebilirliği sınanmalıdır. NWS grid tahmini gerçek hava gözlemi değildir; rüzgâr, yakıt, arazi ve müdahale etkisi birlikte ölçülmeden yayılım veya sonlanım yüzdesi yayımlanmaz.
+Tarayıcı isteği tarihsel eğitim arşivine yazılmaz. Ayrıca geliştirilen **ayrı ve elle çalıştırılan yerel arşiv pilotu**, seçilmiş bir NWS nokta/grid yanıtını ham SHA-256 dosyaları, manifest ve SQLite `weather_forecast_snapshot` kaydı olarak saklar. Kaynak `updateTime` alanını, gerçek alım saatini ve altı değişkenin kendi geçerlilik aralıklarını ayırır. `as_of` sorgusu alım saatinden önce bu tahmini vermez. Hava kaydı otomatik olarak bir `fire_event` ile eşleşmez.
+
+```bash
+python -m fire_public.weather_pilot --latitude 39.7456 --longitude -97.0892 \
+  --db /tmp/wildfire-weather.sqlite3 --raw-dir /tmp/wildfire-weather-raw
+python -m fire_public.weather_pilot --replay \
+  --db /tmp/wildfire-weather-replay.sqlite3 --raw-dir /tmp/wildfire-weather-raw
+```
+
+12 Ekim 2026 01:07 UTC'deki tek noktalı çalışmada NWS kaynağının `updateTime` değeri 11 Ekim 23:36:19 UTC, uygulamanın grid yanıtını aldığı zaman 12 Ekim 01:07:56 UTC idi. O iki an arasındaki karar sorgusu **sıfır** kayıt döndürdü; alımdan sonraki sorgu bir kayıt döndürdü. Nokta ve grid ham JSON yanıtları sırasıyla 3.928 ve 240.206 bayt, sıkıştırılmış toplam 11.464 bayt, SQLite dosyası 73.728 bayttı. Ağsız yeniden kurulum aynı veritabanını bayt düzeyinde üretti. Bunlar tek nokta ölçüsüdür; bölgesel maliyet, kaynak sürekliliği veya model başarısı kanıtı değildir. Ham veri bu açık Git deposuna eklenmedi ve Workers KV'ye yazılmadı.
+
+NWS kaynak güncelleme zamanı, uygulamanın o tahmini güncelleme anında **aldığını kanıtlamaz**. Gelecekteki model örneği için üretim/güncelleme ve alım saatleri, ham özet, birim/geçerlilik aralığı ve kaynağın eksik kaldığı zamanlar birlikte saklanmalıdır. NWS grid tahmini gerçek hava gözlemi değildir; rüzgâr, yakıt, arazi ve müdahale etkisi birlikte ölçülmeden yayılım veya sonlanım yüzdesi yayımlanmaz.
+
+Manifestteki `manifest_sha256`, kazara yapılan alan değişikliklerini yeniden kurulumda yakalar. Bu yerel dosya harici bir zaman damgası veya imza değildir: dosyaları değiştirebilen biri özeti yeniden hesaplayabilir. `captured_at` yerel saat tarafından bildirilen alım zamanıdır; bağımsız alım kanıtı olmadığı için bu pilotun kayıtları bilimsel geriye dönük sınamada doğrulanmış geçmiş tahmin olarak kullanılmamalıdır. Sürekli arşiv aşamasında güvenilir zaman kaydı ve değiştirilemez alım günlüğü ayrıca tasarlanacaktır.

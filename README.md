@@ -51,8 +51,9 @@ For a selected US NIFC incident, the draft preview can show [NWS grid forecast
 context](docs/us-weather-context-pilot-2026-10-12.md): wind, gust, temperature,
 humidity, and forecast precipitation intervals at the recorded point. The browser
 requests this only when an incident is opened. It is not a weather observation at
-the fire, fire-spread prediction, or archived model input; Canada and Türkiye do
-not yet have weather context.
+the fire or a fire-spread prediction. A separate one-point local archive pilot
+checks forecast receipt times and offline replay; the browser requests are not
+archived model inputs. Canada and Türkiye do not yet have weather context.
 
 NASA FIRMS requires a free MAP_KEY. See <https://firms.modaps.eosdis.nasa.gov/api/area/>.
 NIFC data comes from the [WFIGS current incident layer](https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Incident_Locations_Current/FeatureServer/0).

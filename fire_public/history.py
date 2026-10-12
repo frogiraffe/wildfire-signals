@@ -104,7 +104,8 @@ class HistoryStore:
                     "observed_at", "captured_at", "source_url", "rights_url", "payload")
         if any(key not in record for key in required):
             raise ValueError("incomplete observation")
-        if record["subject_kind"] not in {"agency_incident", "satellite_candidate"}:
+        if record["subject_kind"] not in {"agency_incident", "satellite_candidate",
+                                          "weather_forecast_snapshot"}:
             raise ValueError("unsupported subject kind")
         if any(not isinstance(record[key], str) or not record[key].strip()
                for key in ("provider", "source_id", "record_type", "source_url", "rights_url")):
