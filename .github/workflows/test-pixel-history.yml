@@ -1,0 +1,31 @@
+name: Global FIRMS historical archive integration
+on:
+  pull_request:
+    paths:
+      - 'fire_public/pixel_history.py'
+      - 'tests/test_pixel_history.py'
+      - '.github/workflows/test-pixel-history.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'fire_public/pixel_history.py'
+      - 'tests/test_pixel_history.py'
+      - '.github/workflows/test-pixel-history.yml'
+permissions:
+  contents: read
+jobs:
+  offline-release-import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate release importer and existing archive contracts
+        run: |
+          python -m compileall -q fire_public
+          python -m unittest discover -s tests -p 'test_pixel_history.py' -v
+          python -m unittest discover -s tests -p 'test_release_archive.py' -v
+          python -m unittest discover -s tests -p 'test_history.py' -v
+          python -m unittest discover -s tests -p 'test_historical_context.py' -v
