@@ -1,0 +1,29 @@
+name: Historical baseline tests
+on:
+  pull_request:
+    paths:
+      - 'fire_public/historical_baseline.py'
+      - 'tests/test_historical_baseline.py'
+      - '.github/workflows/test-historical-baseline.yml'
+  push:
+    paths:
+      - 'fire_public/historical_baseline.py'
+      - 'tests/test_historical_baseline.py'
+      - '.github/workflows/test-historical-baseline.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile and run baseline and leakage tests
+        run: |
+          python -m compileall -q fire_public/historical_baseline.py
+          python -m unittest discover -s tests -p 'test_historical_baseline.py' -v
+          python -m unittest discover -s tests -p 'test_evaluation_splits.py' -v
+          python -m unittest discover -s tests -p 'test_model_evaluation.py' -v
