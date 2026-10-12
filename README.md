@@ -32,6 +32,16 @@ growth. Failed VIIRS sources are shown with the summary; no-data during an outag
 must not be read as no fire. The map does not retain fire incidents or burned-area
 perimeters after the 72-hour candidate window.
 
+The opt-in daily FIRMS research Releases can now be **verified and imported to a
+persistent local SQLite pixel archive** via
+[`fire_public.pixel_history`](docs/global-firms-pixel-archive.md). It validates
+asset checksums and raw-source record provenance, supports idempotent,
+transactional multi-release imports, and produces geodesic worldwide
+historical source-coverage reports with the map's 0.05°/UTC-hour grouping.
+This is an **offline** research workflow requiring downloaded release assets,
+not continuous free cloud storage or validated wildfire event history.
+Downloaded pixel data and SQLite databases must remain outside this public repo.
+
 The **global region explorer** lets users select an arbitrary point on the map
 or use the current center, choose a 25/50/100/250 km radius and see candidate
 cell-hours, distinct cells, repeated UTC observations, a six-bin time chart,
