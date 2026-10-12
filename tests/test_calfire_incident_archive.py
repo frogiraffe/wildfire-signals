@@ -11,6 +11,7 @@ import json
 import subprocess
 import sys
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 from fire_public.calfire_incident_archive import (
@@ -145,7 +146,7 @@ class OriginalCALFIRECrosswalkTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"pinned CAL FIRE archive"):
             other=self.root/"fake-report"
             # Contract is 2018-only; schema-year protection enforced in module.
-            with unittest.mock.patch("fire_public.calfire_incident_archive.load_study",
+            with patch("fire_public.calfire_incident_archive.load_study",
                  return_value=({"year":2017}, "0"*64, [])):
                 compare(other,self.original,captured_at="2026-10-13T15:00:00Z")
 
