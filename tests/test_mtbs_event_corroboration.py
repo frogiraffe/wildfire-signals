@@ -14,7 +14,7 @@ import sys
 import unittest
 
 from fire_public.mtbs_event_corroboration import (
-    audit, capture, prepare, _source_meta,
+    audit, capture, prepare, render_audit, _source_meta,
 )
 from test_mtbs_pair_reconcile import PairReconciliationTests
 
@@ -153,6 +153,32 @@ class EventCorroborationTests(unittest.TestCase):
         self.assertIn("review_citation_document_archived_after_review",
                       target["unresolved_gates"])
 
+    def test_cloned_document_bytes_under_distinct_urls_are_flagged(self):
+        first=self.one("a")
+        target=self.root/"document-b.bin"
+        target.write_bytes((self.root/"document-a.bin").read_bytes())
+        second_meta=self.root/"source-b.json"
+        second_meta.write_text(json.dumps(self.metadata("b")))
+        capture(self.study,self.store,second_meta,target,captured_at=CAPTURED)
+        result=audit(self.study,self.store,self.fixture.first,self.fixture.second)
+        row=next(r for r in result["cases"] if r["candidate_id"]==self.case["candidate_id"])
+        self.assertIn("identical_archived_document_bytes_under_multiple_sources",
+                      row["unresolved_gates"])
+
+    def test_offline_audit_html_escapes_original_external_source_fields(self):
+        self.one("a",source_record_id='<img src=x onerror=alert("bad")>')
+        self.one("b")
+        result=audit(self.study,self.store,self.fixture.first,self.fixture.second)
+        markup=render_audit(result)
+        self.assertIn("&lt;img src=x onerror=",markup)
+        self.assertNotIn("<img src=x",markup)
+        self.assertIn("script-src &#x27;none&#x27;",markup)
+        self.assertNotIn("<script",markup)
+        self.assertIn("No verified event identities or nonfire labels",markup)
+        forged=dict(result,verified_event_crosswalks=1)
+        with self.assertRaisesRegex(ValueError,"scientifically guarded"):
+            render_audit(forged)
+
     def test_source_date_disagreements_cannot_be_hidden(self):
         self.one("a")
         self.one("b",source_event_at="2018-07-21T00:00:00Z")
@@ -209,15 +235,17 @@ class EventCorroborationTests(unittest.TestCase):
         self.assertNotEqual(subprocess.run(cmd,capture_output=True).returncode,0)
         self.both()
         audit_dest=self.root/"private-audit.json"
+        audit_html=self.root/"private-audit.html"
         cmd=[sys.executable,"-m","fire_public.mtbs_event_corroboration","audit",
              "--study-dir",str(self.study),"--store",str(self.store),
              "--first",str(self.fixture.first),"--second",str(self.fixture.second),
-             "--output",str(audit_dest)]
+             "--output",str(audit_dest),"--html",str(audit_html)]
         proc=subprocess.run(cmd,capture_output=True,text=True)
         self.assertEqual(proc.returncode,0,proc.stderr)
         result=json.loads(audit_dest.read_text())
         self.assertEqual(result["verified_event_crosswalks"],0)
         self.assertEqual(result["private_source_receipts_checked"],2)
+        self.assertIn("Original research source SHA-256",audit_html.read_text())
         self.assertNotEqual(subprocess.run(cmd,capture_output=True).returncode,0)
 
 
