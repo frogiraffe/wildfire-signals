@@ -1,0 +1,27 @@
+name: Statistical evaluation tests
+on:
+  push:
+    paths:
+      - 'fire_public/model_evaluation.py'
+      - 'tests/test_model_evaluation.py'
+      - '.github/workflows/test-model-evaluation.yml'
+  pull_request:
+    paths:
+      - 'fire_public/model_evaluation.py'
+      - 'tests/test_model_evaluation.py'
+      - '.github/workflows/test-model-evaluation.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile and run statistical baseline tests
+        run: |
+          python -m compileall -q fire_public/model_evaluation.py
+          python -m unittest discover -s tests -p 'test_model_evaluation.py' -v
