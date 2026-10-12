@@ -182,6 +182,9 @@ def sync_year(database: str | Path, *, year: int, max_records: int = 100,
         if set(returned) != expected or len(returned) != len(set(returned)):
             raise ValueError("GeoJSON page IDs do not equal requested source IDs")
         selected.extend(parsed)
+    identities = [item[0] for item in selected]
+    if len(identities) != len(set(identities)):
+        raise ValueError("duplicate official GlobalID across different perimeter IDs")
     now = clock() if clock is not None else datetime.now(timezone.utc).isoformat()
     captured = _timestamp(now)
     ids_digest = hashlib.sha256(_canonical(ids).encode()).hexdigest()
