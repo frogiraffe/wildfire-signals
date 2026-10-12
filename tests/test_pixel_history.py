@@ -117,6 +117,38 @@ class HistoricalPixelTests(unittest.TestCase):
         self.assertEqual(report["cells_observed_multiple_hours"],1)
         self.assertIn("0.05 degree",report["aggregation"])
 
+    def test_backfilled_older_scan_restores_true_first_availability(self):
+        record=pixel(FIRMS_SOURCES[0],when=FIRST-timedelta(hours=1))
+        make_release(self.assets/"later",LATER,[record])
+        import_release_assets(self.db,self.assets/"later")
+        decision=(FIRST+timedelta(minutes=10)).isoformat()
+        self.assertEqual(coverage_report(self.db,at=decision,hours=6)[
+            "unique_raw_pixel_observations"],0)
+        make_release(self.assets/"earlier",FIRST,[record])
+        result=import_release_assets(self.db,self.assets/"earlier")
+        self.assertEqual(result["new_unique_pixels"],0)
+        self.assertEqual(result["duplicate_observations"],1)
+        self.assertEqual(coverage_report(self.db,at=decision,hours=6)[
+            "unique_raw_pixel_observations"],1)
+        with sqlite3.connect(self.db) as db:
+            capture,scan=db.execute("""
+                SELECT first_captured_at,first_scan_at FROM pixel_observations
+            """).fetchone()
+        self.assertEqual(capture,(FIRST+timedelta(minutes=5)).isoformat())
+        self.assertEqual(scan,FIRST.isoformat())
+
+    def test_conflicting_normalization_for_same_raw_record_is_rejected(self):
+        original=pixel(FIRMS_SOURCES[0],when=FIRST-timedelta(hours=1))
+        make_release(self.assets/"original",FIRST,[original])
+        import_release_assets(self.db,self.assets/"original")
+        altered=dict(original,frp_mw=99.0)  # same raw digest, contradictory value
+        make_release(self.assets/"conflict",LATER,[altered])
+        with self.assertRaisesRegex(ValueError,"conflicting normalized pixel"):
+            import_release_assets(self.db,self.assets/"conflict")
+        with sqlite3.connect(self.db) as db:
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM pixel_scans").fetchone()[0],1)
+            self.assertEqual(db.execute("SELECT frp_mw FROM pixel_observations").fetchone()[0],8.1)
+
     def test_failed_source_and_empty_scan_not_interpreted_as_fire_absence(self):
         make_release(self.assets,FIRST,[],states={FIRMS_SOURCES[0]:"failed",
                                                   FIRMS_SOURCES[1]:"complete"})

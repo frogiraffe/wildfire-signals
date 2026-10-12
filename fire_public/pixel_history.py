@@ -246,6 +246,27 @@ def import_release_assets(db_path: str | Path, directory: str | Path) -> dict:
                         if cursor.rowcount:
                             rows_inserted += 1
                         else:
+                            # Same raw FIRMS pixel can be found in a later-downloaded
+                            # *earlier* scan. Index earliest actual capture, not import
+                            # order, or as-of replays would hide already-known pixels.
+                            stored = db.execute("""
+                                SELECT raw_sha256,provider,candidate_id,observed_at,
+                                       latitude,longitude,frp_mw,source_url,rights_url,
+                                       first_captured_at
+                                FROM pixel_observations WHERE source_record_id=?
+                            """, (values[0],)).fetchone()
+                            expected = (values[1],values[2],values[3],values[4],
+                                        values[8],values[9],values[10],values[11],
+                                        values[12])
+                            if stored is None or tuple(stored[:9]) != expected:
+                                raise ValueError("conflicting normalized pixel for same source identity")
+                            if values[5] < stored[9]:
+                                db.execute("""
+                                    UPDATE pixel_observations
+                                    SET first_captured_at=?, first_scan_at=?,
+                                        source_received_at=?
+                                    WHERE source_record_id=?
+                                """, (values[5],values[6],values[7],values[0]))
                             duplicates += 1
                 db.execute("""INSERT INTO pixel_scan_assets
                     (scan_at,asset_name,asset_sha256,rows_seen) VALUES (?,?,?,?)""",
