@@ -20,6 +20,7 @@ from .history import _timestamp
 from .region_diagnostics import distance_km
 from .historical_context import (archived_candidates, archived_weather_context,
                                  archived_release_pixel_evidence)
+from .perimeter_context import historical_perimeter_context
 
 MAX_EVENTS = 500
 MAX_EVIDENCE_PER_EVENT = 100
@@ -107,7 +108,9 @@ def build_workbench(path: str | Path, *, at: str, latitude: float | None = None,
                     longitude: float | None = None, radius_km: float | None = None,
                     limit: int = 200, weather_db: str | Path | None = None,
                     satellite_hours: int = 72,
-                    pixel_db: str | Path | None = None) -> dict:
+                    pixel_db: str | Path | None = None,
+                    perimeter_db: str | Path | None = None,
+                    perimeter_year: int | None = None) -> dict:
     """Read real archives with explicit decision-time and optional global circle.
 
     All coordinate inputs are required together. Lack of an official observation
@@ -212,8 +215,14 @@ def build_workbench(path: str | Path, *, at: str, latitude: float | None = None,
             by_event = {r["event_id"]:r["forecast"] for r in weather["event_contexts"]}
             for item in rendered:
                 item["weather_context"] = by_event[item["event_id"]]
+        perimeters = (historical_perimeter_context(
+            perimeter_db,at=cutoff,region=sat_region,year=perimeter_year)
+            if perimeter_db is not None else None)
+        if perimeter_db is None and perimeter_year is not None:
+            raise ValueError("perimeter_year requires an explicitly supplied perimeter_db")
         summary = {
-            "schema_version": 2, "decision_at": cutoff,
+            "schema_version": 3, "decision_at": cutoff,
+            "retrospective_perimeter_evidence":perimeters,
             "satellite_evidence": satellite,
             "weather_evidence": weather,
             "scope": {"type": "circle", "latitude": latitude, "longitude": longitude,
@@ -309,6 +318,26 @@ th{color:#a9cdd1}summary{cursor:pointer;font-weight:650}
         if weather["archive_row_limit_reached"]:
             lines.append("<p class='critical'>Weather archive query limit reached; results may be incomplete.</p>")
         lines.append("</section>")
+    perimeters=report.get("retrospective_perimeter_evidence")
+    if perimeters:
+        lines.append("<section class='panel'><h2>Official retrospective US fire perimeters</h2>")
+        lines.append(f"<p>Archived source identities: {esc(perimeters['archive_known_source_id_count'])}; "
+                     f"matching polygon records: {esc(perimeters['matched_polygons'])}; "
+                     f"shown: {esc(perimeters['preview_count'])}.</p>")
+        lines.append(f"<p>Source year: {esc(perimeters['source_fire_year'])}; "
+                     f"source batches: {esc(perimeters['source_batches'])}; "
+                     f"subset-only source: {esc(perimeters['source_batch_subset_only'])}.</p>")
+        if perimeters["preview_truncated"]:
+            lines.append("<p class='critical'>Perimeter preview truncated; obtain full bounded GeoJSON from the separate offline importer.</p>")
+        for e in perimeters["examples"]:
+            lines.append(f"<details><summary>{esc(e['fire_year'])} — {esc(e['name'])}</summary>"
+                         f"<p>Source ID: {esc(e['source_identity'])}; "
+                         f"provider acres: {esc(e['source_reported_acres'])}; "
+                         f"archive capture: {esc(e['captured_at'])}; "
+                         f"feature hash: {esc(e['feature_sha256'][:16])}</p></details>")
+        for note in perimeters["notes"]:
+            lines.append(f"<p class='muted'>{esc(note)}</p>")
+        lines.append("</section>")
     lines.append("<section class='panel'><h2>Event evidence and capture timeline</h2>")
     if not report["incidents"]:
         lines.append("<p>No matching incident evidence was available by this decision time.</p>")
@@ -367,6 +396,8 @@ def main() -> None:
     report.add_argument("--satellite-hours",type=int,choices=(6,24,72),default=72)
     report.add_argument("--weather-db",type=Path,help="Optional captured NWS forecast HistoryStore archive")
     report.add_argument("--pixel-db",type=Path,help="Optional verified Release raw FIRMS pixel SQLite archive")
+    report.add_argument("--perimeter-db",type=Path,help="Optional retrospective NIFC IFPH polygon archive")
+    report.add_argument("--perimeter-year",type=int,help="Optional retrospective fire year through 2019")
     report.add_argument("--json",type=Path)
     report.add_argument("--html",type=Path)
     report.add_argument("--overwrite",action="store_true")
@@ -381,6 +412,8 @@ def main() -> None:
     compare.add_argument("--satellite-hours",type=int,choices=(6,24,72),default=72)
     compare.add_argument("--weather-db",type=Path)
     compare.add_argument("--pixel-db",type=Path)
+    compare.add_argument("--perimeter-db",type=Path)
+    compare.add_argument("--perimeter-year",type=int)
     compare.add_argument("--json",type=Path)
     compare.add_argument("--html",type=Path)
     compare.add_argument("--overwrite",action="store_true")
@@ -400,7 +433,8 @@ def main() -> None:
         if len({p.resolve() for p in targets}) != len(targets):
             parser.error("JSON and HTML output must be different files")
         sources = [args.db] + ([args.weather_db] if args.weather_db else []) + (
-            [args.pixel_db] if args.pixel_db else [])
+            [args.pixel_db] if args.pixel_db else []) + (
+            [args.perimeter_db] if args.perimeter_db else [])
         if any(p.resolve() == src.resolve() for p in targets for src in sources):
             parser.error("reports cannot overwrite any source SQLite archive")
         if any(p.exists() and not p.is_file() for p in targets):
@@ -411,7 +445,9 @@ def main() -> None:
             result = build_workbench(args.db,at=args.at,latitude=args.latitude,
                                      longitude=args.longitude,radius_km=args.radius_km,
                                      limit=args.limit,satellite_hours=args.satellite_hours,
-                                     weather_db=args.weather_db,pixel_db=args.pixel_db)
+                                     weather_db=args.weather_db,pixel_db=args.pixel_db,
+                                     perimeter_db=args.perimeter_db,
+                                     perimeter_year=args.perimeter_year)
             output_html = render_html(result)
         else:
             from .change_explorer import compare_archive, render_changes_html
@@ -419,7 +455,9 @@ def main() -> None:
                                      later_at=args.later_at,latitude=args.latitude,
                                      longitude=args.longitude,radius_km=args.radius_km,
                                      limit=args.limit,satellite_hours=args.satellite_hours,
-                                     weather_db=args.weather_db,pixel_db=args.pixel_db)
+                                     weather_db=args.weather_db,pixel_db=args.pixel_db,
+                                     perimeter_db=args.perimeter_db,
+                                     perimeter_year=args.perimeter_year)
             output_html = render_changes_html(result)
         for path,value in ((args.json,json.dumps(result,indent=2,ensure_ascii=False)+"\n"),
                            (args.html,output_html)):
