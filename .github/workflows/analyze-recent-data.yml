@@ -1,6 +1,25 @@
 name: Analyze recent public observations
 on:
   workflow_dispatch:
+    inputs:
+      latitude:
+        description: "Circle center latitude (-90..90); optional"
+        required: false
+        type: string
+      longitude:
+        description: "Circle center longitude (-180..180); optional"
+        required: false
+        type: string
+      radius_km:
+        description: "Circle radius in km (default 50)"
+        required: false
+        default: "50"
+        type: string
+      window_hours:
+        description: "Observation window in hours (default 24, max 168)"
+        required: false
+        default: "24"
+        type: string
 permissions:
   contents: read
 jobs:
@@ -12,7 +31,13 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_KV_NAMESPACE_ID: ${{ vars.CLOUDFLARE_KV_NAMESPACE_ID }}
     steps:
+      - uses: actions/checkout@v4
       - name: Analyze retained snapshots without writing data
+        env:
+          INPUT_LATITUDE: ${{ inputs.latitude }}
+          INPUT_LONGITUDE: ${{ inputs.longitude }}
+          INPUT_RADIUS_KM: ${{ inputs.radius_km }}
+          INPUT_WINDOW_HOURS: ${{ inputs.window_hours }}
         run: |
           python - <<'PY'
           from collections import Counter
@@ -138,5 +163,17 @@ jobs:
               'matched_candidate_count': len({row['event_id'] for row in matches}),
               'latest_sources': latest_sources,
           }
+          lat = os.environ.get('INPUT_LATITUDE', '').strip()
+          lon = os.environ.get('INPUT_LONGITUDE', '').strip()
+          if bool(lat) != bool(lon):
+              raise ValueError('Specify both latitude and longitude, or neither')
+          if lat:
+              from fire_public.region_diagnostics import summarize_circle
+              region = summarize_circle(events, latitude=float(lat), longitude=float(lon),
+                  radius_km=float(os.environ['INPUT_RADIUS_KM']), as_of=at,
+                  window_hours=float(os.environ['INPUT_WINDOW_HOURS']))
+              region['source_errors'] = latest['manifest'].get('source_errors', [])
+              region['data_status'] = latest['manifest'].get('data_status')
+              print('REGION_JSON=' + json.dumps(region, sort_keys=True))
           print('ANALYSIS_JSON=' + json.dumps(result, sort_keys=True))
           PY
