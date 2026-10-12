@@ -124,6 +124,15 @@ negative wildfire labels. The existing bounded *real-source* multi-year CI
 now produces both quality reports from its already captured dataset, without
 more government API requests.
 
+The [real USGS/USFS MTBS second-source pilot](docs/mtbs-second-source-pilot.md)
+adds a different official *post-fire large-fire mapping* source. It samples
+2017/2018 year-specific USDA ArcGIS fire-centroid layers with reproducible
+source IDs, preserves exact source bytes and date/fire-type metadata, and
+optionally compares geographic co-location with archived NIFC perimeters.
+MTBS includes prescribed burns, uses size/imagery thresholds and may share
+upstream records with NIFC: **it is not a complete wildfire census, verified
+negative data or proof of independently validated model accuracy**.
+
 The [multi-year official NIFC study](docs/official-multiyear-nifc-study.md)
 now retrieves deterministic, seeded-hash samples of independently published
 historical US perimeter records across several years, preserving the official
