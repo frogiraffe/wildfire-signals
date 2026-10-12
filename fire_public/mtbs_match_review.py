@@ -13,9 +13,11 @@ import json
 import math
 import re
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from .label_review import _text
-from .mtbs_region_study import aligned_capture
+from .mtbs_pilot import _first_by_hash
+from .official_perimeters import _canonical
 from .mtbs_pilot import _parse_feature, BASE, YEARS
 from .official_perimeters import SERVICE, _feature, intersects_circle
 
@@ -241,6 +243,36 @@ def load_study(folder: Path) -> tuple[dict, str, list[dict]]:
                 _sha(raw)!=meta["sha256"]):
             raise ValueError("original source response SHA-256 or byte length mismatch")
         raws[name]=raw
+    # Recompute government-published ROI ObjectID populations and the seeded
+    # deterministic selection, not merely the previously formatted report.
+    populations=report.get("source_population")
+    if not isinstance(populations,dict):
+        raise ValueError("source population metadata required")
+    expected_selected={}
+    for provider in ("nifc","mtbs"):
+        id_name=f"{provider}-{year}-roi-ids.json"
+        if id_name not in raws:
+            raise ValueError("original regional source IDs unavailable")
+        ids=json.loads(raws[id_name]).get("objectIds")
+        if (not isinstance(ids,list) or not ids or len(ids)>50000 or
+                len(set(ids))!=len(ids) or
+                any(type(x) is not int or x<0 for x in ids)):
+            raise ValueError("invalid or censored ROI source ID population")
+        ids=sorted(ids)
+        sample=_first_by_hash(ids,year,
+            min(len(ids),report["record_limit_per_source"]),
+            provider+":"+report["selected_id_seed"])
+        if (populations.get(provider+"_roi_object_ids")!=len(ids) or
+                populations.get(provider+"_roi_ids_sha256")!=
+                     hashlib.sha256(_canonical(ids).encode()).hexdigest() or
+                populations.get(provider+"_selected_ids_sha256")!=
+                     hashlib.sha256(_canonical(sample).encode()).hexdigest()):
+            raise ValueError("declared source ROI population/selection differs from original response")
+        expected_selected[provider]=set(sample)
+    if populations.get("both_selected_records_exhaust_all_source_roi_ids") is not (
+        len(expected_selected["nifc"])==populations["nifc_roi_object_ids"] and
+        len(expected_selected["mtbs"])==populations["mtbs_roi_object_ids"]):
+        raise ValueError("source record sample-completeness flag inconsistent")
     nifc_orig={}
     for name,raw in raws.items():
         if name.startswith(f"nifc-{year}-page-"):
@@ -268,8 +300,10 @@ def load_study(folder: Path) -> tuple[dict, str, list[dict]]:
         if oid in mtbs_orig:
             raise ValueError("repeated original MTBS ObjectID")
         mtbs_orig[oid]=parsed
-    if len(nifc_orig)!=len(nifc) or len(mtbs_orig)!=len(mtbs):
-        raise ValueError("source record population disagrees with raw selected provider responses")
+    if (set(nifc_orig)!=expected_selected["nifc"] or
+            set(mtbs_orig)!=expected_selected["mtbs"] or
+            len(nifc_orig)!=len(nifc) or len(mtbs_orig)!=len(mtbs)):
+        raise ValueError("selected source IDs disagree with original population and feature responses")
     by_nifc={}
     for record in nifc:
         oid=record.get("object_id")
@@ -396,6 +430,16 @@ def render_packet(folder: Path,reviewer_id: str) -> str:
         '<script>'+script+"</script></body></html>\n")
 
 
+def _url(value: object) -> bool:
+    if not isinstance(value,str) or not 0<len(value)<=2048:
+        return False
+    try:
+        result=urlsplit(value)
+        return result.scheme=="https" and bool(result.hostname) and not result.username
+    except ValueError:
+        return False
+
+
 def validate_votes(folder: Path,vote_file: Path) -> dict:
     report,digest,cases=load_study(folder)
     raw=_bounded_file(vote_file,MAX_VOTES_BYTES)
@@ -423,10 +467,9 @@ def validate_votes(folder: Path,vote_file: Path) -> dict:
         reason=_text(item.get("reason"),"review rationale",15)
         url=item.get("evidence_url")
         if choice!="inconclusive":
-            if not (isinstance(url,str) and url.startswith("https://") and
-                    len(url)<=2048):
+            if not _url(url):
                 raise ValueError("source URL required for a speculative event hypothesis")
-        elif url is not None and not (isinstance(url,str) and url.startswith("https://")):
+        elif url is not None and not _url(url):
             raise ValueError("optional research URL must be HTTPS")
         counts[choice]+=1
     if seen!=by_id:
