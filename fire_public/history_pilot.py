@@ -81,12 +81,16 @@ def _fetch_json(url: str) -> tuple[dict, bytes]:
     return json.loads(raw), raw
 
 
+def _received_at() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
 def run_pilot(db_path: Path, raw_dir: Path) -> dict:
     if db_path.exists() or (raw_dir / "pilot-manifest.json").exists():
         raise FileExistsError("pilot output already exists; choose a new path")
-    captured_at = datetime.now(timezone.utc).isoformat()
+    started_at = _received_at()
     raw_dir.mkdir(parents=True, exist_ok=True)
-    report = {"schema_version": 1, "captured_at": captured_at, "samples": [],
+    report = {"schema_version": 2, "started_at": started_at, "samples": [],
               "predictive_evidence": False}
     with_history = HistoryStore(db_path)
     try:
@@ -97,6 +101,7 @@ def run_pilot(db_path: Path, raw_dir: Path) -> dict:
                 "cql_filter": f"national_fire_id='{fire_id}'"})
             url = f"{CWFIS_URL}?{query}"
             source, raw = _fetch_json(url)
+            captured_at = _received_at()
             if int(source.get("numberMatched", 0)) > len(source.get("features", [])):
                 raise ValueError("CWFIS pilot response truncated")
             records = cwfis_records(source, expected_id=fire_id,
@@ -106,7 +111,8 @@ def run_pilot(db_path: Path, raw_dir: Path) -> dict:
             for record in records:
                 with_history.append(record)
             report["samples"].append({"event_key": f"cwfis:{fire_id}",
-                "record_count": len(records), "source_response_sha256": raw_hash,
+                "record_count": len(records), "captured_at": captured_at,
+                "source_response_sha256": raw_hash,
                 "source_url": url, "source_bytes": len(raw),
                 "history_kind": "provider_status_intervals"})
 
@@ -115,13 +121,15 @@ def run_pilot(db_path: Path, raw_dir: Path) -> dict:
             "returnGeometry": "true", "outSR": 4326, "resultRecordCount": 2})
         url = f"{NIFC_PERIMETER_URL}?{query}"
         source, raw = _fetch_json(url)
+        captured_at = _received_at()
         record = nifc_perimeter_record(source, expected_id=NIFC_ID,
                                        captured_at=captured_at, source_url=url)
         raw_hash = hashlib.sha256(raw).hexdigest()
         (raw_dir / f"{raw_hash}.json.gz").write_bytes(gzip.compress(raw, mtime=0))
         with_history.append(record)
         report["samples"].append({"event_key": f"nifc_wfigs:{NIFC_ID}",
-            "record_count": 1, "source_response_sha256": raw_hash,
+            "record_count": 1, "captured_at": captured_at,
+            "source_response_sha256": raw_hash,
             "source_url": url, "source_bytes": len(raw),
             "history_kind": "retrospective_perimeter_only"})
     finally:
@@ -138,7 +146,7 @@ def replay_pilot(raw_dir: Path, db_path: Path) -> dict:
     if db_path.exists():
         raise FileExistsError("replay database already exists")
     manifest = json.loads((raw_dir / "pilot-manifest.json").read_text(encoding="utf-8"))
-    if manifest.get("schema_version", 1) != 1:
+    if manifest.get("schema_version", 1) not in (1, 2):
         raise ValueError("unsupported pilot manifest")
     prepared = []
     for sample in manifest["samples"]:
@@ -150,13 +158,18 @@ def replay_pilot(raw_dir: Path, db_path: Path) -> dict:
             raise ValueError("source checksum mismatch")
         source = json.loads(raw)
         key = sample["event_key"]
+        # Version 1 stored only a run-start estimate; preserve its original
+        # replay result, but use per-response receipt times for new manifests.
+        captured_at = (sample["captured_at"] if manifest.get("schema_version") == 2
+                       else manifest["captured_at"])
         if key.startswith("cwfis:"):
             records = cwfis_records(source, expected_id=key.removeprefix("cwfis:"),
-                                    captured_at=manifest["captured_at"],
+                                    captured_at=captured_at,
                                     source_url=sample["source_url"])
         elif key == f"nifc_wfigs:{NIFC_ID}":
             records = [nifc_perimeter_record(source, expected_id=NIFC_ID,
-                captured_at=manifest["captured_at"], source_url=sample["source_url"])]
+                captured_at=captured_at,
+                source_url=sample["source_url"])]
         else:
             raise ValueError("unsupported pilot event")
         if len(records) != sample["record_count"]:

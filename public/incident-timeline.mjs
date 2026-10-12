@@ -1,4 +1,4 @@
-// Source-record changes observed in rolling public snapshots, not fire progression.
+// Source-record changes observed by this map, not fire progression.
 export function incidentTimeline(snapshot, incident) {
   if (!incident?.provider || !incident?.official_id) return [];
   const rows = snapshot?.details?.incident_history?.[`${incident.provider}:${incident.official_id}`];

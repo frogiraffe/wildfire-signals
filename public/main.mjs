@@ -92,7 +92,9 @@ function showRecord(kind, id) {
         const change = entry.change === 'first_seen' ? msg.timelineFirst : msg.timelineChanged;
         const agencyStatus = entry.agency_status
           ? ` · ${msg.agencyStatus}: ${msg[`status${entry.agency_status}`] || entry.agency_status}` : '';
-        description.textContent = `${change}${agencyStatus}`;
+        const sourceDate = entry.source_modified_at
+          ? ` · ${msg.timelineSourceDate}: ${entry.source_modified_at}` : '';
+        description.textContent = `${change}${agencyStatus}${sourceDate}`;
         row.append(time,description); list.append(row);
       }
       box.append(list);

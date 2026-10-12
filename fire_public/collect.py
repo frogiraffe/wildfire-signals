@@ -274,22 +274,29 @@ def build_snapshot(firms: dict[str, list[dict]], incidents: list[dict], *,
     for incident in incidents:
         key = f"{incident['provider']}:{incident['official_id']}"
         entries = [row for row in prior_history.get(key, [])
-                   if isinstance(row, dict) and row.get("seen_at", "") >= cutoff.isoformat()]
+                   if isinstance(row, dict)]
         status = incident.get("agency_status")
         source_modified = incident.get("modified_at")
+        # A collection timestamp is not a source change. Keep only stable source fields.
+        source_fields = {field: incident.get(field) for field in
+                         ("name", "incident_kind", "latitude", "longitude",
+                          "modified_at", "agency_status")}
+        fingerprint = hashlib.sha256(json.dumps(source_fields, sort_keys=True,
+            separators=(",", ":")).encode()).hexdigest()
         if not entries or (entries[-1].get("agency_status") != status
-                           or entries[-1].get("source_modified_at") != source_modified):
+                           or entries[-1].get("source_modified_at") != source_modified
+                           or (entries[-1].get("source_fingerprint") is not None
+                               and entries[-1]["source_fingerprint"] != fingerprint)):
             entries.append({"change": "record_changed" if entries else "first_seen",
                             "seen_at": at.isoformat(), "source_modified_at": source_modified,
-                            "agency_status": status})
-        history[key] = entries[-5:]
+                            "agency_status": status, "source_fingerprint": fingerprint})
+        history[key] = [entries[0], *entries[-4:]] if len(entries) > 5 else entries
     for key, entries in prior_history.items():
         provider = key.split(":", 1)[0]
         if key not in history and provider in errors:
-            valid = [row for row in entries if isinstance(row, dict)
-                     and row.get("seen_at", "") >= cutoff.isoformat()]
+            valid = [row for row in entries if isinstance(row, dict)]
             if valid:
-                history[key] = valid[-5:]
+                history[key] = [valid[0], *valid[-4:]] if len(valid) > 5 else valid
     if len(history) > MAX_TIMELINE_INCIDENTS:
         recent_keys = sorted(history, key=lambda key: (history[key][-1]["seen_at"], key),
                              reverse=True)[:MAX_TIMELINE_INCIDENTS]

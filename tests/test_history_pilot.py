@@ -5,6 +5,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from fire_public.history_pilot import cwfis_records, nifc_perimeter_record, replay_pilot, run_pilot
 from fire_public.history import HistoryStore
@@ -108,6 +109,38 @@ class HistoryPilotTests(unittest.TestCase):
             with self.assertRaises(FileExistsError):
                 run_pilot(db, Path(temp) / "raw")
             self.assertEqual(db.read_bytes(), b"user data")
+
+    def test_pilot_capture_times_follow_each_completed_response(self):
+        from fire_public.history_pilot import CWFIS_IDS, NIFC_ID
+        times = [f"2026-10-12T15:0{i}:00+00:00" for i in range(4)]
+        def fake_fetch(url):
+            if "typeName=" in url:
+                fire_id = next(fire_id for fire_id in CWFIS_IDS if fire_id in url)
+                source = {"type": "FeatureCollection", "numberMatched": 1,
+                    "features": [{"properties": {"national_fire_id": fire_id,
+                    "stage_of_control_status": "UC", "record_start": "2019-05-02T00:00:00Z"}}]}
+            else:
+                source = {"features": [{"attributes": {"poly_IRWINID": NIFC_ID,
+                    "poly_PolygonDateTime": 1668840740000, "attr_IncidentTypeCategory": "WF"},
+                    "geometry": {"rings": [[[0, 0], [1, 0], [0, 1], [0, 0]]]}}]}
+            return source, json.dumps(source).encode()
+        with tempfile.TemporaryDirectory() as temp, \
+                patch("fire_public.history_pilot._received_at", side_effect=times), \
+                patch("fire_public.history_pilot._fetch_json", side_effect=fake_fetch):
+            raw_dir = Path(temp) / "raw"
+            db = Path(temp) / "pilot.sqlite3"
+            manifest = run_pilot(db, raw_dir)
+            self.assertEqual(manifest["started_at"], times[0])
+            self.assertEqual([row["captured_at"] for row in manifest["samples"]], times[1:])
+            store = HistoryStore(db)
+            self.addCleanup(store.close)
+            self.assertEqual(store.as_of(times[0], f"cwfis:{CWFIS_IDS[0]}"), [])
+            self.assertEqual(len(store.as_of(times[1], f"cwfis:{CWFIS_IDS[0]}")), 1)
+            replay_db = Path(temp) / "replay.sqlite3"
+            replay_pilot(raw_dir, replay_db)
+            replay_store = HistoryStore(replay_db)
+            self.addCleanup(replay_store.close)
+            self.assertEqual(replay_store.as_of(times[0], f"cwfis:{CWFIS_IDS[0]}"), [])
 
 
 if __name__ == "__main__":

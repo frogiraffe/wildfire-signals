@@ -1,6 +1,6 @@
 import unittest
 import gzip
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 from fire_public.collect import (build_snapshot, fetch_firms, parse_cwfis_page, parse_firms_csv,
@@ -139,6 +139,43 @@ class CollectTests(unittest.TestCase):
         failed = build_snapshot({}, [], at=AT.replace(hour=15), previous=updated,
                                 errors={"cwfis": "TimeoutError"})
         self.assertEqual(failed["details"]["incident_history"][key], history)
+
+    def test_unchanged_incident_does_not_gain_false_first_seen_after_72_hours(self):
+        incident = {"kind": "agency_incident", "provider": "cwfis", "official_id": "CA-1",
+                    "name": "Example", "incident_kind": "active_wildland_fire",
+                    "latitude": 52.0, "longitude": -115.0,
+                    "modified_at": "2026-10-12T11:00:00+00:00", "agency_status": "UC",
+                    "last_seen_at": AT.isoformat()}
+        first = build_snapshot({}, [incident], at=AT)
+        key = "cwfis:CA-1"
+        later_at = AT + timedelta(hours=73)
+        failed = build_snapshot({}, [], at=later_at, previous=first,
+                                errors={"cwfis": "TimeoutError"})
+        self.assertEqual(failed["details"]["incident_history"][key][0]["seen_at"],
+                         AT.isoformat())
+        recovered = build_snapshot({}, [{**incident, "last_seen_at": later_at.isoformat()}],
+                                   at=later_at + timedelta(hours=1), previous=failed)
+        entries = recovered["details"]["incident_history"][key]
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0]["seen_at"], AT.isoformat())
+
+    def test_incident_timeline_tracks_source_location_change_and_keeps_first_entry(self):
+        incident = {"kind": "agency_incident", "provider": "nifc_wfigs", "official_id": "US-1",
+                    "name": "Example", "incident_kind": "WF", "latitude": 40.0,
+                    "longitude": -110.0, "modified_at": AT.isoformat(),
+                    "last_seen_at": AT.isoformat()}
+        snapshot = build_snapshot({}, [incident], at=AT)
+        key = "nifc_wfigs:US-1"
+        for index in range(1, 7):
+            at = AT + timedelta(hours=index)
+            changed = {**incident, "longitude": -110.0 + index / 100,
+                       "last_seen_at": at.isoformat()}
+            snapshot = build_snapshot({}, [changed], at=at, previous=snapshot)
+        entries = snapshot["details"]["incident_history"][key]
+        self.assertEqual(len(entries), 5)
+        self.assertEqual(entries[0]["change"], "first_seen")
+        self.assertEqual(entries[0]["seen_at"], AT.isoformat())
+        self.assertEqual(entries[-1]["seen_at"], (AT + timedelta(hours=6)).isoformat())
 
     def test_nearby_agency_point_is_only_provisional(self):
         events = [{"event_id":"e1", "latitude":36.9, "longitude":30.7,
