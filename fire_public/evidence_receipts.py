@@ -61,7 +61,9 @@ def _source(meta: dict) -> dict:
         end = _utc(_text(meta.get("coverage_end_at"), "coverage end"))
         if start >= end:
             raise ValueError("source coverage interval must have positive duration")
-        data.update(coverage_start_at=start.isoformat(),
+        data.update(coverage_region_id=_text(
+                        meta.get("coverage_region_id"), "coverage region"),
+                    coverage_start_at=start.isoformat(),
                     coverage_end_at=end.isoformat(),
                     coverage_attestation="declared_scope_not_externally_verified")
     elif "coverage_start_at" in meta or "coverage_end_at" in meta:
@@ -217,9 +219,14 @@ def audit_receipts(queue_path: Path, reviews_path: Path, store: Path) -> dict:
                 failures.append({"case_id":case["case_id"], "role":role,
                                  "reason":"source_not_captured_by_review_time"})
                 continue
+            if role == "label" and r["source_record_id"] != entry.get("label_source_id"):
+                failures.append({"case_id":case["case_id"], "role":role,
+                                 "reason":"source_record_does_not_match_reviewed_label"})
+                continue
             if role == "coverage":
                 cov = entry["negative_coverage"]
-                if (r["source_kind"].casefold() in ("nifc_historical_perimeter", "firms")
+                if (r["coverage_region_id"] != entry.get("region_id")
+                        or r["source_kind"].casefold() in ("nifc_historical_perimeter", "firms")
                         or _utc(r["coverage_start_at"]) > _utc(cov["start_at"])
                         or _utc(r["coverage_end_at"]) < _utc(cov["end_at"])):
                     failures.append({"case_id":case["case_id"], "role":role,
