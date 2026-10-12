@@ -36,8 +36,8 @@ The preview also lists up to five recently observed cells in the visible map are
 Cells observed in multiple UTC hours appear first; selecting one centers the map
 and opens its underlying observation. This is an investigation queue, not a danger
 ranking or fire confirmation. Source failures and stale data are shown beside it.
-The [analysis product plan](docs/analysis-product-2026-10-12.md) describes the
-next evidence and validation gates.
+The [observation investigation slice](docs/analysis-product-2026-10-12.md)
+is only an early step toward the [wildfire analysis product objective](docs/wildfire-analysis-product-vision-2026-10-12.md).
 
 NASA FIRMS requires a free MAP_KEY. See <https://firms.modaps.eosdis.nasa.gov/api/area/>.
 NIFC data comes from the [WFIGS current incident layer](https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Incident_Locations_Current/FeatureServer/0).

@@ -1,6 +1,6 @@
-# Analysis product: from observations to investigation
+# Observation investigation slice (superseded product scope)
 
-Status: working plan, updated 12 October 2026. The public map is a preview, not a fire validation or forecasting product. The current collector has no weather source; the meteorological stage below is planned research and a bounded pilot, not shipped functionality.
+Status: implemented first slice. The broader product objective is now defined in [Wildfire Signals: yangın analizi ürün hedefi](wildfire-analysis-product-vision-2026-10-12.md). This document remains the scope and evidence record for the observation queue; its delivery sequence below is superseded by that product plan. The current collector has no weather source.
 
 ## User job
 
