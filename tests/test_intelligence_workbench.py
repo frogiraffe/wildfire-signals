@@ -170,6 +170,13 @@ class HistoricalIntelligenceWorkbenchTests(unittest.TestCase):
         self.assertNotEqual(second.returncode,0)
         self.assertIn("output already exists",second.stderr)
         self.assertEqual(json.loads(first.stdout)["shown"],1)
+        destructive = subprocess.run([
+            sys.executable,"-m","fire_public.intelligence_workbench","report",
+            "--db",str(self.db),"--at","2026-10-12T18:00:00Z",
+            "--json",str(self.db),"--overwrite"],capture_output=True,text=True)
+        self.assertNotEqual(destructive.returncode,0)
+        self.assertIn("cannot overwrite",destructive.stderr)
+        self.assertEqual(build_workbench(self.db,at="2026-10-12T18:00:00Z")["shown"],1)
 
 
 if __name__=="__main__":
