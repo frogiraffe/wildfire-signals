@@ -1,0 +1,32 @@
+name: MTBS NIFC Two-Reviewer Hypothesis Reconciliation
+on:
+  pull_request:
+    paths:
+      - 'fire_public/mtbs_pair_reconcile.py'
+      - 'fire_public/mtbs_match_review.py'
+      - 'tests/test_mtbs_pair_reconcile.py'
+      - '.github/workflows/test-mtbs-pair-reconcile.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'fire_public/mtbs_pair_reconcile.py'
+      - 'fire_public/mtbs_match_review.py'
+      - 'tests/test_mtbs_pair_reconcile.py'
+      - '.github/workflows/test-mtbs-pair-reconcile.yml'
+permissions:
+  contents: read
+jobs:
+  source-bound-reconciliation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate review disagreements, identical citations, chronology, tampering and outputs
+        run: |
+          python -m compileall -q fire_public
+          python -m unittest discover -s tests -p 'test_mtbs_pair_reconcile.py' -v
+          python -m unittest discover -s tests -p 'test_mtbs_match_review.py' -v
+          python -m unittest discover -s tests -p 'test_mtbs_region_study.py' -v

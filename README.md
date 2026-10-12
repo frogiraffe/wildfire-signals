@@ -124,6 +124,14 @@ negative wildfire labels. The existing bounded *real-source* multi-year CI
 now produces both quality reports from its already captured dataset, without
 more government API requests.
 
+The [two-reviewer MTBS–NIFC reconciliation](docs/mtbs-nifc-pair-reconciliation.md)
+compares distinct private human reviews of the same source-verified candidate
+set, reports agreeing *hypotheses*, conflicting opinions, inconclusive cases,
+repeated source citations, and many-to-many geographic candidates. Read-only
+local HTML and JSON retain each reviewer decision and original review-file
+SHA-256 without promoting **any** pair into an independently verified fire
+event, nonfire control, or forecasting metric.
+
 The [offline MTBS–NIFC pair review workbench](docs/mtbs-nifc-pair-review.md)
 lets researchers review authentic same-region source proximity pairs with
 original government names, MTBS fire type, polygon/centroid SVG previews,
