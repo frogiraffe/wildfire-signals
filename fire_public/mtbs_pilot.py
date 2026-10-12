@@ -42,17 +42,17 @@ def _json_http(url: str, params: dict) -> tuple[dict,bytes]:
     # USDA's public DNS intermittently returns EAI_AGAIN from GitHub runners.
     # Retry *only* that explicitly temporary resolver fault, not HTTP errors,
     # schema changes, bad permissions, permanent DNS failures or rate limits.
-    # Three bounded calls at most; all attempts preserve the same exact URL.
-    for attempt in range(3):
+    # Five bounded calls at most with a 45-second total sleep budget; all attempts preserve the same exact URL.
+    for attempt in range(5):
         try:
             with build_opener(_RejectRedirects()).open(request,timeout=45) as response:
                 raw=response.read(MAX_BYTES+1)
             break
         except URLError as error:
-            if (attempt==2 or not isinstance(error.reason,gaierror)
+            if (attempt==4 or not isinstance(error.reason,gaierror)
                     or error.reason.errno!=EAI_AGAIN):
                 raise
-            sleep(2*(attempt+1))
+            sleep(3*(2**attempt))
     if not raw or len(raw)>MAX_BYTES:
         raise ValueError("MTBS source response empty or over 4 MiB budget")
     result=json.loads(raw)
