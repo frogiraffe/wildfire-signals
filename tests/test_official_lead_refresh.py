@@ -174,7 +174,7 @@ class LeadLiveAuditTests(unittest.TestCase):
                          clock=lambda:"2016-01-01T00:00:00Z")
 
     def test_budget_and_untrusted_metadata_gate(self):
-        with self.assertRaisesRegex(ValueError,"max_leads"):
+        with self.assertRaisesRegex(ValueError,"exceeds explicit review budget"):
             verify_leads(self.queue_path,self.db,max_leads=3,
                          fetch_page=self.provider.page,fetch_metadata=metadata)
         def forged_metadata():
