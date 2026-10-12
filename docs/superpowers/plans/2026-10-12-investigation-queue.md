@@ -21,7 +21,10 @@
 - [x] Add a local fixture browser check in `tests/browser/investigation-local.mjs` for navigation, mobile fit, and stale/partial state.
 - [x] Add the lead section and translated copy in `public/index.html` and `public/map-state.mjs`.
 - [x] Render the leads and connect each control to map centering and the existing record detail in `public/main.mjs`; style within `public/style.css`.
-- [ ] Run the final JS, Python, local browser, and preview browser checks; report separately what could not be verified live.
+- [x] Run the final JS (27/27), Python (40/40), and local desktop/mobile browser checks.
+- [x] Deploy branch preview for code commit `2eee732` and run desktop/mobile browser check: [GitHub run 38186968423](https://github.com/frogiraffe/wildfire-signals/actions/runs/38186968423).
+
+Code review found and the implementation fixed agency-only filter handling, combined stale/source warnings, and time rollover in an open tab. The preview test can pass when no recent lead exists; the local fixture test exercises lead selection and navigation. Mobile performance with a full global viewport remains to be measured before a stable release claim.
 
 ## Review focus
 
