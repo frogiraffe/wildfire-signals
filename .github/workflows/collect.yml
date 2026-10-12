@@ -10,7 +10,7 @@ on:
         required: true
         default: true
 permissions:
-  contents: read
+  contents: write
 concurrency:
   group: public-collection
   cancel-in-progress: false
@@ -39,12 +39,25 @@ jobs:
           ENABLE_ANALYSIS_ARCHIVE: ${{ vars.ENABLE_ANALYSIS_ARCHIVE }}
           ANALYSIS_RECEIPT_DIR: ${{ runner.temp }}/wildfire-analysis-receipts
         run: python -m fire_public.cli
-      - name: Upload bounded agency research receipt
+      - name: Upload bounded analysis receipts
         if: vars.ENABLE_ANALYSIS_ARCHIVE == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: agency-receipt-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/wildfire-analysis-receipts/*.json.gz
+          name: analysis-receipt-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/wildfire-analysis-receipts/*.json.gz
+            ${{ runner.temp }}/wildfire-analysis-receipts/*.jsonl.gz
           if-no-files-found: ignore
           retention-days: 90
           compression-level: 0
+      - name: Publish immutable daily research evidence
+        if: vars.ENABLE_ANALYSIS_ARCHIVE == 'true'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          ANALYSIS_RECEIPT_DIR: ${{ runner.temp }}/wildfire-analysis-receipts
+        run: |
+          if compgen -G "$ANALYSIS_RECEIPT_DIR/firms-pixel-scan-*.json.gz" > /dev/null; then
+            python -m fire_public.release_archive
+          else
+            echo 'No research receipt in this collection window'
+          fi

@@ -60,6 +60,20 @@ class CollectTests(unittest.TestCase):
         self.assertEqual(events[0]["kind"], "satellite_candidate")
         self.assertFalse(events[0]["source_agreement"])
 
+    def test_same_cell_from_two_sensors_records_source_agreement_without_confirmation(self):
+        first = parse_firms_csv(CSV, "VIIRS_NOAA20_NRT", at=AT)
+        second = parse_firms_csv(CSV, "VIIRS_NOAA21_NRT", at=AT)
+        snapshot = build_snapshot({"VIIRS_NOAA20_NRT":first,
+                                   "VIIRS_NOAA21_NRT":second},[],at=AT)
+        event = snapshot['events'][0]
+        self.assertEqual(event['sources'],['VIIRS_NOAA20_NRT','VIIRS_NOAA21_NRT'])
+        self.assertTrue(event['source_agreement'])
+        self.assertEqual(event['kind'],'satellite_candidate')
+        self.assertEqual(event['detection_count'],4)
+        repeated = build_snapshot({"VIIRS_NOAA20_NRT":first},[],at=AT,
+                                  previous=snapshot,errors={"VIIRS_NOAA21_NRT":"timeout"})
+        self.assertEqual(repeated['events'][0]['detection_count'],4)
+
     def test_nifc_filters_prescribed_fire_and_retains_official_identity(self):
         page = {"features": [{"attributes": {"IrwinID": "n1", "IncidentTypeCategory": "WF",
                   "IncidentName": "Alpha"}, "geometry": {"x": 30, "y": 36}},
