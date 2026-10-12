@@ -35,4 +35,16 @@ jobs:
       - name: Contract tests
         run: python -m unittest discover -s tests -v
       - name: Collect and publish
+        env:
+          ENABLE_ANALYSIS_ARCHIVE: ${{ vars.ENABLE_ANALYSIS_ARCHIVE }}
+          ANALYSIS_RECEIPT_DIR: ${{ runner.temp }}/wildfire-analysis-receipts
         run: python -m fire_public.cli
+      - name: Upload bounded agency research receipt
+        if: vars.ENABLE_ANALYSIS_ARCHIVE == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: agency-receipt-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/wildfire-analysis-receipts/*.json.gz
+          if-no-files-found: ignore
+          retention-days: 90
+          compression-level: 0

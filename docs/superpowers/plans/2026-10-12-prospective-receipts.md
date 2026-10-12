@@ -1,0 +1,7 @@
+# Bounded prospective agency receipts
+
+**Goal:** Start a small, explicitly temporary record of agency incident states actually seen by the hosted collector, so later 6/12/24-hour status and missingness studies have true receipt times. No weather or fire prediction is inferred from these receipts.
+
+**Architecture:** Reuse the already built snapshot in the existing GitHub Actions collector. At most four successful scans per UTC day (hours 00/06/12/18) can emit a gzip receipt containing only NIFC/CWFIS incident records, source states, scan and capture times, run ID/SHA, and immutable snapshot pointer. The receipt is capped at 128 KiB, 2,000 incidents, and uploaded as one Actions artifact with 90-day retention. No new provider call or KV write. Failed/over-budget archive generation cannot undo a public snapshot; it reports a skip. Workflow activation is gated by `ENABLE_ANALYSIS_ARCHIVE=true` after branch integration and a Free-budget check.
+
+**Acceptance:** Tests prove no satellite candidate or match is copied, failed agency sources are marked, bad times/duplicates/over-budget input fail closed, artifacts are deterministic for fixed input, and collection remains successful if the optional receipt fails. An offline audit verifies file hashes, reports missing scan intervals and source failures, and never labels a disappearing event as extinguished. A 90-day artifact window is a pilot, not a durable historical training archive; prospective outcome labels and weather alignment remain separate work.

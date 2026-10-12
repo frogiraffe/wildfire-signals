@@ -5,16 +5,41 @@ import io
 import os
 import re
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from urllib.parse import quote, urlsplit
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 from .collect import FIRMS_SOURCES, build_snapshot, fetch_cwfis, fetch_firms, fetch_nifc
 from .publish import publish
+from .analysis_receipt import build_receipt, write_receipt
 
 API = "https://api.cloudflare.com/client/v4"
 HEX_ID = re.compile(r"^[a-f0-9]{32}$")
 MIN_SCAN_INTERVAL = timedelta(minutes=55)
+
+
+def maybe_write_analysis_receipt(snapshot, snapshot_key, *, scan_at, captured_at=None):
+    if os.environ.get("ENABLE_ANALYSIS_ARCHIVE") != "true":
+        return {"status": "disabled"}
+    if os.environ.get("FORCE_COLLECTION") == "true":
+        return {"status": "manual_repair_excluded"}
+    if scan_at.hour not in {0, 6, 12, 18} or scan_at.minute < 17:
+        return {"status": "outside_pilot_window"}
+    try:
+        payload, report = build_receipt(snapshot,
+            captured_at=(captured_at or datetime.now(timezone.utc)).isoformat(),
+            run_id=os.environ.get("GITHUB_RUN_ID", ""),
+            head_sha=os.environ.get("GITHUB_SHA", ""),
+            snapshot_key=snapshot_key)
+        write_receipt(Path(os.environ["ANALYSIS_RECEIPT_DIR"]),payload,
+                      scan_at=report["scan_at"])
+        return {"status": "written", **report}
+    except Exception as exc:
+        # Publication already succeeded; an optional research receipt cannot
+        # invalidate or roll back the public map. The skip stays in the run log.
+        return {"status": "skipped", "reason": str(exc) if isinstance(exc, ValueError)
+                else type(exc).__name__}
 
 
 def api_request(url, token, *, data=None):
@@ -175,8 +200,10 @@ def main():
                     f"{quote(key, safe='')}{suffix}", token, data=value)
 
     key = publish(snapshot, put, previous_key=pointer["key"] if pointer else None)
+    receipt = maybe_write_analysis_receipt(snapshot,key,scan_at=at)
     print(json.dumps({"key":key, "events":len(snapshot["events"]),
-                      "incidents":len(snapshot["incidents"]), "errors":sorted(errors)}))
+                      "incidents":len(snapshot["incidents"]), "errors":sorted(errors),
+                      "analysis_receipt":receipt}))
 
 
 if __name__ == "__main__":

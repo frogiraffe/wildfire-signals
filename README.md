@@ -66,6 +66,11 @@ that do not cover the decision time. It does not create training labels or a mod
 The local [CWFIS status time-series pilot](docs/agency-status-series-2026-10-12.md)
 reports source-status intervals, gaps, corrections, and an under-control to
 out-of-control reversal without turning those records into extinguishment labels.
+An opt-in [prospective agency receipt pilot](docs/prospective-agency-receipts-2026-10-12.md)
+can create bounded GitHub Actions artifacts from successful collector snapshots
+at four UTC hours per day. It is disabled until `ENABLE_ANALYSIS_ARCHIVE=true` is
+set after integration; 90-day artifacts are temporary research evidence, not a
+durable training archive.
 
 NASA FIRMS requires a free MAP_KEY. See <https://firms.modaps.eosdis.nasa.gov/api/area/>.
 NIFC data comes from the [WFIGS current incident layer](https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Incident_Locations_Current/FeatureServer/0).
