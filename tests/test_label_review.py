@@ -12,11 +12,12 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from fire_public.official_perimeters import sync_year
-from fire_public.label_review import prepare_queue, finalize_queue
+from fire_public.label_review import prepare_queue, finalize_queue, main
 from fire_public.labeled_evaluation import run_evaluation
 
 VERIFIED="2026-10-12T13:00:00Z"
@@ -189,6 +190,50 @@ class LabelReviewTests(unittest.TestCase):
         self.assertNotIn("label",self.queue["cases"][2])
         self.assertIn("independent",self.queue["warnings"][-1])
 
+    def test_duplicate_spacetime_unit_with_distinct_ids_rejected(self):
+        frame=copy.deepcopy(FRAME)
+        frame["units"].append(dict(frame["units"][0], sampling_unit_id="duplicate-id"))
+        self.frame.write_text(json.dumps(frame),encoding="utf-8")
+        with self.assertRaisesRegex(ValueError,"duplicate region-time location"):
+            prepare_queue(self.db,at=AT,years=[2017,2018],frame_path=self.frame)
+
+    def test_future_sampling_unit_not_in_as_of_queue(self):
+        frame=copy.deepcopy(FRAME)
+        frame["units"][0]["decision_at"]="2026-10-14T00:00:00Z"
+        self.frame.write_text(json.dumps(frame),encoding="utf-8")
+        with self.assertRaisesRegex(ValueError,"after queue as-of"):
+            prepare_queue(self.db,at=AT,years=[2017,2018],frame_path=self.frame)
+
+    def test_partial_export_file_removed_if_writer_fails(self):
+        cohort=self.root/"partial-cohort.jsonl"
+        manifest=self.root/"partial-manifest.json"
+        summary=self.root/"partial-summary.json"
+        original=Path.open
+        class FailingWriter:
+            def __init__(self, handle):
+                self.handle=handle
+            def __enter__(self):
+                self.handle.__enter__()
+                return self
+            def __exit__(self,*args):
+                return self.handle.__exit__(*args)
+            def write(self, content):
+                self.handle.write("incomplete")
+                raise OSError("simulated disk failure")
+        def failing_open(path,*args,**kwargs):
+            handle=original(path,*args,**kwargs)
+            return FailingWriter(handle) if path==manifest and args[0]=="x" else handle
+        argv=["label_review","finalize","--queue",str(self.queue_file),
+              "--reviews",str(self.reviews_file),"--protocol",str(self.protocol_file),
+              "--cohort",str(cohort),"--manifest",str(manifest),
+              "--summary",str(summary)]
+        with patch.object(sys,"argv",argv), patch.object(Path,"open",failing_open):
+            with self.assertRaisesRegex(OSError,"simulated disk failure"):
+                main()
+        self.assertFalse(cohort.exists())
+        self.assertFalse(manifest.exists())
+        self.assertFalse(summary.exists())
+
     def test_queue_and_frame_change_detection(self):
         self.reviews["queue_sha256"]="0"*64
         with self.assertRaisesRegex(ValueError,"immutable source queue digest"):
@@ -231,6 +276,24 @@ class LabelReviewTests(unittest.TestCase):
         control=next(x for x in self.decisions if x["label"]==0)
         control["negative_coverage"]["coverage_reviewer_id"]=control["primary"]["reviewer_id"]
         with self.assertRaisesRegex(ValueError,"third reviewer"):
+            self.finalize()
+
+    def test_final_label_verification_postdates_negative_coverage_review(self):
+        control=next(x for x in self.decisions if x["label"]==0)
+        control["negative_coverage"]["reviewed_at"]="2026-10-12T14:00:00Z"
+        with self.assertRaisesRegex(ValueError,"after third coverage review"):
+            self.finalize()
+
+    def test_incomplete_requested_official_year_rejected(self):
+        with self.assertRaisesRegex(ValueError,"requested official years"):
+            prepare_queue(self.db,at=AT,years=[2016,2017],frame_path=self.frame)
+
+    def test_official_lead_cannot_claim_different_event_year(self):
+        self.decisions[0]["independently_verified_event_at"]="2025-07-05T04:00:00Z"
+        self.decisions[0]["decision_at"]="2025-07-05T00:00:00Z"
+        self.decisions[0]["feature_cutoff_at"]="2025-07-05T00:00:00Z"
+        self.decisions[0]["label_available_at"]="2025-08-01T00:00:00Z"
+        with self.assertRaisesRegex(ValueError,"official perimeter fire year"):
             self.finalize()
 
     def test_predated_2017_positive_not_valid_label_for_2017_future_day(self):

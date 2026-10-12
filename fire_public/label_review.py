@@ -83,17 +83,27 @@ def prepare_queue(perimeter_db: Path, *, at: str, years: list[int],
     if not isinstance(slots, list) or not 1 <= len(slots) <= MAX_CASES:
         raise ValueError("frame needs 1..400 independently enumerated region-time units")
     by_id = {}
+    seen_locations = set()
+    queue_as_of = _utc(at)
     for slot in slots:
         if not isinstance(slot, dict):
             raise ValueError("frame unit must be an object")
         identity = _text(slot.get("sampling_unit_id"), "frame sampling identity")
         _text(slot.get("region_id"), "frame region")
         _valid_point(slot)
-        _utc(slot.get("decision_at"))
+        decision_at = _utc(slot.get("decision_at"))
+        if decision_at > queue_as_of:
+            raise ValueError("frame decision after queue as-of cutoff")
+        location = (slot["region_id"], slot["latitude"], slot["longitude"], decision_at)
+        if location in seen_locations:
+            raise ValueError("duplicate region-time location in independent frame")
+        seen_locations.add(location)
         if identity in by_id:
             raise ValueError("duplicate independent frame sampling identity")
         by_id[identity] = slot
     original, geo = study_report(perimeter_db, at=at, years=years)
+    if not original["complete_requested_year_sample"]:
+        raise ValueError("all requested official years need archived source batches by queue as-of")
     cases = []
     for feature in geo["features"]:
         props = feature["properties"]
@@ -232,6 +242,9 @@ def _review_decision(case: dict, entry: dict, horizon: float) -> dict | None:
                                 "independent occurrence timestamp"))
         if not timestamp <= occurrence <= window_end:
             raise ValueError("verified positive event outside declared prediction horizon")
+        if (case["kind"] == "retrospective_official_perimeter_review"
+                and occurrence.year != case["source_fire_year"]):
+            raise ValueError("official perimeter fire year conflicts with verified event")
     else:
         coverage = entry.get("negative_coverage")
         if not isinstance(coverage, dict):
@@ -247,8 +260,11 @@ def _review_decision(case: dict, entry: dict, horizon: float) -> dict | None:
         reviewer = _text(coverage.get("coverage_reviewer_id"), "negative coverage reviewer")
         if reviewer in (primary_id, secondary_id):
             raise ValueError("negative coverage requires independent third reviewer")
-        if _utc(_text(coverage.get("reviewed_at"), "coverage audit timestamp")) < max(end, available):
+        coverage_reviewed = _utc(_text(coverage.get("reviewed_at"), "coverage audit timestamp"))
+        if coverage_reviewed < max(end, available):
             raise ValueError("negative coverage must be verified after observation window")
+        if verified < coverage_reviewed:
+            raise ValueError("final label verification must occur after third coverage review")
     source = _text(entry.get("label_source"), "independent source")
     if source.casefold() in ("firms", "satellite_candidate", "thermal_detection"):
         raise ValueError("FIRMS thermal detections are not independent wildfire ground truth")
@@ -354,8 +370,15 @@ def finalize_queue(queue_path: Path, reviews_path: Path,
 
 def _write_new(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("x", encoding="utf-8") as writer:
-        writer.write(content)
+    created = False
+    try:
+        with path.open("x", encoding="utf-8") as writer:
+            created = True
+            writer.write(content)
+    except Exception:
+        if created:
+            path.unlink(missing_ok=True)
+        raise
 
 
 def main() -> None:

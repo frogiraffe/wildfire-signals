@@ -42,6 +42,8 @@ The CLI verifies underlying sampled source IDs and feature SHA-256 before use, s
 
 The sampled frame region distribution is a *selection policy within an already selected source frame*: balancing does **not** make the results representative of all regions or correct for incomplete source reporting. Frame records are never prefilled as zero. Official perimeter candidates carry no event day or fire outcome label and require independent date/scope adjudication. Maximum queue: 400 leads (up to 240 official and 200 frame candidates).
 
+Queue preparation requires an archived NIFC source batch for every requested year by `--at`. It rejects frame units whose decision time is later than that cutoff and exact duplicate region/coordinate/decision units even when they have different IDs. These checks prevent obvious denominator duplication and future-unit selection; they do not establish that the externally supplied frame is exhaustive or that nearby overlapping units are independent. The original source batch was captured retrospectively and must never be treated as a feature available at the historical decision time.
+
 ## Stage 2 — Explicit human review records
 
 Create a private `reviews.json`:
@@ -98,6 +100,7 @@ This is a **structural example**, not evidence that this example window was fire
 Every adjudicated case requires two *different reviewers* who independently vote on the **same** label, cite external evidence, and have review times after source availability. For **negative labels only**, an additional third independent reviewer must explicitly confirm that the incident registry's geographic/time coverage spans the entire declared target prediction horizon, with a source URL and later audit timestamp. No retrospective perimeter can be relabeled zero.
 
 A verified **positive** also requires `independently_verified_event_at` within the declared `decision_at...decision_at+horizon_hours` window; NIFC's `FIRE_YEAR_INT` alone is insufficient. Labels need a source availability time later than the prediction decision, and feature cutoff cannot exceed the decision time.
+For a NIFC lead, the independently verified event must also fall in the perimeter's recorded fire year; this is a consistency check, not proof that the perimeter and event are the same fire. Negative final verification must postdate the third coverage review. Investigators must separately check event identity, spatial unit extent, registry inclusion, reporting lag, and whether retrospective evidence could have existed at the decision time.
 
 ## Stage 3 — Human-attested protocol and guarded export
 
