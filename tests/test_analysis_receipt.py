@@ -104,7 +104,8 @@ class AnalysisReceiptTests(unittest.TestCase):
                 "last_scan_at":later_at,"data_status":"fresh","source_errors":[]},
                 "incidents":[{**row,"modified_at":later_at,"last_seen_at":later_at}
                              for row in SNAPSHOT["incidents"]],
-                "sources":[{**row,"status":"complete"} for row in SNAPSHOT["sources"]]}
+                "sources":[{**row,"status":"deferred" if row["key"] == "nifc_wfigs"
+                            else "complete"} for row in SNAPSHOT["sources"]]}
             second,_ = build_receipt(later,captured_at="2026-10-13T00:01:00Z",
                 run_id="124",head_sha="a" * 40,snapshot_key="snapshot:" + "c" * 64)
             write_receipt(directory,second,scan_at=later_at)
@@ -112,6 +113,7 @@ class AnalysisReceiptTests(unittest.TestCase):
             self.assertEqual(report["receipt_count"],2)
             self.assertEqual(report["gaps_over_9_hours"][0]["hours"],12)
             self.assertEqual(report["source_failure_counts"],{"cwfis":1})
+            self.assertEqual(report["source_deferred_counts"],{"nifc_wfigs":1})
             self.assertEqual(report["identities_seen_in_2_or_more_receipts"],2)
             self.assertEqual(report["extinguishment_labels_created"],0)
             first_path.write_bytes(first + b"corrupt")

@@ -62,6 +62,7 @@ def audit_receipts(directory: Path) -> dict:
             for first,second in zip(scan_times,scan_times[1:])
             if (second - first).total_seconds() > 9 * 3600]
     failures = Counter()
+    deferrals = Counter()
     identities = Counter()
     for receipt in receipts:
         states = receipt.get("source_states")
@@ -72,8 +73,10 @@ def audit_receipts(directory: Path) -> dict:
             if not isinstance(state, dict) or state.get("status") not in {
                     "complete", "failed", "deferred"}:
                 raise ValueError("agency source state invalid")
-            if state["status"] != "complete":
+            if state["status"] == "failed":
                 failures[source] += 1
+            elif state["status"] == "deferred":
+                deferrals[source] += 1
         for incident in receipt["incidents"]:
             provider, source_id = incident.get("provider"), incident.get("official_id")
             if provider not in {"nifc_wfigs", "cwfis"} or not isinstance(source_id, str):
@@ -84,6 +87,7 @@ def audit_receipts(directory: Path) -> dict:
             "last_scan_at": scan_times[-1].isoformat(),
             "gaps_over_9_hours": gaps,
             "source_failure_counts": dict(sorted(failures.items())),
+            "source_deferred_counts": dict(sorted(deferrals.items())),
             "distinct_agency_identities": len(identities),
             "identities_seen_in_2_or_more_receipts": sum(count >= 2 for count in identities.values()),
             "extinguishment_labels_created": 0,

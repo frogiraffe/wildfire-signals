@@ -12,4 +12,4 @@ Kod, UTC 00/06/12/18 saatlerinin :17–:59 aralığında en fazla bir normal ba�
 python -m fire_public.receipt_audit /path/to/extracted-artifacts
 ```
 
-Denetim dosya özetini ve boyutunu kontrol eder, dokuz saati aşan alım boşluklarını, başarısız kurum kaynaklarını ve tekrar görülen olay kimliklerini sayar. Bir olayın sonraki aktif katmanda görünmemesini **söndü** etiketi saymaz. GitHub artefaktı ve içindeki saatler tek başına bağımsız, değiştirilemez zaman kanıtı değildir. Bu küçük kohortta hava, yakıt, arazi, çevre, müdahale ve doğrulanmış sonuç etiketleri henüz yoktur; eğitim veya olasılık yayımlama kapısı geçilmemiştir.
+Denetim dosya özetini ve boyutunu kontrol eder, dokuz saati aşan alım boşluklarını, başarısız ve ertelenmiş kurum kaynaklarını ayrı ayrı ve tekrar görülen olay kimliklerini sayar. Bir olayın sonraki aktif katmanda görünmemesini **söndü** etiketi saymaz. GitHub artefaktı ve içindeki saatler tek başına bağımsız, değiştirilemez zaman kanıtı değildir. Bu küçük kohortta hava, yakıt, arazi, çevre, müdahale ve doğrulanmış sonuç etiketleri henüz yoktur; eğitim veya olasılık yayımlama kapısı geçilmemiştir.
