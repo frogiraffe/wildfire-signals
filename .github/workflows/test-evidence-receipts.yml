@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'fire_public/evidence_receipts.py'
+      - 'fire_public/negative_coverage_gate.py'
+      - 'tests/test_negative_coverage_gate.py'
       - 'fire_public/label_review.py'
       - 'tests/test_evidence_receipts.py'
       - '.github/workflows/test-evidence-receipts.yml'
@@ -10,6 +12,8 @@ on:
     branches: [main]
     paths:
       - 'fire_public/evidence_receipts.py'
+      - 'fire_public/negative_coverage_gate.py'
+      - 'tests/test_negative_coverage_gate.py'
       - 'fire_public/label_review.py'
       - 'tests/test_evidence_receipts.py'
       - '.github/workflows/test-evidence-receipts.yml'
@@ -28,6 +32,7 @@ jobs:
         run: |
           python -m compileall -q fire_public
           python -m unittest discover -s tests -p 'test_evidence_receipts.py' -v
+          python -m unittest discover -s tests -p 'test_negative_coverage_gate.py' -v
           python -m unittest discover -s tests -p 'test_label_review.py' -v
           python -m unittest discover -s tests -p 'test_review_intake.py' -v
           python -m unittest discover -s tests -p 'test_sampling_audit.py' -v

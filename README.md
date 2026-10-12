@@ -80,6 +80,15 @@ of source revisions. The existing real NIFC eight-lead CI tests this against
 the actual provider; records remain retrospective positive-context evidence,
 not automatically valid binary event outcomes or fire-negative labels.
 
+The optional [negative registry geographic and temporal admission gate](docs/negative-registry-coverage-gate.md)
+now requires a sampled unit's complete WGS84 study footprint to fit inside
+the **independently declared** source's rectangular scope and a continuous
+observation interval across the full prediction horizon, with no unknown
+or outage periods. It binds the exact registry source URL and record ID to
+SHA-256-archived third-reviewer evidence and blocks strict cohort export if
+any negative case fails. A registry's completeness remains an operator claim,
+**not verified no-fire ground truth**.
+
 The [independent evidence receipt archive](docs/independent-evidence-receipts.md)
 lets a researcher preserve original privately acquired source documents using
 content-addressed SHA-256 blobs and capture-time receipts. The optional
