@@ -90,6 +90,8 @@ def review(case, ordinal):
         "evidence_url":f"https://example.org/{role}/case-{ordinal}",
         "reviewed_at":VERIFIED,
         "agrees_with_label":True,
+        "reviewer_label":int(official_case),
+        "independent_evidence_checked":True,
     }
     obj={
       "case_id":case["case_id"],"status":"adjudicated",
@@ -209,6 +211,11 @@ class LabelReviewTests(unittest.TestCase):
         control["negative_coverage"]["registry_complete_for_unit_window"]=True
         control["negative_coverage"]["end_at"]="2017-07-05T01:00:00Z"
         with self.assertRaisesRegex(ValueError,"entire declared horizon"):
+            self.finalize()
+
+    def test_disagreement_cannot_export_a_synthetic_cohort(self):
+        self.decisions[0]["secondary"]["reviewer_label"]=0
+        with self.assertRaisesRegex(ValueError,"independently vote"):
             self.finalize()
 
     def test_reviewers_are_independent_and_postdate_label_source(self):
