@@ -57,9 +57,12 @@ Researchers must independently complete the existing NIFC–MTBS offline pair-re
       --store /private/wildfire/event-evidence \
       --first /private/wildfire/researcher-a.json \
       --second /private/wildfire/researcher-b.json \
-      --output /private/wildfire/source-corroboration-audit.json
+      --output /private/wildfire/source-corroboration-audit.json \
+      --html /private/wildfire/source-corroboration-audit.html
 
 The audit checks original NIFC/MTBS identities, integrity of each captured third-party document and receipt, source publication/capture chronology, agreement of source relationship claims with human citations, different declared upstream lineages, plausible event-time evidence, duplicate citations, missing supporting documents and contradictory review conclusions.
+
+The optional local HTML report has no scripts or network access. It displays missing evidence gates and preserves the same scientific limitations. Identical source document bytes under multiple URLs are explicitly flagged rather than counted as independent supporting records.
 
 A structurally complete dossier is only **ready for external independent adjudication**. It does not become a confirmed event. Outputs always report **0 verified event crosswalks and 0 verified nonfire labels**. A source’s absence from the archive is never evidence that a wildfire did not occur.
 
