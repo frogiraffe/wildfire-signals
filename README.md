@@ -45,7 +45,14 @@ unavailable source never proves that a fire ended. The separate
 [historical evidence pilot](docs/historical-evidence-pilot-2026-10-12.md)
 stores a small official US/Canada sample with capture times and checksum-verified
 raw responses for later model research. This pilot is local and does not add a
-long-term collector or public forecasts.
+long-term collector or fire predictions.
+
+For a selected US NIFC incident, the draft preview can show [NWS grid forecast
+context](docs/us-weather-context-pilot-2026-10-12.md): wind, gust, temperature,
+humidity, and forecast precipitation intervals at the recorded point. The browser
+requests this only when an incident is opened. It is not a weather observation at
+the fire, fire-spread prediction, or archived model input; Canada and Türkiye do
+not yet have weather context.
 
 NASA FIRMS requires a free MAP_KEY. See <https://firms.modaps.eosdis.nasa.gov/api/area/>.
 NIFC data comes from the [WFIGS current incident layer](https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Incident_Locations_Current/FeatureServer/0).

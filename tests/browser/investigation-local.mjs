@@ -23,7 +23,7 @@ const server = createServer(async (request,response) => {
   }
   const name = request.url === '/' ? 'index.html' : request.url.slice(1);
   if (!['index.html','style.css','main.mjs','map-state.mjs','area-analysis.mjs',
-    'incident-timeline.mjs'].includes(name)) {
+    'incident-timeline.mjs','weather-context.mjs'].includes(name)) {
     response.writeHead(404).end(); return;
   }
   response.setHeader('Content-Type',name.endsWith('.css') ? 'text/css'
@@ -123,6 +123,54 @@ try {
   assert.match(detail,/Sınırları içinde tutuluyor/);
   assert.match(detail,/Yangının yayılma geçmişi değildir/);
   await incidentPage.close();
+
+  activeSnapshot = {...snapshot,events:[],incidents:[{kind:'agency_incident',
+    provider:'nifc_wfigs',official_id:'US-1',name:'US test event',incident_kind:'WF',
+    latitude:39.7456,longitude:-97.0892,modified_at:new Date().toISOString()}],
+    details:{incident_history:{}}};
+  const weatherPage = await browser.newPage({viewport:{width:1366,height:768}});
+  const weatherCalls = [];
+  await weatherPage.route('https://api.weather.gov/**',route => {
+    weatherCalls.push(route.request().url());
+    const from = new Date(Date.now()-3_600_000).toISOString();
+    const response = route.request().url().includes('/points/')
+      ? {properties:{forecastGridData:'https://api.weather.gov/gridpoints/TOP/32,81'}}
+      : {properties:{updateTime:from,
+          windSpeed:{uom:'wmoUnit:km_h-1',values:[{validTime:`${from}/P2D`,value:20}]},
+          windDirection:{uom:'wmoUnit:degree_(angle)',values:[{validTime:`${from}/P2D`,value:270}]},
+          windGust:{uom:'wmoUnit:km_h-1',values:[{validTime:`${from}/P2D`,value:35}]},
+          temperature:{uom:'wmoUnit:degC',values:[{validTime:`${from}/P2D`,value:28}]},
+          relativeHumidity:{uom:'wmoUnit:percent',values:[{validTime:`${from}/P2D`,value:30}]},
+          quantitativePrecipitation:{uom:'wmoUnit:mm',values:[{validTime:`${from}/P2D`,value:0}]}}};
+    return route.fulfill({status:200,contentType:'application/geo+json',body:JSON.stringify(response)});
+  });
+  await weatherPage.goto(`http://127.0.0.1:${server.address().port}/#lang=tr&kind=incident&lat=39.7456&lon=-97.0892&zoom=7`);
+  await weatherPage.locator('#incident-count').getByText('1').waitFor();
+  const weatherMapBox = await weatherPage.locator('#map canvas.maplibregl-canvas').boundingBox();
+  for (let attempt=0;attempt<30 && !await weatherPage.locator('#detail').isVisible();attempt++) {
+    await weatherPage.mouse.click(weatherMapBox.x+weatherMapBox.width/2,
+      weatherMapBox.y+weatherMapBox.height/2);
+    await weatherPage.waitForTimeout(500);
+  }
+  await weatherPage.locator('.weather-context').getByText('Rüzgâr: 20 km/h').first().waitFor();
+  assert.equal(weatherCalls.length,2);
+  const weatherDetail = await weatherPage.locator('.weather-context').textContent();
+  assert.match(weatherDetail,/Hamle: 35 km\/h/);
+  assert.match(weatherDetail,/Tahmini yağış: 0 mm/);
+  assert.match(weatherDetail,/yayılım tahmini değildir/);
+  const headings = await weatherPage.locator('#detail-content h3').allTextContents();
+  assert.ok(headings.indexOf('Kayıt konumundaki hava') < headings.indexOf('Kurum kaydı değişim geçmişi'));
+  await weatherPage.locator('.weather-context details summary').first().click();
+  assert.match(await weatherPage.locator('.weather-context details').first().textContent(),
+    /Kaynak geçerlilik aralıkları.*Rüzgâr/s);
+  if (process.env.SCREENSHOT_DIR)
+    await weatherPage.screenshot({path:`${process.env.SCREENSHOT_DIR}/weather-context.png`});
+  await weatherPage.setViewportSize({width:390,height:844});
+  assert.equal(await weatherPage.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1),false);
+  assert.equal(await weatherPage.locator('.weather-context').isVisible(),true);
+  if (process.env.SCREENSHOT_DIR)
+    await weatherPage.screenshot({path:`${process.env.SCREENSHOT_DIR}/weather-context-mobile.png`});
+  await weatherPage.close();
 } finally {
   await browser.close();
   await new Promise(resolve => server.close(resolve));

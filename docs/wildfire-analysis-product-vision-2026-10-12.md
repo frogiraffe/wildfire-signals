@@ -21,7 +21,7 @@ Amaç yangın yönetimine yardımcı **kanıtlı durum ve olasılık bilgisi** s
 | --- | --- | --- |
 | NASA FIRMS uydu tespitleri | Erken aday sinyali ve zaman dizisi | NOAA-20/21 0,05° hücre/saat adayları toplanıyor; yangın doğrulaması değil. |
 | Resmî olay kayıtları ve yangın çevreleri | Olay kimliği, durum ve bağımsız değerlendirme etiketi | NIFC/CWFIS olayları ayrı toplanıyor; küresel kapsam ve çevre geçmişi yok. |
-| Hava durumu ve tahmini | Oluşma koşulu, yayılım ve sonlanım girdisi | Yok; 10 m rüzgâr/hız/hamle, nem, sıcaklık ve yağış kaynağı ile Free maliyeti sınanacak. |
+| Hava durumu ve tahmini | Oluşma koşulu, yayılım ve sonlanım girdisi | [ABD NIFC olay ayrıntısı için NWS grid tahmini bağlam pilotu](us-weather-context-pilot-2026-10-12.md) var; model girdisi arşivi, Kanada/Türkiye kapsamı ve hava etkisi değerlendirmesi yok. |
 | Yakıt/bitki, arazi örtüsü, topoğrafya ve kuraklık | Yayılım ve oluşma modellerinin yerel girdileri | Açık depoda bütünleşik katman yok; çözünürlük, lisans ve güncellik araştırılacak. |
 | Yıldırım, insan etkinliği ve müdahale/containment geçmişi | Tutuşma ve sonlanım tahmini için olası girdiler | Kapsam ve güvenilirlik bölgeye göre araştırılacak; eksikse model hedefi daraltılacak. |
 | Tarihsel yangın olayları ve çevreleri | Eğitim, geçmişe dönük sınama ve karşılaştırma | Mevcut 72 saatlik harita saklaması bunun için yeterli değil. |

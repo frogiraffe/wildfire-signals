@@ -2,9 +2,11 @@ import * as maplibregl from 'https://unpkg.com/maplibre-gl@6.13.0/dist/maplibre-
 import {MESSAGES, parseState, stateHash, visible, effectiveStatus, featureCollection} from './map-state.mjs';
 import {summarizeArea, investigationLeads} from './area-analysis.mjs';
 import {incidentTimeline} from './incident-timeline.mjs';
+import {fetchNwsWeather} from './weather-context.mjs';
 
 const state = parseState(location.hash);
 let snapshot = {manifest:{data_status:'unknown'},events:[],incidents:[],matches:[],sources:[],details:{}};
+let weatherController = null;
 const el = id => document.getElementById(id);
 const map = new maplibregl.Map({container:'map',
   style:'https://tiles.openfreemap.org/styles/liberty', center:[state.lon,state.lat], zoom:state.zoom,
@@ -31,7 +33,83 @@ function saveState() {
   history.replaceState(null, '', stateHash(state));
 }
 
+function stopWeatherRequest() {
+  weatherController?.abort();
+  weatherController = null;
+}
+
+function renderWeather(container, forecast, msg) {
+  container.replaceChildren();
+  const meta = document.createElement('p');
+  meta.textContent = `${msg.weatherUpdated}: ${forecast.updatedAt} · ${msg.weatherReceived}: ${forecast.receivedAt}`;
+  container.append(meta);
+  if (forecast.stale) {
+    const warning = document.createElement('p'); warning.textContent = msg.weatherStale;
+    container.append(warning);
+  }
+  const list = document.createElement('ol');
+  for (const row of forecast.rows) {
+    const item = document.createElement('li');
+    const time = document.createElement('strong');
+    time.textContent = `${msg.weatherHour.replace('{hours}',row.hours)} · ${row.validAt}`;
+    const number = (value, unit) => value === null ? msg.weatherMissing : `${Math.round(value)} ${unit}`;
+    const wind = document.createElement('span');
+    const direction = row.directionDeg === null ? msg.weatherMissing : `${Math.round(row.directionDeg)}°`;
+    wind.textContent = `${msg.weatherWind}: ${number(row.windKmh,'km/h')} ` +
+      `(${msg.weatherFrom} ${direction}) · ${msg.weatherGust}: ${number(row.gustKmh,'km/h')}`;
+    const air = document.createElement('span');
+    air.textContent = `${msg.weatherTemp}: ${number(row.temperatureC,'°C')} · ` +
+      `${msg.weatherHumidity}: ${number(row.humidityPercent,'%')}`;
+    const rain = document.createElement('span');
+    rain.textContent = `${msg.weatherRain}: ${row.rain ? `${row.rain.mm} mm ` +
+      `(${msg.weatherRainWindow} ${row.rain.start} – ${row.rain.end})` : msg.weatherMissing}`;
+    item.append(time,wind,air,rain); list.append(item);
+    const detail = document.createElement('details');
+    const summary = document.createElement('summary'); summary.textContent = msg.weatherIntervals;
+    const intervals = document.createElement('dl');
+    for (const [label,key] of [[msg.weatherWind,'windKmh'],[msg.weatherFrom,'directionDeg'],
+      [msg.weatherGust,'gustKmh'],[msg.weatherTemp,'temperatureC'],
+      [msg.weatherHumidity,'humidityPercent']]) {
+      const valid = row.validity[key];
+      if (!valid) continue;
+      const dt = document.createElement('dt'); dt.textContent = label;
+      const dd = document.createElement('dd'); dd.textContent = `${valid.start} – ${valid.end}`;
+      intervals.append(dt,dd);
+    }
+    detail.append(summary,intervals); item.append(detail);
+  }
+  container.append(list);
+  const footnote = document.createElement('p'); footnote.textContent = msg.weatherFootnote;
+  const source = document.createElement('a');
+  source.href = forecast.sourceUrl; source.textContent = 'NOAA / NWS';
+  source.target = '_blank'; source.rel = 'noopener noreferrer';
+  container.append(footnote,source);
+}
+
+function showWeather(box, incident, msg) {
+  if (incident.provider !== 'nifc_wfigs') return;
+  const section = document.createElement('section'); section.className = 'weather-context';
+  const heading = document.createElement('h3'); heading.textContent = msg.weatherTitle;
+  const scope = document.createElement('p'); scope.textContent = msg.weatherScope;
+  const content = document.createElement('div'); content.setAttribute('role','status');
+  content.textContent = msg.weatherLoading;
+  section.append(heading,scope,content); box.append(section);
+  const controller = new AbortController(); weatherController = controller;
+  const timeout = setTimeout(() => controller.abort(),12_000);
+  fetchNwsWeather(incident.latitude,incident.longitude,{signal:controller.signal})
+    .then(forecast => {
+      if (weatherController === controller && !el('detail').hidden)
+        renderWeather(content,forecast,msg);
+    })
+    .catch(() => {
+      if (weatherController === controller && !el('detail').hidden)
+        content.textContent = msg.weatherUnavailable;
+    })
+    .finally(() => clearTimeout(timeout));
+}
+
 function showRecord(kind, id) {
+  stopWeatherRequest();
   const msg = MESSAGES[state.lang];
   const item = kind === 'candidate' ? snapshot.events.find(x => x.event_id === id)
     : snapshot.incidents.find(x => `${x.provider}:${x.official_id}` === id);
@@ -71,6 +149,8 @@ function showRecord(kind, id) {
     }
     box.append(list);
   }
+  el('detail').hidden = false;
+  if (kind === 'incident') showWeather(box,item,msg);
   if (kind === 'incident') {
     const heading = document.createElement('h3'); heading.textContent = msg.timelineTitle;
     const scope = document.createElement('p'); scope.textContent = msg.timelineScope;
@@ -100,7 +180,6 @@ function showRecord(kind, id) {
       box.append(list);
     }
   }
-  el('detail').hidden = false;
   el('detail-close').focus();
 }
 
@@ -209,8 +288,10 @@ for (const key of ['language','hours','source','kind']) el(key).addEventListener
 el('share').addEventListener('click',async () => {
   saveState(); await navigator.clipboard.writeText(location.href);
 });
-el('detail-close').addEventListener('click',() => {el('detail').hidden = true;});
-window.addEventListener('keydown',event => {if (event.key === 'Escape') el('detail').hidden = true;});
+el('detail-close').addEventListener('click',() => {stopWeatherRequest();el('detail').hidden = true;});
+window.addEventListener('keydown',event => {if (event.key === 'Escape') {
+  stopWeatherRequest(); el('detail').hidden = true;
+}});
 window.addEventListener('hashchange',() => {Object.assign(state,parseState(location.hash));map.jumpTo({center:[state.lon,state.lat],zoom:state.zoom});draw();});
 
 try {
