@@ -100,6 +100,23 @@ class HistoricalPixelTests(unittest.TestCase):
         self.assertFalse(late["fire_confirmation"])
         self.assertEqual(late["evidence_completeness"],"unverified")
 
+    def test_map_equivalent_cell_hour_aggregation_and_repeated_hours(self):
+        make_release(self.assets,FIRST,[
+            pixel(FIRMS_SOURCES[0],when=FIRST-timedelta(minutes=40),
+                  latitude=0.011,longitude=30.011,ident="first"),
+            pixel(FIRMS_SOURCES[0],when=FIRST-timedelta(minutes=35),
+                  latitude=0.019,longitude=30.019,ident="second"),
+            pixel(FIRMS_SOURCES[1],when=FIRST-timedelta(hours=1,minutes=35),
+                  latitude=0.018,longitude=30.015,ident="previous-hour")])
+        import_release_assets(self.db,self.assets)
+        report=coverage_report(self.db,at=(FIRST+timedelta(minutes=10)).isoformat(),
+                               hours=6,latitude=0.015,longitude=30.015,radius_km=20)
+        self.assertEqual(report["unique_raw_pixel_observations"],3)
+        self.assertEqual(report["candidate_cell_hours"],2)
+        self.assertEqual(report["distinct_observed_cells"],1)
+        self.assertEqual(report["cells_observed_multiple_hours"],1)
+        self.assertIn("0.05 degree",report["aggregation"])
+
     def test_failed_source_and_empty_scan_not_interpreted_as_fire_absence(self):
         make_release(self.assets,FIRST,[],states={FIRMS_SOURCES[0]:"failed",
                                                   FIRMS_SOURCES[1]:"complete"})
