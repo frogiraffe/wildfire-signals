@@ -164,6 +164,13 @@ class HistoricalPixelTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"provenance mismatch"):
             import_release_assets(self.db,self.assets)
 
+    def test_raw_csv_time_and_coordinates_must_match_normalized_pixel(self):
+        changed = pixel(FIRMS_SOURCES[0],when=FIRST-timedelta(hours=1))
+        changed["latitude"] = 42.5  # raw CSV still reports zero latitude
+        make_release(self.assets,FIRST,[changed])
+        with self.assertRaisesRegex(ValueError,"raw-to-normalized"):
+            import_release_assets(self.db,self.assets)
+
     def test_missing_asset_is_not_a_complete_import(self):
         make_release(self.assets,FIRST,[
             pixel(FIRMS_SOURCES[0],when=FIRST-timedelta(hours=1))])
