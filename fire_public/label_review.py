@@ -287,7 +287,8 @@ def _review_decision(case: dict, entry: dict, horizon: float) -> dict | None:
 
 
 def finalize_queue(queue_path: Path, reviews_path: Path,
-                   protocol_path: Path) -> tuple[list[dict], dict, dict]:
+                   protocol_path: Path,
+                   evidence_store: Path | None = None) -> tuple[list[dict], dict, dict]:
     """Reject unsafe shortcuts; preserve unresolved/excluded counts and provenance."""
     q = _load(queue_path, MAX_REVIEW_BYTES)
     reviews = _load(reviews_path, MAX_REVIEW_BYTES)
@@ -337,12 +338,29 @@ def finalize_queue(queue_path: Path, reviews_path: Path,
     if _utc(p["coverage_attested_at"]) < max(
             _utc(row["label_verified_at"]) for row in rows):
         raise ValueError("coverage attestation must postdate adjudicated outcomes")
+    receipt_audit = None
+    if evidence_store is not None:
+        # Imported locally to keep ordinary historical fixture workflows
+        # compatible; strict real-data runs opt into verified source snapshots.
+        from .evidence_receipts import audit_receipts
+        receipt_audit = audit_receipts(queue_path, reviews_path, evidence_store)
+        if not receipt_audit["structurally_receipt_complete"]:
+            missing = receipt_audit["missing_or_invalid"]
+            raise ValueError(
+                f"strict source receipt gate failed: {len(missing)} missing/invalid reviewer evidence bindings"
+            )
     manifest = dict(p)
     manifest.update({
         "review_queue_sha256": _sha(queue_path),
         "review_decisions_sha256": _sha(reviews_path),
         "sampling_frame_sha256": q["sampling_frame"]["input_sha256"],
         "cohort_origin": "double_reviewed_provided_external_evidence",
+        "source_receipt_gate": ("hash_checked_operator_captured_snapshots"
+                                if receipt_audit is not None else "not_requested"),
+        "source_receipt_store_sha256": (receipt_audit["source_receipts_sha256"]
+                                        if receipt_audit is not None else None),
+        "source_receipt_bindings": (receipt_audit["review_bindings"]
+                                     if receipt_audit is not None else []),
         "evidence_claim_type": "human_attested_not_independently_verified_by_software",
         "review_counts": dict(sorted(counts.items())),
         "scientific_caveat": (
@@ -358,6 +376,10 @@ def finalize_queue(queue_path: Path, reviews_path: Path,
         "positive_labels": counts["label_1"],
         "negative_labels": counts["label_0"],
         "source_authenticity_externally_verified_by_tool": False,
+        "source_receipt_gate": ("hash_checked_operator_captured_snapshots"
+                                if receipt_audit is not None else "not_requested"),
+        "source_receipt_bindings": (len(receipt_audit["review_bindings"])
+                                     if receipt_audit is not None else 0),
         "ready_for_structural_baseline": True,
         "notes": [
             "A human attestation cannot prove source completeness without a separate scientific audit.",
@@ -399,6 +421,8 @@ def main() -> None:
     finalize.add_argument("--cohort", required=True, type=Path)
     finalize.add_argument("--manifest", required=True, type=Path)
     finalize.add_argument("--summary", required=True, type=Path)
+    finalize.add_argument("--evidence-store", type=Path,
+                          help="Optional strict gate requiring SHA-256-checked private source snapshots for each adjudication")
     args = parser.parse_args()
     outputs = ([args.output] if args.command == "prepare" else
                [args.cohort, args.manifest, args.summary])
@@ -417,7 +441,8 @@ def main() -> None:
         print(json.dumps({"queue":str(args.output), "cases":len(data["cases"]),
                           "independent_labels_created":0},sort_keys=True))
         return
-    rows, manifest, summary = finalize_queue(args.queue, args.reviews, args.protocol)
+    rows, manifest, summary = finalize_queue(
+        args.queue, args.reviews, args.protocol, evidence_store=args.evidence_store)
     serialized = [
         "".join(json.dumps(row, sort_keys=True, ensure_ascii=False)+"\n" for row in rows),
         json.dumps(manifest, indent=2, sort_keys=True, ensure_ascii=False)+"\n",
