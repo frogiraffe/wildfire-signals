@@ -64,6 +64,14 @@ source and feature availability times, and only then exports a
 The existing real NIFC CI can now demonstrate an unadjudicated eight-real-source
 queue with explicitly synthetic control units; **no true negative samples or
 measured prediction skill are created by these integration tests**.
+The [official NIFC lead source reconciliation](docs/official-lead-source-reconciliation.md)
+directly re-queries the pinned US government ArcGIS HTTPS layer for archived
+review-queue perimeter identities, compares original and fresh source feature
+hashes, and preserves **raw provider GeoJSON bytes** with a reproducible audit
+of source revisions. The existing real NIFC eight-lead CI tests this against
+the actual provider; records remain retrospective positive-context evidence,
+not automatically valid binary event outcomes or fire-negative labels.
+
 The [independent evidence receipt archive](docs/independent-evidence-receipts.md)
 lets a researcher preserve original privately acquired source documents using
 content-addressed SHA-256 blobs and capture-time receipts. The optional
