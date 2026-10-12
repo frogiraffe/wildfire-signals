@@ -127,6 +127,13 @@ class PerimeterHistoryTests(unittest.TestCase):
                 self.assertFalse(self.db.exists())
         self.service.bad=None
 
+    def test_same_global_id_cannot_silently_discard_a_different_perimeter(self):
+        self.service.entries[1]["properties"]["GlobalID"] = (
+            self.service.entries[0]["properties"]["GlobalID"])
+        with self.assertRaisesRegex(ValueError,"duplicate official GlobalID"):
+            self.sync(max_records=2)
+        self.assertFalse(self.db.exists())
+
     def test_year_scope_and_record_budget(self):
         for year in (2019.0,2020,1890):
             with self.assertRaises(ValueError):
