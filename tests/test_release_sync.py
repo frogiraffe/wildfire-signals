@@ -76,7 +76,7 @@ class ReleaseSyncTests(unittest.TestCase):
         self.input=self.root/"official"
         self.destination=self.root/"downloaded"
         self.database=self.root/"history.sqlite3"
-        self.record=_release_files(self.root/"restored",STAMP)
+        self.record=_release_files(self.input,STAMP)
         self.data={a["browser_download_url"]:(self.input/a["name"]).read_bytes()
                    for a in self.record["assets"]}
         self.calls=[]
