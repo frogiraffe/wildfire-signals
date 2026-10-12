@@ -24,7 +24,8 @@ const server = createServer(async (request,response) => {
   const name = request.url === '/' ? 'index.html' : request.url.slice(1);
   if (!['index.html','style.css','main.mjs','map-state.mjs','area-analysis.mjs',
     'incident-timeline.mjs','weather-context.mjs','perimeter-context.mjs',
-    'analysis-answers.mjs','region-explorer.mjs','region-explorer-view.mjs'].includes(name)) {
+    'analysis-answers.mjs','region-explorer.mjs','region-explorer-view.mjs',
+    'coverage-audit.mjs'].includes(name)) {
     response.writeHead(404).end(); return;
   }
   response.setHeader('Content-Type',name.endsWith('.css') ? 'text/css'
@@ -49,6 +50,22 @@ try {
     assert.equal(await page.locator('#region-cells').textContent(),'1');
     assert.equal(await page.locator('#region-repeat').textContent(),'1');
     assert.equal(await page.locator('.region-chart-col').count(),6);
+    assert.equal(await page.locator('#coverage-source-list > li').count(),6);
+    assert.match(await page.locator('#coverage-snapshot-status').textContent(),
+      /Veri görüntüsü güncel/);
+    assert.match(await page.locator('#coverage-source-list').textContent(),
+      /VIIRS_NOAA20_NRT/);
+    assert.match(await page.locator('#coverage-source-list').textContent(),
+      /Burada izlenmiyor/);
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),page.locator('#coverage-download').click()]);
+    assert.equal(download.suggestedFilename(),'wildfire-region-coverage.json');
+    const contents=await readFile(await download.path(),'utf8');
+    const evidence=JSON.parse(contents);
+    assert.equal(evidence.rows.length,6);
+    assert.equal(evidence.confirmedFireCoverageVerified,false);
+    assert.equal(evidence.regionCoverageVerified,false);
+    assert.equal(evidence.rows.find(r=>r.key==='VIIRS_NOAA20_NRT').observedInCircle,1);
     await page.locator('#region-radius').selectOption('100');
     assert.match(await page.evaluate(()=>location.hash),/rr=100/);
     assert.match(await page.evaluate(()=>location.hash),/rlat=/);
@@ -77,6 +94,9 @@ try {
   const stale = await browser.newPage();
   await stale.goto(`http://127.0.0.1:${server.address().port}/#lang=tr&lat=-6&lon=145&zoom=7`);
   await stale.locator('#lead-quality').getByText('Veri görüntüsü eski').waitFor();
+  await stale.locator('#region-center').click();
+  assert.match(await stale.locator('#coverage-snapshot-status').textContent(),
+    /Veri görüntüsü eski/);
   assert.equal(await stale.locator('#lead-list button').count(),0);
   assert.match(await stale.locator('#lead-empty').textContent(),/yangın olmadığı anlamına gelmez/);
   await stale.close();
@@ -86,6 +106,9 @@ try {
   const partial = await browser.newPage();
   await partial.goto(`http://127.0.0.1:${server.address().port}/#lang=tr&lat=-6&lon=145&zoom=7`);
   await partial.locator('#lead-quality').getByText('Bazı uydu kaynakları başarısız').waitFor();
+  await partial.locator('#region-center').click();
+  assert.match(await partial.locator('#coverage-source-list').textContent(),
+    /Kaynak başarısız/);
   await partial.close();
   activeSnapshot = {...activeSnapshot,manifest:{...activeSnapshot.manifest,
     last_scan_at:new Date(Date.now()-3*3_600_000).toISOString()}};
