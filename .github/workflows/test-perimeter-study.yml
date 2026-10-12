@@ -1,0 +1,88 @@
+name: NIFC reproducible multi-year government evidence study
+on:
+  pull_request:
+    paths:
+      - 'fire_public/official_perimeters.py'
+      - 'fire_public/perimeter_study.py'
+      - 'tests/test_perimeter_study.py'
+      - '.github/workflows/test-perimeter-study.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'fire_public/official_perimeters.py'
+      - 'fire_public/perimeter_study.py'
+      - 'tests/test_perimeter_study.py'
+      - '.github/workflows/test-perimeter-study.yml'
+permissions:
+  contents: read
+jobs:
+  offline-study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Multi-year sampling, source digest and history regressions
+        run: |
+          python -m compileall -q fire_public
+          python -m unittest discover -s tests -p 'test_perimeter_study.py' -v
+          python -m unittest discover -s tests -p 'test_official_perimeters.py' -v
+          python -m unittest discover -s tests -p 'test_workbench_official_perimeters.py' -v
+          python -m unittest discover -s tests -p 'test_official_live_probe.py' -v
+
+  real-multi-year-nifc:
+    needs: offline-study
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Collect 4 real official records from each of two historical years
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p /tmp/wildfire-nifc-multiyear
+          python -m fire_public.perimeter_study sync \
+            --db /tmp/wildfire-nifc-multiyear/nifc-2017-2018.sqlite3 \
+            --year 2017 --year 2018 \
+            --records-per-year 4 \
+            --seed wildfire-ci-source-sample-v1 \
+            --report /tmp/wildfire-nifc-multiyear/study.json \
+            --geojson /tmp/wildfire-nifc-multiyear/study.geojson \
+            2>&1 | tee /tmp/wildfire-nifc-multiyear/live.log
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from fire_public.perimeter_study import study_report
+          root=Path('/tmp/wildfire-nifc-multiyear')
+          result=json.loads((root/'study.json').read_text())
+          geo=json.loads((root/'study.geojson').read_text())
+          assert result['requested_fire_years']==[2017,2018]
+          assert result['complete_requested_year_sample']
+          assert result['stored_polygon_records']==8
+          assert len(geo['features'])==8
+          assert all(row['sample_selection_mode']=='hash' for row in result['year_results'])
+          assert all(row['source_object_ids']>=4 for row in result['year_results'])
+          assert result['negative_labels_created']==0
+          assert result['source_fire_occurrence_coverage_complete'] is False
+          restored,_=study_report(root/'nifc-2017-2018.sqlite3',
+                                  at=result['decision_at'],years=[2017,2018])
+          assert restored['stored_polygon_records']==8
+          print('Confirmed authentic US government responses in 2 distinct years, 8 archived GeoJSON perimeters.')
+          PY
+      - name: Preserve real research sample and source coverage audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nifc-real-multiyear-sample
+          path: |
+            /tmp/wildfire-nifc-multiyear/nifc-2017-2018.sqlite3
+            /tmp/wildfire-nifc-multiyear/study.json
+            /tmp/wildfire-nifc-multiyear/study.geojson
+            /tmp/wildfire-nifc-multiyear/live.log
+          if-no-files-found: warn
+          retention-days: 7
