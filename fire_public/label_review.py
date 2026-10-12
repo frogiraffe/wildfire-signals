@@ -91,6 +91,12 @@ def prepare_queue(perimeter_db: Path, *, at: str, years: list[int],
         identity = _text(slot.get("sampling_unit_id"), "frame sampling identity")
         _text(slot.get("region_id"), "frame region")
         _valid_point(slot)
+        if "study_bbox" in slot:
+            from .negative_coverage_gate import bbox
+            frame_extent=bbox(slot["study_bbox"],"frame study footprint")
+            if not (frame_extent[0]<=slot["longitude"]<=frame_extent[2]
+                    and frame_extent[1]<=slot["latitude"]<=frame_extent[3]):
+                raise ValueError("frame location must lie inside declared study footprint")
         decision_at = _utc(slot.get("decision_at"))
         if decision_at > queue_as_of:
             raise ValueError("frame decision after queue as-of cutoff")
@@ -152,6 +158,7 @@ def prepare_queue(perimeter_db: Path, *, at: str, years: list[int],
             "sampling_unit_id": identity,
             "region_id": item["region_id"],
             "latitude": item["latitude"], "longitude": item["longitude"],
+            "study_bbox": item.get("study_bbox"),
             "decision_at": _timestamp(item["decision_at"]),
             "evidence_role": "unlabeled_region_time_sample",
         })
@@ -288,7 +295,8 @@ def _review_decision(case: dict, entry: dict, horizon: float) -> dict | None:
 
 def finalize_queue(queue_path: Path, reviews_path: Path,
                    protocol_path: Path,
-                   evidence_store: Path | None = None) -> tuple[list[dict], dict, dict]:
+                   evidence_store: Path | None = None,
+                   coverage_registry: Path | None = None) -> tuple[list[dict], dict, dict]:
     """Reject unsafe shortcuts; preserve unresolved/excluded counts and provenance."""
     q = _load(queue_path, MAX_REVIEW_BYTES)
     reviews = _load(reviews_path, MAX_REVIEW_BYTES)
@@ -349,6 +357,17 @@ def finalize_queue(queue_path: Path, reviews_path: Path,
             raise ValueError(
                 f"strict source receipt gate failed: {len(missing)} missing/invalid reviewer evidence bindings"
             )
+    coverage_audit = None
+    if coverage_registry is not None:
+        if evidence_store is None:
+            raise ValueError("strict coverage registry requires independent source evidence store")
+        from .negative_coverage_gate import admit_coverage
+        coverage_audit=admit_coverage(queue_path,reviews_path,protocol_path,
+                                      coverage_registry,evidence_store)
+        if not coverage_audit["structurally_complete"]:
+            raise ValueError(
+                f"negative registry spatial/temporal scope gate failed for "
+                f"{coverage_audit['denied']} of {coverage_audit['negative_cases_checked']} cases")
     manifest = dict(p)
     manifest.update({
         "review_queue_sha256": _sha(queue_path),
@@ -361,6 +380,12 @@ def finalize_queue(queue_path: Path, reviews_path: Path,
                                         if receipt_audit is not None else None),
         "source_receipt_bindings": (receipt_audit["review_bindings"]
                                      if receipt_audit is not None else []),
+        "negative_registry_scope_gate": (
+            "operator_declared_scope_checked_against_archived_source" if
+            coverage_audit is not None else "not_requested"),
+        "negative_registry_manifest_sha256":(
+            coverage_audit["registry_sha256"] if coverage_audit is not None else None),
+        "negative_registry_independent_completeness_verified":False,
         "evidence_claim_type": "human_attested_not_independently_verified_by_software",
         "review_counts": dict(sorted(counts.items())),
         "scientific_caveat": (
@@ -380,6 +405,9 @@ def finalize_queue(queue_path: Path, reviews_path: Path,
                                 if receipt_audit is not None else "not_requested"),
         "source_receipt_bindings": (len(receipt_audit["review_bindings"])
                                      if receipt_audit is not None else 0),
+        "negative_registry_scope_cases_checked":(
+            coverage_audit["negative_cases_checked"] if coverage_audit is not None else 0),
+        "negative_registry_independent_completeness_verified":False,
         "ready_for_structural_baseline": True,
         "notes": [
             "A human attestation cannot prove source completeness without a separate scientific audit.",
@@ -423,6 +451,8 @@ def main() -> None:
     finalize.add_argument("--summary", required=True, type=Path)
     finalize.add_argument("--evidence-store", type=Path,
                           help="Optional strict gate requiring SHA-256-checked private source snapshots for each adjudication")
+    finalize.add_argument("--coverage-registry", type=Path,
+                          help="Optional spatial, continuous-window and outage audit for negative cases; requires --evidence-store")
     args = parser.parse_args()
     outputs = ([args.output] if args.command == "prepare" else
                [args.cohort, args.manifest, args.summary])
@@ -442,7 +472,8 @@ def main() -> None:
                           "independent_labels_created":0},sort_keys=True))
         return
     rows, manifest, summary = finalize_queue(
-        args.queue, args.reviews, args.protocol, evidence_store=args.evidence_store)
+        args.queue, args.reviews, args.protocol, evidence_store=args.evidence_store,
+        coverage_registry=args.coverage_registry)
     serialized = [
         "".join(json.dumps(row, sort_keys=True, ensure_ascii=False)+"\n" for row in rows),
         json.dumps(manifest, indent=2, sort_keys=True, ensure_ascii=False)+"\n",
