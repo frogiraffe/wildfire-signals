@@ -7,6 +7,8 @@ on:
       - 'fire_public/perimeter_quality.py'
       - 'tests/test_perimeter_study.py'
       - 'tests/test_perimeter_quality.py'
+      - 'fire_public/label_review.py'
+      - 'tests/test_label_review.py'
       - '.github/workflows/test-perimeter-study.yml'
   push:
     branches: [main]
@@ -16,6 +18,8 @@ on:
       - 'fire_public/perimeter_quality.py'
       - 'tests/test_perimeter_study.py'
       - 'tests/test_perimeter_quality.py'
+      - 'fire_public/label_review.py'
+      - 'tests/test_label_review.py'
       - '.github/workflows/test-perimeter-study.yml'
 permissions:
   contents: read
@@ -65,6 +69,34 @@ jobs:
             --year 2017 --year 2018 \
             --json /tmp/wildfire-nifc-multiyear/quality.json \
             --html /tmp/wildfire-nifc-multiyear/quality.html
+          # These units are SYNTHETIC frame controls used only to prove
+          # source-to-queue wiring. Neither is a confirmed non-fire observation.
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path('/tmp/wildfire-nifc-multiyear')
+          frame={
+            'schema_version':1,
+            'frame_name':'CI SYNTHETIC unlabeled region-time units',
+            'sampling_protocol':'Fixture-only test of review queue data contracts',
+            'frame_provenance':'Synthetic demonstration; NOT a vetted incident/non-fire frame',
+            'source_url':'https://example.org/synthetic-ci-frame',
+            'rights_url':'https://example.org/synthetic-ci-rights',
+            'units':[
+              {'sampling_unit_id':'synthetic-2017','region_id':'ci-region-a',
+               'latitude':37.0,'longitude':-120.0,'decision_at':'2017-07-05T00:00:00Z'},
+              {'sampling_unit_id':'synthetic-2018','region_id':'ci-region-b',
+               'latitude':38.0,'longitude':-119.0,'decision_at':'2018-07-05T00:00:00Z'}
+            ]
+          }
+          (root/'synthetic-frame.json').write_text(json.dumps(frame))
+          PY
+          python -m fire_public.label_review prepare \
+            --perimeter-db /tmp/wildfire-nifc-multiyear/nifc-2017-2018.sqlite3 \
+            --frame /tmp/wildfire-nifc-multiyear/synthetic-frame.json \
+            --at "$(python -c "import json;print(json.load(open('/tmp/wildfire-nifc-multiyear/study.json'))['decision_at'])")" \
+            --year 2017 --year 2018 --max-controls 2 \
+            --output /tmp/wildfire-nifc-multiyear/unadjudicated-queue.json
           python - <<'PY'
           import json
           from pathlib import Path
@@ -89,6 +121,13 @@ jobs:
           assert quality['forecast_skill_measured'] is False
           assert quality['year_quality'][0]['sampled_record_count']==4
           assert quality['year_quality'][1]['sampled_record_count']==4
+          queue=json.loads((root/'unadjudicated-queue.json').read_text())
+          assert queue['counts']['official_perimeter_leads']==8
+          assert queue['counts']['unlabeled_frame_units']==2
+          assert queue['negative_labels_created']==0
+          assert all(case['proposed_label'] is None for case in queue['cases'])
+          assert queue['sampling_frame']['selection_strategy']=='seeded_hash_region_round_robin'
+          assert queue['sampling_frame']['selected_by_region']=={'ci-region-a':1,'ci-region-b':1}
           print('Confirmed authentic US government responses in 2 distinct years, 8 archived GeoJSON perimeters.')
           PY
       - name: Preserve real research sample and source coverage audit
@@ -102,6 +141,8 @@ jobs:
             /tmp/wildfire-nifc-multiyear/study.geojson
             /tmp/wildfire-nifc-multiyear/quality.json
             /tmp/wildfire-nifc-multiyear/quality.html
+            /tmp/wildfire-nifc-multiyear/unadjudicated-queue.json
+            /tmp/wildfire-nifc-multiyear/synthetic-frame.json
             /tmp/wildfire-nifc-multiyear/live.log
           if-no-files-found: warn
           retention-days: 7
