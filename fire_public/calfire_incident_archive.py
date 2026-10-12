@@ -117,12 +117,15 @@ def parse_archive(raw: bytes) -> list[dict]:
         urls=sorted(set(url for link in links if (url:=_incident_path(link))))
         if len(urls)!=1:
             raise ValueError("CAL FIRE original incident archive row lacks a unique official event page")
-        try:
-            n_acres=int(acres.replace(",",""))
-        except ValueError as exc:
-            raise ValueError("CAL FIRE source acres not numeric") from exc
-        if not 0<=n_acres<=20_000_000:
-            raise ValueError("CAL FIRE source acreage outside conservative range")
+        if acres.strip().casefold() in ("", "n/a", "na", "unknown", "-", "—"):
+            n_acres=None
+        else:
+            try:
+                n_acres=int(acres.replace(",",""))
+            except ValueError as exc:
+                raise ValueError("CAL FIRE source acres not numeric") from exc
+            if not 0<=n_acres<=20_000_000:
+                raise ValueError("CAL FIRE source acreage outside conservative range")
         date=_date(started)
         incidents.append({
             "name":name,"counties":counties,
@@ -130,6 +133,8 @@ def parse_archive(raw: bytes) -> list[dict]:
             "source_started_raw":started,
             "started_year_is_requested_2018":bool(date and date[:4]=="2018"),
             "reported_acres":n_acres,
+            "reported_acres_missing":n_acres is None,
+            "reported_acres_raw":acres,
             "containment_source_text":containment,
             "original_event_url":urls[0],
             "retrospective_archive_record":True,
@@ -240,6 +245,8 @@ def compare(study_dir: Path,original_html: bytes,*,captured_at: str) -> dict:
         "calfire_archive_records_parsed":len(incidents),
         "archive_records_with_non2018_or_unknown_dates":sum(
             not x["started_year_is_requested_2018"] for x in incidents),
+        "archive_records_missing_reported_acres":sum(
+            x["reported_acres_missing"] for x in incidents),
         "archive_not_necessarily_all_fires":True,
         "source_upstream_independence_from_nifc_or_mtbs_unverified":True,
         "research_leads_by_case":counters,
