@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
+import base64
 import hashlib
 import html
 import json
@@ -269,6 +270,8 @@ def audit(study_dir: Path, store: Path, first: Path | None = None,
         lineages = {d["upstream_family"].casefold() for d in docs}
         if len(publishers) < 2 or len(lineages) < 2:
             issues.append("two_distinct_declared_publisher_and_upstream_families_required")
+        if len({d["document_sha256"] for d in docs}) < len(docs):
+            issues.append("identical_archived_document_bytes_under_multiple_sources")
         if any(d["upstream_role"] != "firsthand_original_record" for d in docs):
             issues.append("secondary_or_unknown_upstream_material_requires_manual_review")
         times = [d["source_event_at"] for d in docs]
@@ -329,6 +332,75 @@ def audit(study_dir: Path, store: Path, first: Path | None = None,
     }
 
 
+HTML_STYLE = """
+:root{font-family:system-ui,sans-serif;color-scheme:light;background:#f2f5f6;color:#182f39}
+body{max-width:1150px;margin:auto;padding:20px;line-height:1.5}
+header,main,footer{background:white;padding:20px;border:1px solid #ced9dd;border-radius:9px;margin:12px 0}
+h1{font-size:1.6rem}h2{font-size:1.15rem}
+table{border-collapse:collapse;width:100%}th,td{padding:9px;text-align:left;border-bottom:1px solid #d4dde1}
+th{background:#edf1f2}td{overflow-wrap:anywhere}
+small{color:#415b65}.warning{color:#875113}
+details{margin:8px 0}summary{cursor:pointer;font-weight:600}
+@media(max-width:750px){body{padding:8px}header,main,footer{padding:12px}
+thead{display:none}table,tr,td,tbody{display:block}tr{border-bottom:2px solid #8aa0a9}
+td{border:0;padding:5px}td:before{content:attr(data-label) ": ";font-weight:700}}
+"""
+
+
+def render_audit(report: dict) -> str:
+    if (report.get("status") != "third_party_corroboration_structural_audit_not_ground_truth"
+            or report.get("verified_event_crosswalks") != 0 or
+            report.get("independent_nonfire_labels") != 0):
+        raise ValueError("external evidence report is not a scientifically guarded structural audit")
+    e = lambda x: html.escape(str(x), quote=True)
+    rows = []
+    for case in report["cases"]:
+        sources = "".join(
+            "<li>Publisher declaration: " + e(src["publisher_id"]) +
+            "; upstream: " + e(src["upstream_family"]) +
+            "; source ID: " + e(src["source_record_id"]) +
+            "; archived document SHA-256: " + e(src["document_sha256"]) +
+            "; cited HTTPS URL: " + e(src["source_url"]) + "</li>"
+            for src in case["archived_sources"])
+        details = ("<details><summary>Source claims and remaining gates</summary><ul>" +
+                   sources + "</ul><p>" + e(", ".join(case["unresolved_gates"]) or
+                   "No remaining structural gaps; independent adjudication STILL required.") +
+                   "</p></details>")
+        values = [
+            ("Candidate", case["candidate_id"]),
+            ("State", case["research_status"]),
+            ("Archived sources", case["document_count"]),
+            ("Reviewer hypothesis", case["review_agreement"] or "not completed"),
+        ]
+        cells = "".join('<td data-label="' + e(label) + '">' + e(value) + "</td>"
+                        for label, value in values)
+        rows.append("<tr>" + cells + "<td data-label=\"Review gates\">" + details + "</td></tr>")
+    css_sha = base64.b64encode(hashlib.sha256(HTML_STYLE.encode()).digest()).decode()
+    csp = ("default-src 'none'; connect-src 'none'; script-src 'none'; img-src 'none'; "
+           "object-src 'none'; base-uri 'none'; style-src 'sha256-" + css_sha + "'")
+    counts = report["statuses"]
+    return (
+        '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        '<meta http-equiv="Content-Security-Policy" content="' + e(csp) + '">'
+        '<title>Private third-party incident evidence audit</title><style>' + HTML_STYLE +
+        '</style></head><body><header><h1>Independent-event evidence dossiers</h1>'
+        '<p>Original research source SHA-256: ' + e(report["source_study_sha256"]) + '</p>'
+        '<p class="warning">All source origins, upstream families and cross-references '
+        'remain operator-supplied claims. No verified event identities or nonfire labels.</p>'
+        '</header><main><h2>Independent adjudication readiness (not verification)</h2>'
+        '<p>Structurally ready: ' +
+        str(counts["documentary_case_ready_for_external_adjudication_not_verified"]) +
+        ' · Missing evidence/review: ' + str(counts["further_independent_evidence_required"]) +
+        '</p><table><thead><tr><th>Candidate</th><th>State</th><th>Archived sources</th>'
+        '<th>Reviewer hypothesis</th><th>Review gates</th></tr></thead><tbody>' +
+        "".join(rows) + '</tbody></table></main>'
+        '<footer><small>Private offline audit only; original document integrity is not '
+        'publisher authentication or independent wildfire occurrence validation.</small></footer>'
+        '</body></html>\n'
+    )
+
+
 def _write(path: Path, value: dict) -> None:
     if path.exists() or path.is_symlink():
         raise ValueError("new output required, do not overwrite private evidence")
@@ -357,6 +429,7 @@ def main() -> None:
     check.add_argument("--first", type=Path)
     check.add_argument("--second", type=Path)
     check.add_argument("--output", type=Path, required=True)
+    check.add_argument("--html", type=Path, help="Optional private offline read-only evidence audit HTML")
     args = parser.parse_args()
     if args.action == "prepare":
         if args.output.resolve().is_relative_to(args.study_dir.resolve()):
@@ -371,8 +444,23 @@ def main() -> None:
                 args.output.resolve().is_relative_to(args.store.resolve()) or
                 args.output.resolve() in {p.resolve() for p in (args.first, args.second) if p}):
             parser.error("audit output must be separate from original/private evidence")
+        if (args.html is not None and
+                (args.html.resolve() == args.output.resolve() or
+                 args.html.exists() or args.html.resolve().is_relative_to(args.study_dir.resolve()) or
+                 args.html.resolve().is_relative_to(args.store.resolve()) or
+                 args.html.resolve() in {p.resolve() for p in (args.first, args.second) if p})):
+            parser.error("private HTML output must be new, distinct and outside source archives/votes")
         result = audit(args.study_dir, args.store, args.first, args.second)
+        html_output = render_audit(result) if args.html is not None else None
         _write(args.output, result)
+        if args.html is not None:
+            try:
+                args.html.parent.mkdir(parents=True, exist_ok=True)
+                with args.html.open("x", encoding="utf-8") as target:
+                    target.write(html_output)
+            except BaseException:
+                args.output.unlink()
+                raise
         print(json.dumps({"candidate_count": result["candidate_count"],
                           "cases_needing_evidence": result["statuses"]["further_independent_evidence_required"],
                           "verified_event_crosswalks": 0}, sort_keys=True))
