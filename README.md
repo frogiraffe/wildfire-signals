@@ -57,6 +57,16 @@ This is an **offline** research workflow requiring downloaded release assets,
 not continuous free cloud storage or validated wildfire event history.
 Downloaded pixel data and SQLite databases must remain outside this public repo.
 
+A bounded [official USFS MTBS reference downloader](docs/mtbs-reference-acquisition.md)
+can now acquire complete, small, year/bounding-box filtered wildfire GeoJSON
+cohorts directly from the USFS ArcGIS FeatureServer. It stores a SHA-256
+provenance manifest, and the retrospective benchmark accepts it via
+`--reference-manifest` without manually re-entering publisher and retrieval
+time. Requests fail closed on incomplete pagination, unexpected source results
+or oversized datasets. **These are post-fire references, never live inputs.**
+MTBS historical fire dates and the project's newer research FIRMS archive may
+not yet overlap, so no real detection scores have been established.
+
 A separate [retrospective MTBS perimeter benchmark](docs/retrospective-perimeter-benchmark.md)
 now compares an explicitly supplied official-schema burned-area GeoJSON
 reference with historical, checksum-verified raw FIRMS pixel records.
