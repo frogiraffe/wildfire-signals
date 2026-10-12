@@ -125,7 +125,7 @@ def compare_reports(before: dict, after: dict) -> dict:
         "hours_between":round((datetime.fromisoformat(second) -
                                datetime.fromisoformat(first)).total_seconds()/3600,3),
         "scope":before["scope"],
-        "sample_complete":not incomplete_reasons,
+        "comparison_untruncated":not incomplete_reasons,
         "incomplete_reasons":sorted(set(incomplete_reasons)),
         "agency": {
             "earlier_matched":before["matched_identities"],
@@ -202,7 +202,7 @@ th{color:#bed1d8}summary{cursor:pointer;font-weight:650}
                       ("Hours between",result["hours_between"])):
         output.append(f"<article><strong>{esc(num)}</strong>{esc(label)}</article>")
     output.append("</div>")
-    if not result["sample_complete"]:
+    if not result["comparison_untruncated"]:
         output.append(f"<p class='warning'>Incomplete comparison: "
                       f"{esc(', '.join(result['incomplete_reasons']))}</p>")
     for event in result["agency"]["changed_events"]:
