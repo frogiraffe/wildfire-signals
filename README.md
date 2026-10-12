@@ -57,6 +57,15 @@ This is an **offline** research workflow requiring downloaded release assets,
 not continuous free cloud storage or validated wildfire event history.
 Downloaded pixel data and SQLite databases must remain outside this public repo.
 
+The [regional source coverage audit](docs/global-source-coverage-audit.md) is integrated
+into that explorer. It compares the selected circle's NASA FIRMS candidate observations
+and NIFC/CWFIS current agency records with the snapshot's per-source health,
+acquisition age and known scope. US NWS and perimeters are explicitly listed as
+on-demand/not monitored sources rather than implied global coverage. The panel
+also exports an auditable JSON snapshot with provenance and missingness warnings.
+It is a client-side evidence tool: **zero detections never prove absence of fire,
+and a successful world API call does not validate regional observation completeness.**
+
 The **global region explorer** lets users select an arbitrary point on the map
 or use the current center, choose a 25/50/100/250 km radius and see candidate
 cell-hours, distinct cells, repeated UTC observations, a six-bin time chart,

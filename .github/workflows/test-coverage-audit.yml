@@ -1,0 +1,50 @@
+name: Global regional source coverage evidence
+on:
+  pull_request:
+    paths:
+      - 'public/coverage-audit.mjs'
+      - 'public/map-state.mjs'
+      - 'public/region-explorer-view.mjs'
+      - 'public/index.html'
+      - 'public/style.css'
+      - 'tests/js/coverage-audit.test.mjs'
+      - 'tests/browser/investigation-local.mjs'
+      - '.github/workflows/test-coverage-audit.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'public/coverage-audit.mjs'
+      - 'public/map-state.mjs'
+      - 'public/region-explorer-view.mjs'
+      - 'public/index.html'
+      - 'public/style.css'
+      - 'tests/js/coverage-audit.test.mjs'
+      - 'tests/browser/investigation-local.mjs'
+      - '.github/workflows/test-coverage-audit.yml'
+permissions:
+  contents: read
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test public analytical and provider status calculations
+        run: npm run test:public
+  browser:
+    needs: unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Responsive evidence source audit and download smoke
+        run: node tests/browser/investigation-local.mjs

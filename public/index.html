@@ -57,6 +57,14 @@
             <h3 data-i18n="regionSensors">Sensor memberships</h3>
             <ul id="region-sensors" class="region-sensors"></ul>
             <p id="region-source-issues"></p>
+            <section class="coverage-audit" aria-labelledby="coverage-title">
+              <h3 id="coverage-title" data-i18n="coverageTitle">Regional source evidence</h3>
+              <p data-i18n="coverageScope">Provider status, known observations and coverage gaps within the selected circle. Not a wildfire probability or verified source coverage.</p>
+              <p id="coverage-snapshot-status" role="status"></p>
+              <ul id="coverage-source-list" aria-label="Source evidence by provider"></ul>
+              <p id="coverage-caveat" data-i18n="coverageCaveat">Successful global API requests do not prove complete observation coverage. Agency sources do not cover every country.</p>
+              <button id="coverage-download" type="button" data-i18n="coverageDownload">Export evidence JSON</button>
+            </section>
             <h3 data-i18n="regionLeads">Observed locations to inspect</h3>
             <ol id="region-leads" class="region-leads"></ol>
             <p id="region-empty" data-i18n="regionNone">No matching observations in available data does not prove no fire.</p>

@@ -81,3 +81,22 @@
 .region-pick-mode{cursor:crosshair!important}
 #region-results[hidden],#region-empty[hidden]{display:none}
 @media(max-width:700px){.region-explorer{padding:9px}.region-controls button{padding:4px}.region-chart-label{font-size:8px}}
+
+/* Evidence-first regional provider capability and operational health. */
+.coverage-audit{margin:16px 0 10px;border-top:1px solid #53707c;padding-top:9px}
+.coverage-audit h3{font-size:12px;margin:7px 0}
+.coverage-audit #coverage-snapshot-status{font-size:11px;color:#f5d5a4}
+.coverage-audit ul{list-style:none;margin:9px 0;padding:0;display:grid;gap:7px}
+.coverage-audit li{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;
+  border:1px solid #345662;background:#213c48;border-radius:7px;padding:8px;align-items:start}
+.coverage-audit li strong{font-size:10px;overflow-wrap:anywhere}
+.coverage-audit li span,.coverage-audit li small{font-size:10px;line-height:1.4;overflow-wrap:anywhere}
+.coverage-audit li>span:nth-child(2){grid-column:1/-1;color:#c2d8de;margin-top:2px}
+.coverage-audit .coverage-source-status{grid-column:1/-1;color:#f4d09d;margin-top:4px}
+.coverage-audit .coverage-source-count{grid-column:1/-1;color:#e1f0f0}
+.coverage-audit li small{grid-column:1/-1;color:#aac5c8}
+.coverage-audit .coverage-source-links{grid-column:1/-1}
+.coverage-audit a{color:#9bdad7;font-size:10px}
+.coverage-audit #coverage-download{width:100%;font-size:11px;padding:7px}
+.coverage-audit #coverage-caveat{color:#f5d5a4}
+@media(max-width:700px){.coverage-audit li{padding:6px}.coverage-audit ul{gap:5px}}
