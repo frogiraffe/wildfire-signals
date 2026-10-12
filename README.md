@@ -124,6 +124,15 @@ negative wildfire labels. The existing bounded *real-source* multi-year CI
 now produces both quality reports from its already captured dataset, without
 more government API requests.
 
+The [source-verified MTBS–NIFC research work triage](docs/mtbs-candidate-research-triage.md)
+now produces deterministic coordinator JSON, formula-safe CSV and static HTML
+priorities from the original government source records, region source-ID
+population, candidate multiplicity, MTBS fire type and descriptive name tokens.
+It can optionally incorporate **genuine separate reviewer disagreements**
+through the existing double-review verification, without synthesizing opinions
+in CI. Priority represents **manual investigation workload**, never a
+quantitative same-event likelihood, negative wildfire label or prediction score.
+
 The [two-reviewer MTBS–NIFC reconciliation](docs/mtbs-nifc-pair-reconciliation.md)
 compares distinct private human reviews of the same source-verified candidate
 set, reports agreeing *hypotheses*, conflicting opinions, inconclusive cases,
