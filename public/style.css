@@ -48,3 +48,36 @@
 .weather-change-analysis li strong,.weather-change-analysis li span{display:block;font-size:11px;line-height:1.45}
 .weather-change-analysis li strong{color:#c2e4df}
 @media(max-width:700px){.detail{max-height:64%}}
+
+/* Global investigation: compact enough for the existing mobile map sidebar. */
+.region-explorer{margin:0 0 19px;padding:12px;border:1px solid #476f7d;border-radius:8px;background:#1b3440}
+.region-explorer h2{font-size:14px;margin:0 0 7px}
+.region-explorer h3{font-size:12px;color:#c2e4df;margin:12px 0 5px}
+.region-explorer p{font-size:11px;line-height:1.5;color:#b7cbd0;margin:6px 0}
+.region-controls{display:flex;flex-wrap:wrap;gap:5px}
+.region-controls button{font-size:11px;padding:6px;flex:1 1 auto}
+.region-controls button[aria-pressed="true"]{background:#365c5c;border-color:#a9dcd2}
+.region-controls button:disabled{opacity:.45;cursor:default}
+.region-explorer label{margin:9px 0 4px}
+.region-explorer select{width:100%;font-size:12px}
+.region-explorer .region-location{font-variant-numeric:tabular-nums;color:#cde8e1;overflow-wrap:anywhere}
+.region-explorer dl{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;margin:12px 0;font-size:11px}
+.region-explorer dt{color:#a9c2c8}
+.region-explorer dd{margin:0;font-variant-numeric:tabular-nums;text-align:right}
+#region-quality{color:#f8cf95;font-weight:600}
+#region-source-issues:not(:empty){color:#f8cf95}
+.region-chart{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;min-height:106px;align-items:end;padding:6px 0;border-bottom:1px solid #34505d}
+.region-chart-col{min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px}
+.region-chart-number{font-size:10px;font-variant-numeric:tabular-nums}
+.region-chart-track{width:100%;max-width:25px;height:62px;display:flex;align-items:flex-end;border-radius:3px;background:#2b4350;overflow:hidden}
+.region-chart-bar{display:block;width:100%;min-height:0;background:#7cc6be;border-radius:3px 3px 0 0}
+.region-chart-label{font-size:9px;color:#c3d7db;white-space:nowrap}
+.region-sensors,.region-leads{list-style:none;margin:6px 0;padding:0}
+.region-sensors li{display:flex;justify-content:space-between;gap:7px;font-size:10px;padding:4px 0}
+.region-sensors li span{overflow-wrap:anywhere}
+.region-sensors li strong{font-variant-numeric:tabular-nums}
+.region-leads li{margin:5px 0}
+.region-leads button{font-size:10px;width:100%;text-align:left;overflow-wrap:anywhere;padding:7px}
+.region-pick-mode{cursor:crosshair!important}
+#region-results[hidden],#region-empty[hidden]{display:none}
+@media(max-width:700px){.region-explorer{padding:9px}.region-controls button{padding:4px}.region-chart-label{font-size:8px}}
