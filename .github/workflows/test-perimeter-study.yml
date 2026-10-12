@@ -5,6 +5,8 @@ on:
       - 'fire_public/official_perimeters.py'
       - 'fire_public/perimeter_study.py'
       - 'fire_public/perimeter_quality.py'
+      - 'fire_public/official_lead_refresh.py'
+      - 'tests/test_official_lead_refresh.py'
       - 'tests/test_perimeter_study.py'
       - 'tests/test_perimeter_quality.py'
       - 'fire_public/label_review.py'
@@ -16,6 +18,8 @@ on:
       - 'fire_public/official_perimeters.py'
       - 'fire_public/perimeter_study.py'
       - 'fire_public/perimeter_quality.py'
+      - 'fire_public/official_lead_refresh.py'
+      - 'tests/test_official_lead_refresh.py'
       - 'tests/test_perimeter_study.py'
       - 'tests/test_perimeter_quality.py'
       - 'fire_public/label_review.py'
@@ -40,6 +44,7 @@ jobs:
           python -m unittest discover -s tests -p 'test_official_perimeters.py' -v
           python -m unittest discover -s tests -p 'test_workbench_official_perimeters.py' -v
           python -m unittest discover -s tests -p 'test_official_live_probe.py' -v
+          python -m unittest discover -s tests -p 'test_official_lead_refresh.py' -v
 
   real-multi-year-nifc:
     needs: offline-study
@@ -97,6 +102,12 @@ jobs:
             --at "$(python -c "import json;print(json.load(open('/tmp/wildfire-nifc-multiyear/study.json'))['decision_at'])")" \
             --year 2017 --year 2018 --max-controls 2 \
             --output /tmp/wildfire-nifc-multiyear/unadjudicated-queue.json
+          python -m fire_public.official_lead_refresh \
+            --queue /tmp/wildfire-nifc-multiyear/unadjudicated-queue.json \
+            --perimeter-db /tmp/wildfire-nifc-multiyear/nifc-2017-2018.sqlite3 \
+            --max-leads 8 \
+            --json /tmp/wildfire-nifc-multiyear/official-lead-reconciliation.json \
+            --source-dir /tmp/wildfire-nifc-multiyear/live-source-responses
           python - <<'PY'
           import json
           from pathlib import Path
@@ -128,6 +139,17 @@ jobs:
           assert all(case['proposed_label'] is None for case in queue['cases'])
           assert queue['sampling_frame']['selection_strategy']=='seeded_hash_region_round_robin'
           assert queue['sampling_frame']['selected_by_region']=={'ci-region-a':1,'ci-region-b':1}
+          refresh=json.loads((root/'official-lead-reconciliation.json').read_text())
+          assert refresh['reviewed_official_leads']==8
+          assert refresh['official_source_requests']==2
+          assert refresh['transport']=='direct_pinned_official_https'
+          assert refresh['independent_outcomes_verified']==0
+          assert refresh['independently_verified_negative_labels']==0
+          import hashlib
+          for source in refresh['source_response_evidence']:
+            path=root/'live-source-responses'/source['filename']
+            raw=path.read_bytes()
+            assert hashlib.sha256(raw).hexdigest()==source['sha256']
           print('Confirmed authentic US government responses in 2 distinct years, 8 archived GeoJSON perimeters.')
           PY
       - name: Preserve real research sample and source coverage audit
@@ -143,6 +165,8 @@ jobs:
             /tmp/wildfire-nifc-multiyear/quality.html
             /tmp/wildfire-nifc-multiyear/unadjudicated-queue.json
             /tmp/wildfire-nifc-multiyear/synthetic-frame.json
+            /tmp/wildfire-nifc-multiyear/official-lead-reconciliation.json
+            /tmp/wildfire-nifc-multiyear/live-source-responses/
             /tmp/wildfire-nifc-multiyear/live.log
           if-no-files-found: warn
           retention-days: 7
