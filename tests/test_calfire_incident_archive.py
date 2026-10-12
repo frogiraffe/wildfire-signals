@@ -26,13 +26,17 @@ def html_archive(*,change=None):
         name=(f"Fire record {i}" if i<=4 else f"Unrelated report {i}")
         if change=="same-names" and i==2:
             name="Fire record 1"
+        if change=="missing-acres" and i==4:
+            source_acres="" 
+        else:
+            source_acres="1,300"
         start="7/20/2018" if i!=14 else "12/31/1969"
         url=f"/incidents/2018/7/20/example-{i}"
         if change=="outside-url" and i==1:
             url="https://evil.example/incidents/2018/7/20/fake"
         rows.append(
             "<tr><td><a href='"+url+"'>"+name+"</a></td>"
-            "<td>Shasta</td><td>"+start+"</td><td>1,300</td><td>100%</td></tr>"
+            "<td>Shasta</td><td>"+start+"</td><td>"+source_acres+"</td><td>100%</td></tr>"
         )
     return (
         "<!doctype html><html><head><title>2018 Incidents</title></head>"
@@ -64,6 +68,15 @@ class OriginalCALFIRECrosswalkTests(unittest.TestCase):
         self.assertFalse(rows[0]["independently_authenticated_event_identity"])
         self.assertFalse(rows[-1]["started_year_is_requested_2018"])
         self.assertEqual(rows[-1]["source_started_at"],"1969-12-31")
+
+    def test_missing_acres_stays_unknown_and_never_becomes_zero(self):
+        rows=parse_archive(html_archive(change="missing-acres"))
+        self.assertIsNone(rows[3]["reported_acres"])
+        self.assertTrue(rows[3]["reported_acres_missing"])
+        self.assertEqual(rows[3]["reported_acres_raw"],"")
+        result=compare(self.study,html_archive(change="missing-acres"),
+                       captured_at="2026-10-13T15:00:00Z")
+        self.assertEqual(result["archive_records_missing_reported_acres"],1)
 
     def test_real_provider_shaped_case_pairs_get_only_ambiguous_name_leads(self):
         result=compare(self.study,self.original,captured_at="2026-10-13T15:00:00Z")
