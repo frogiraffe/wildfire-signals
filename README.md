@@ -124,6 +124,16 @@ negative wildfire labels. The existing bounded *real-source* multi-year CI
 now produces both quality reports from its already captured dataset, without
 more government API requests.
 
+The [offline MTBS–NIFC pair review workbench](docs/mtbs-nifc-pair-review.md)
+lets researchers review authentic same-region source proximity pairs with
+original government names, MTBS fire type, polygon/centroid SVG previews,
+and evidence-backed **unverified hypotheses**. It independently rechecks
+original source response bytes, region ObjectID population/selection hashes,
+record geometries and *all* candidate pairs before making a CSP-restricted,
+standalone HTML reviewer packet, and validates downloaded hypothesis JSON.
+Nothing enters the binary wildfire/nonfire label pipeline without separate
+independent adjudication and coverage evidence.
+
 The [same-region MTBS/NIFC historical investigation](docs/mtbs-nifc-shared-region-study.md)
 now queries both genuine government datasets for **the same bounded WGS84 region
 and the same year** before sampling, preserves original provider response bytes,
