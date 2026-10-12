@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'fire_public/mtbs_match_review.py'
+      - 'fire_public/mtbs_candidate_triage.py'
+      - 'tests/test_mtbs_candidate_triage.py'
       - 'tests/test_mtbs_match_review.py'
       - 'tests/browser/mtbs-match-review-local.mjs'
       - '.github/workflows/test-mtbs-match-review.yml'
@@ -10,6 +12,8 @@ on:
     branches: [main]
     paths:
       - 'fire_public/mtbs_match_review.py'
+      - 'fire_public/mtbs_candidate_triage.py'
+      - 'tests/test_mtbs_candidate_triage.py'
       - 'tests/test_mtbs_match_review.py'
       - 'tests/browser/mtbs-match-review-local.mjs'
       - '.github/workflows/test-mtbs-match-review.yml'
@@ -28,6 +32,8 @@ jobs:
         run: |
           python -m compileall -q fire_public
           python -m unittest discover -s tests -p 'test_mtbs_match_review.py' -v
+          python -m unittest discover -s tests -p 'test_mtbs_candidate_triage.py' -v
+          python -m unittest discover -s tests -p 'test_mtbs_pair_reconcile.py' -v
           python -m unittest discover -s tests -p 'test_mtbs_region_study.py' -v
   browser:
     needs: integrity
