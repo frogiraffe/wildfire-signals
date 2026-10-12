@@ -1,0 +1,37 @@
+name: Historical Workbench official NIFC perimeter integration
+on:
+  pull_request:
+    paths:
+      - 'fire_public/perimeter_context.py'
+      - 'fire_public/intelligence_workbench.py'
+      - 'fire_public/change_explorer.py'
+      - 'tests/test_workbench_official_perimeters.py'
+      - '.github/workflows/test-workbench-perimeters.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'fire_public/perimeter_context.py'
+      - 'fire_public/intelligence_workbench.py'
+      - 'fire_public/change_explorer.py'
+      - 'tests/test_workbench_official_perimeters.py'
+      - '.github/workflows/test-workbench-perimeters.yml'
+permissions:
+  contents: read
+jobs:
+  compare-perimeter-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile research tools and run full historical source regressions
+        run: |
+          python -m compileall -q fire_public
+          python -m unittest discover -s tests -p 'test_workbench_official_perimeters.py' -v
+          python -m unittest discover -s tests -p 'test_official_perimeters.py' -v
+          python -m unittest discover -s tests -p 'test_intelligence_workbench.py' -v
+          python -m unittest discover -s tests -p 'test_change_explorer.py' -v
+          python -m unittest discover -s tests -p 'test_workbench_pixel_integration.py' -v
+          python -m unittest discover -s tests -p 'test_historical_context.py' -v

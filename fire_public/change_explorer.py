@@ -26,6 +26,13 @@ def _same_scope(a: dict, b: dict) -> None:
     if a["satellite_evidence"].get("origin","agency_history") != b[
             "satellite_evidence"].get("origin","agency_history"):
         raise ValueError("Satellite evidence provenance must be the same")
+    left, right = (a.get("retrospective_perimeter_evidence"),
+                   b.get("retrospective_perimeter_evidence"))
+    if bool(left) != bool(right):
+        raise ValueError("Perimeter evidence origin must be the same")
+    if left and (left["source"] != right["source"] or
+                 left["source_fire_year"] != right["source_fire_year"]):
+        raise ValueError("Perimeter provider and study year must match")
 
 
 def _event_diff(before: dict | None, after: dict | None) -> dict:
@@ -83,6 +90,40 @@ def compare_reports(before: dict, after: dict) -> dict:
     sat_before = before["satellite_evidence"]
     sat_after = after["satellite_evidence"]
 
+    prior_perimeters = before.get("retrospective_perimeter_evidence")
+    new_perimeters = after.get("retrospective_perimeter_evidence")
+    perimeter_comparison = None
+    if prior_perimeters and new_perimeters:
+        past_features = {x["source_identity"]: x for x in prior_perimeters["examples"]}
+        current_features = {x["source_identity"]: x for x in new_perimeters["examples"]}
+        changes = []
+        for identity in sorted(current_features):
+            current_polygon = current_features[identity]
+            prior_polygon = past_features.get(identity)
+            if prior_polygon is None:
+                kind = "first_seen_in_archive"
+            elif prior_polygon["feature_sha256"] != current_polygon["feature_sha256"]:
+                kind = "retrospective_source_geometry_or_attribute_revision"
+            else:
+                continue
+            changes.append({
+                "source_identity":identity,"name":current_polygon["name"],
+                "kind":kind,"captured_at":current_polygon["captured_at"],
+                "feature_sha256":current_polygon["feature_sha256"],
+                "note":"Retrospective capture/revision; NOT a wildfire ignition, growth or spread event.",
+            })
+        perimeter_comparison={
+            "provider":"nifc_ifph_retrospective",
+            "source_fire_year":new_perimeters["source_fire_year"],
+            "earlier_matched_polygons":prior_perimeters["matched_polygons"],
+            "later_matched_polygons":new_perimeters["matched_polygons"],
+            "preview_only":True,"first_seen_or_revised_in_preview":changes,
+            "source_sample_incomplete":(
+                prior_perimeters["source_batch_subset_only"] or
+                new_perimeters["source_batch_subset_only"]),
+            "no_negative_labels":True,
+            "note":"Changes to archived retrospective perimeter evidence, not prospective fire evolution.",
+        }
     weather_changes = []
     for key in sorted(past.keys() & current.keys()):
         former = past[key].get("weather_context")
@@ -112,6 +153,9 @@ def compare_reports(before: dict, after: dict) -> dict:
     incomplete_reasons = []
     if before["truncated"] or after["truncated"]:
         incomplete_reasons.append("agency_display_limit")
+    if prior_perimeters and new_perimeters and (
+            prior_perimeters["preview_truncated"] or new_perimeters["preview_truncated"]):
+        incomplete_reasons.append("retrospective_perimeter_preview_limit")
     if sat_before["row_limit_reached"] or sat_after["row_limit_reached"]:
         incomplete_reasons.append("satellite_archive_query_limit")
     if any(x.get("evidence_truncated") for x in before["incidents"]+after["incidents"]):
@@ -159,6 +203,7 @@ def compare_reports(before: dict, after: dict) -> dict:
                     "Two rolling windows of available thermal candidates, NOT burned-area, ignition or spread measurements."),
         },
         "forecast_receipt_changes":weather_changes,
+        "retrospective_perimeter_changes":perimeter_comparison,
         "warnings":[
             "Known-at-time comparison only: later-collected historical records did not exist in the earlier archive view.",
             "An incident newly seen here may predate the earlier decision time.",
@@ -175,10 +220,13 @@ def compare_archive(path: str | Path, *, earlier_at: str, later_at: str,
                     latitude: float | None = None, longitude: float | None = None,
                     radius_km: float | None = None, limit: int = 200,
                     satellite_hours: int = 72, weather_db: str | Path | None = None,
-                    pixel_db: str | Path | None = None) -> dict:
+                    pixel_db: str | Path | None = None,
+                    perimeter_db: str | Path | None = None,
+                    perimeter_year: int | None = None) -> dict:
     kwargs = dict(latitude=latitude,longitude=longitude,radius_km=radius_km,
                   limit=limit,satellite_hours=satellite_hours,weather_db=weather_db,
-                  pixel_db=pixel_db)
+                  pixel_db=pixel_db,perimeter_db=perimeter_db,
+                  perimeter_year=perimeter_year)
     before = build_workbench(path,at=earlier_at,**kwargs)
     after = build_workbench(path,at=later_at,**kwargs)
     return compare_reports(before,after)
@@ -250,6 +298,18 @@ th{color:#bed1d8}summary{cursor:pointer;font-weight:650}
     for source,row in result["sources"].items():
         output.append(f"<li><b>{esc(source)}</b>: {esc(row['before'])} → {esc(row['after'])}</li>")
     output.append("</ul>")
+    perimeter=result.get("retrospective_perimeter_changes")
+    if perimeter:
+        output.append("<h2>Retrospective perimeter archive additions/revisions</h2>")
+        output.append(f"<p>Earlier polygon records: "
+                      f"{esc(perimeter['earlier_matched_polygons'])}; later: "
+                      f"{esc(perimeter['later_matched_polygons'])}.</p>")
+        output.append(f"<p class='warning'>{esc(perimeter['note'])}</p>")
+        if perimeter["source_sample_incomplete"]:
+            output.append("<p class='warning'>The upstream IFPH sample was deliberately bounded and is not a complete US historical perimeter census.</p>")
+        for entry in perimeter["first_seen_or_revised_in_preview"]:
+            output.append(f"<p>{esc(entry['name'])} — {esc(entry['kind'])}, "
+                          f"captured {esc(entry['captured_at'])}</p>")
     if result["forecast_receipt_changes"]:
         output.append("<h2>Changed captured forecast receipts</h2><ul>")
         for row in result["forecast_receipt_changes"]:

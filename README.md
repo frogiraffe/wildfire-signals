@@ -47,6 +47,13 @@ point-in-time source coverage reports. It has strict network/download budgets,
 does not enable or run any public collector, and does not claim that missing
 observations mean no wildfires. The researcher owns the local backup.
 
+The [Historical Intelligence Workbench integration](docs/workbench-official-perimeter-evidence.md)
+can now include separately archived **retrospective NIFC official fire polygons**
+with `--perimeter-db` in both `report` and `compare`. The feature keeps them
+separate from current incident IDs, satellite thermal candidates and weather
+evidence; it reports when polygon versions were actually archived rather than
+claiming the original fire year was a prospective source-availability date.
+
 An opt-in [official US historical perimeter evidence importer](docs/official-historical-perimeters.md)
 now retrieves bounded, year-specific NIFC IFPH GeoJSON directly from the public
 read-only ArcGIS source. The research SQLite archive versions source attributes
