@@ -111,6 +111,19 @@ def _pixel(row: dict, receipt: dict) -> tuple:
         raise ValueError("pixel timestamp exceeds confirmed receipt time")
     if not _finite(row.get("latitude"), -90, 90) or not _finite(row.get("longitude"), -180, 180):
         raise ValueError("invalid thermal observation coordinates")
+    # A stored digest authenticates the raw fields only relative to the signed
+    # receipt asset. Ensure the normalized values were actually derived from it.
+    try:
+        raw_lat, raw_lon = float(fields["latitude"]), float(fields["longitude"])
+        raw_acquired = datetime.strptime(
+            f"{fields['acq_date']}{str(fields['acq_time']).zfill(4)}",
+            "%Y-%m-%d%H%M").replace(tzinfo=timezone.utc).isoformat()
+    except (KeyError, TypeError, ValueError):
+        raise ValueError("raw FIRMS coordinates or acquisition time invalid") from None
+    if (not math.isfinite(raw_lat) or not math.isfinite(raw_lon)
+            or raw_lat != row["latitude"] or raw_lon != row["longitude"]
+            or raw_acquired != observed):
+        raise ValueError("raw-to-normalized FIRMS fields mismatch")
     frp = row.get("frp_mw")
     if frp is not None and not _finite(frp, 0, 1e9):
         raise ValueError("invalid FRP")
