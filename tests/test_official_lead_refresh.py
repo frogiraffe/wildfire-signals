@@ -105,6 +105,7 @@ class LeadLiveAuditTests(unittest.TestCase):
         self.queue=prepare_queue(self.db,at=OLD,years=[2017,2018],
                                   frame_path=file,max_controls=1)
         self.queue_path.write_text(json.dumps(self.queue),encoding="utf-8")
+        self.original_batches=[dict(b) for b in self.queue["source_batches"]]
 
     def verify(self,**opts):
         return verify_leads(self.queue_path,self.db,
@@ -164,8 +165,13 @@ class LeadLiveAuditTests(unittest.TestCase):
         self.queue_path.write_text(json.dumps(self.queue))
         with self.assertRaisesRegex(ValueError,"batch years are inconsistent"):
             self.verify()
-        with self.assertRaises(ValueError):
-            self.verify(clock=lambda:"2016-01-01T00:00:00Z")
+        # Restore the queue before testing the independent chronology guard.
+        self.queue["source_batches"] = self.original_batches
+        self.queue_path.write_text(json.dumps(self.queue))
+        with self.assertRaisesRegex(ValueError,"cannot predate"):
+            verify_leads(self.queue_path,self.db,max_leads=4,
+                         fetch_page=self.provider.page,fetch_metadata=metadata,
+                         clock=lambda:"2016-01-01T00:00:00Z")
 
     def test_budget_and_untrusted_metadata_gate(self):
         with self.assertRaisesRegex(ValueError,"max_leads"):
