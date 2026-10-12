@@ -98,18 +98,18 @@ def compare_reports(before: dict, after: dict) -> dict:
         current_features = {x["source_identity"]: x for x in new_perimeters["examples"]}
         changes = []
         for identity in sorted(current_features):
-            current = current_features[identity]
-            past = past_features.get(identity)
-            if past is None:
+            current_polygon = current_features[identity]
+            prior_polygon = past_features.get(identity)
+            if prior_polygon is None:
                 kind = "first_seen_in_archive"
-            elif past["feature_sha256"] != current["feature_sha256"]:
+            elif prior_polygon["feature_sha256"] != current_polygon["feature_sha256"]:
                 kind = "retrospective_source_geometry_or_attribute_revision"
             else:
                 continue
             changes.append({
-                "source_identity":identity,"name":current["name"],
-                "kind":kind,"captured_at":current["captured_at"],
-                "feature_sha256":current["feature_sha256"],
+                "source_identity":identity,"name":current_polygon["name"],
+                "kind":kind,"captured_at":current_polygon["captured_at"],
+                "feature_sha256":current_polygon["feature_sha256"],
                 "note":"Retrospective capture/revision; NOT a wildfire ignition, growth or spread event.",
             })
         perimeter_comparison={
