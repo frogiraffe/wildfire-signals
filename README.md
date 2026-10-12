@@ -54,6 +54,15 @@ separate from current incident IDs, satellite thermal candidates and weather
 evidence; it reports when polygon versions were actually archived rather than
 claiming the original fire year was a prospective source-availability date.
 
+The [official NIFC sampled-source quality audit](docs/nifc-source-quality-audit.md)
+checks stored agency polygon integrity before producing year-by-year field-missingness,
+reported acreage, vertex/degenerate-geometry and exact duplicate-shape review
+summaries. It exports static HTML and JSON, with observed fractions denominated
+by **downloaded government records only**, and explicitly identifies missing
+negative wildfire labels. The existing bounded *real-source* multi-year CI
+now produces both quality reports from its already captured dataset, without
+more government API requests.
+
 The [multi-year official NIFC study](docs/official-multiyear-nifc-study.md)
 now retrieves deterministic, seeded-hash samples of independently published
 historical US perimeter records across several years, preserving the official

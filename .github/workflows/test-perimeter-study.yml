@@ -4,14 +4,18 @@ on:
     paths:
       - 'fire_public/official_perimeters.py'
       - 'fire_public/perimeter_study.py'
+      - 'fire_public/perimeter_quality.py'
       - 'tests/test_perimeter_study.py'
+      - 'tests/test_perimeter_quality.py'
       - '.github/workflows/test-perimeter-study.yml'
   push:
     branches: [main]
     paths:
       - 'fire_public/official_perimeters.py'
       - 'fire_public/perimeter_study.py'
+      - 'fire_public/perimeter_quality.py'
       - 'tests/test_perimeter_study.py'
+      - 'tests/test_perimeter_quality.py'
       - '.github/workflows/test-perimeter-study.yml'
 permissions:
   contents: read
@@ -28,6 +32,7 @@ jobs:
         run: |
           python -m compileall -q fire_public
           python -m unittest discover -s tests -p 'test_perimeter_study.py' -v
+          python -m unittest discover -s tests -p 'test_perimeter_quality.py' -v
           python -m unittest discover -s tests -p 'test_official_perimeters.py' -v
           python -m unittest discover -s tests -p 'test_workbench_official_perimeters.py' -v
           python -m unittest discover -s tests -p 'test_official_live_probe.py' -v
@@ -54,6 +59,12 @@ jobs:
             --report /tmp/wildfire-nifc-multiyear/study.json \
             --geojson /tmp/wildfire-nifc-multiyear/study.geojson \
             2>&1 | tee /tmp/wildfire-nifc-multiyear/live.log
+          python -m fire_public.perimeter_quality \
+            --db /tmp/wildfire-nifc-multiyear/nifc-2017-2018.sqlite3 \
+            --at "$(python -c "import json;print(json.load(open('/tmp/wildfire-nifc-multiyear/study.json'))['decision_at'])")" \
+            --year 2017 --year 2018 \
+            --json /tmp/wildfire-nifc-multiyear/quality.json \
+            --html /tmp/wildfire-nifc-multiyear/quality.html
           python - <<'PY'
           import json
           from pathlib import Path
@@ -72,6 +83,12 @@ jobs:
           restored,_=study_report(root/'nifc-2017-2018.sqlite3',
                                   at=result['decision_at'],years=[2017,2018])
           assert restored['stored_polygon_records']==8
+          quality=json.loads((root/'quality.json').read_text())
+          assert quality['sampled_polygons_total']==8
+          assert quality['negative_labels_created']==0
+          assert quality['forecast_skill_measured'] is False
+          assert quality['year_quality'][0]['sampled_record_count']==4
+          assert quality['year_quality'][1]['sampled_record_count']==4
           print('Confirmed authentic US government responses in 2 distinct years, 8 archived GeoJSON perimeters.')
           PY
       - name: Preserve real research sample and source coverage audit
@@ -83,6 +100,8 @@ jobs:
             /tmp/wildfire-nifc-multiyear/nifc-2017-2018.sqlite3
             /tmp/wildfire-nifc-multiyear/study.json
             /tmp/wildfire-nifc-multiyear/study.geojson
+            /tmp/wildfire-nifc-multiyear/quality.json
+            /tmp/wildfire-nifc-multiyear/quality.html
             /tmp/wildfire-nifc-multiyear/live.log
           if-no-files-found: warn
           retention-days: 7
