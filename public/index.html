@@ -32,6 +32,13 @@
           <p id="area-quality"></p>
           <p data-i18n="areaCaveat">Thermal candidates only. Counts do not measure fire size or spread.</p>
         </section>
+        <section class="investigation" aria-labelledby="investigation-title">
+          <h2 id="investigation-title" data-i18n="leadTitle">Places to inspect</h2>
+          <p data-i18n="leadScope">Recent observed cells in this map view, ordered for review. This is not a danger ranking.</p>
+          <p id="lead-quality" role="status"></p>
+          <ol id="lead-list"></ol>
+          <p id="lead-empty" data-i18n="leadEmpty">No matching recent observations in the available data. This does not mean no fire.</p>
+        </section>
         <label for="hours" data-i18n="time">Time window</label><select id="hours"><option value="6">6 h</option><option value="24">24 h</option><option value="72">72 h</option></select>
         <p class="intro" data-i18n="timeScope">Time window filters satellite observations. Agency records show the current source layer; check each agency update date.</p>
         <label for="source" data-i18n="source">Source</label><select id="source"><option value="all" data-i18n="all">All sources</option></select>

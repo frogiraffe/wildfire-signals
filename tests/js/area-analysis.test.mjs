@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {summarizeArea} from '../../public/area-analysis.mjs';
+import {summarizeArea, investigationLeads} from '../../public/area-analysis.mjs';
 
 const now = new Date('2026-10-12T00:00:00Z');
 const bounds = {west:140,east:150,south:-10,north:0};
@@ -46,4 +46,33 @@ test('agency source failures do not imply satellite gaps in the area summary', (
     {key:'nifc_wfigs',status:'failed'},
     {key:'VIIRS_NOAA20_NRT',status:'complete'}]},bounds,24,now);
   assert.deepEqual(result.sourceProblems,[]);
+});
+
+test('investigation leads group a cell by distinct UTC hours and retain underlying evidence', () => {
+  const snapshot = {events:[
+    event('early',-6.025,145.025,'2026-10-11T18:05:00Z'),
+    event('same-hour',-6.025,145.025,'2026-10-11T18:40:00Z'),
+    event('latest',-6.025,145.025,'2026-10-11T23:00:00Z',['VIIRS_NOAA21_NRT']),
+    event('single',-7.025,146.025,'2026-10-11T23:30:00Z')]};
+  const leads = investigationLeads(snapshot,bounds,24,now);
+  assert.equal(leads.length,2);
+  assert.deepEqual(leads[0],{latitude:-6.025,longitude:145.025,
+    observedHours:2,latestObservedAt:'2026-10-11T23:00:00Z',
+    eventId:'latest',sources:['VIIRS_NOAA20_NRT','VIIRS_NOAA21_NRT']});
+  assert.equal(leads[1].eventId,'single');
+  assert.equal(leads[1].observedHours,1);
+});
+
+test('investigation leads obey viewport, time, source, recency and limit', () => {
+  const snapshot = {events:[
+    event('west',-5,179,'2026-10-11T23:00:00Z',['VIIRS_NOAA20_NRT']),
+    event('east',-5,-179,'2026-10-11T22:00:00Z',['VIIRS_NOAA21_NRT']),
+    event('old',-5,-178,'2026-10-11T09:00:00Z',['VIIRS_NOAA21_NRT']),
+    event('outside',-5,0,'2026-10-11T23:00:00Z',['VIIRS_NOAA21_NRT'])]};
+  const antimeridian = {west:170,east:-170,south:-10,north:0};
+  assert.deepEqual(investigationLeads(snapshot,antimeridian,24,now,
+    'VIIRS_NOAA21_NRT',1).map(x => x.eventId),['east']);
+  assert.deepEqual(investigationLeads(snapshot,antimeridian,6,now,
+    'VIIRS_NOAA20_NRT').map(x => x.eventId),['west']);
+  assert.deepEqual(investigationLeads({events:[]},bounds,72,now),[]);
 });

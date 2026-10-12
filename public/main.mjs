@@ -1,6 +1,6 @@
 import * as maplibregl from 'https://unpkg.com/maplibre-gl@6.13.0/dist/maplibre-gl.mjs';
 import {MESSAGES, parseState, stateHash, visible, effectiveStatus, featureCollection} from './map-state.mjs';
-import {summarizeArea} from './area-analysis.mjs';
+import {summarizeArea, investigationLeads} from './area-analysis.mjs';
 
 const state = parseState(location.hash);
 let snapshot = {manifest:{data_status:'unknown'},events:[],incidents:[],matches:[],sources:[],details:{}};
@@ -99,6 +99,39 @@ function draw() {
       `${area.recentCount.toLocaleString(state.lang)} / ${area.earlierCount.toLocaleString(state.lang)}` : '';
   el('area-quality').textContent = !areaAvailable ? msg.areaUnavailable : area.sourceProblems.length
     ? `${msg.areaQuality}: ${area.sourceProblems.join(', ')}` : '';
+  const leadList = el('lead-list'); leadList.replaceChildren();
+  const leads = areaAvailable ? investigationLeads({events},
+    {west:bounds.getWest(),east:bounds.getEast(),south:bounds.getSouth(),north:bounds.getNorth()},
+    state.hours,new Date()) : [];
+  el('lead-quality').textContent = dataStatus === 'stale' ? msg.leadStale
+    : area.sourceProblems.length ? msg.leadSatellitePartial
+    : dataStatus === 'partial' ? msg.leadPartial
+    : dataStatus === 'unknown' ? msg.leadUnknown : '';
+  el('lead-empty').hidden = leads.length > 0;
+  for (const lead of leads) {
+    const row = document.createElement('li');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.eventId = lead.eventId;
+    const location = document.createElement('strong');
+    location.textContent = `${lead.latitude.toFixed(3)}, ${lead.longitude.toFixed(3)}`;
+    const evidence = document.createElement('span');
+    evidence.textContent = lead.observedHours >= 2
+      ? msg.leadRepeated.replace('{hours}',lead.observedHours) : msg.leadSingle;
+    const sensors = document.createElement('span');
+    sensors.textContent = lead.sources.join(', ');
+    const latest = document.createElement('time');
+    latest.dateTime = lead.latestObservedAt;
+    latest.textContent = `${new Date(lead.latestObservedAt).toLocaleString(
+      state.lang === 'tr' ? 'tr-TR' : 'en-US',
+      {timeZone:'UTC',dateStyle:'short',timeStyle:'short'})} UTC`;
+    button.append(location,evidence,sensors,latest);
+    button.addEventListener('click',() => {
+      map.easeTo({center:[lead.longitude,lead.latitude],zoom:Math.max(map.getZoom(),8)});
+      showRecord('candidate',lead.eventId);
+    });
+    row.append(button); leadList.append(row);
+  }
   el('last-scan').textContent = snapshot.manifest?.last_scan_at || '—';
   const sources = el('source-list'); sources.replaceChildren();
   for (const source of snapshot.sources || []) {

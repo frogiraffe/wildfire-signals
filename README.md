@@ -32,6 +32,13 @@ growth. Failed VIIRS sources are shown with the summary; no-data during an outag
 must not be read as no fire. The map does not retain fire incidents or burned-area
 perimeters after the 72-hour candidate window.
 
+The preview also lists up to five recently observed cells in the visible map area.
+Cells observed in multiple UTC hours appear first; selecting one centers the map
+and opens its underlying observation. This is an investigation queue, not a danger
+ranking or fire confirmation. Source failures and stale data are shown beside it.
+The [analysis product plan](docs/analysis-product-2026-10-12.md) describes the
+next evidence and validation gates.
+
 NASA FIRMS requires a free MAP_KEY. See <https://firms.modaps.eosdis.nasa.gov/api/area/>.
 NIFC data comes from the [WFIGS current incident layer](https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Incident_Locations_Current/FeatureServer/0).
 Canadian records come from the [CWFIS current active fire layer](https://cwfis.cfs.nrcan.gc.ca/downloads/docs/en/references/cwfif/cwfis-data-placemat.pdf)

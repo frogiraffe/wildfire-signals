@@ -18,7 +18,14 @@ export const MESSAGES = {
     areaRepeated:'Cells seen in 2+ hours', areaLatest:'Latest observation',
     areaCompare:'Recent / preceding', areaHours:'hours',
     areaQuality:'Incomplete source data', areaUnavailable:'No verified snapshot is available.',
-    areaCaveat:'Thermal candidates only. Counts do not measure fire size or spread.'},
+    areaCaveat:'Thermal candidates only. Counts do not measure fire size or spread.',
+    leadTitle:'Places to inspect',leadScope:'Recent observed cells in this map view, ordered for review. This is not a danger ranking.',
+    leadEmpty:'No matching recent observations in the available data. This does not mean no fire.',
+    leadRepeated:'Observed in {hours} distinct hours',leadSingle:'Observed in one hour',
+    leadStale:'Snapshot is stale; recent observations may be missing.',
+    leadPartial:'Some sources failed; check the source states below.',
+    leadSatellitePartial:'Some satellite sources failed; this list may be incomplete.',
+    leadUnknown:'No verified snapshot is available.'},
   tr: {title:'Yangın Sinyalleri', candidates:'Uydu adayları', incidents:'Kurum olayları',
     timeScope:'Zaman aralığı uydu gözlemlerini süzer. Kurum kayıtları güncel kaynak katmanından gelir; her kaydın kurum güncelleme tarihini kontrol edin.',
     all:'Tüm kaynaklar', time:'Zaman aralığı', source:'Kaynak', status:'Durum',
@@ -38,7 +45,14 @@ export const MESSAGES = {
     areaRepeated:'2+ saatte görülen hücre', areaLatest:'Son gözlem',
     areaCompare:'Son / önceki', areaHours:'saat',
     areaQuality:'Eksik kaynak verisi', areaUnavailable:'Doğrulanmış veri görüntüsü yok.',
-    areaCaveat:'Bunlar termal adaylardır; sayılar yangın alanı veya yayılma ölçümü değildir.'}
+    areaCaveat:'Bunlar termal adaylardır; sayılar yangın alanı veya yayılma ölçümü değildir.',
+    leadTitle:'İncelenecek konumlar',leadScope:'Bu harita görünümündeki yakın zamanlı gözlem hücreleri. Sıralama tehlike derecesi değildir.',
+    leadEmpty:'Mevcut veride eşleşen yakın zamanlı gözlem yok. Bu, yangın olmadığı anlamına gelmez.',
+    leadRepeated:'{hours} ayrı saatte gözlendi',leadSingle:'Tek saatte gözlendi',
+    leadStale:'Veri görüntüsü eski; yakın zamanlı gözlemler eksik olabilir.',
+    leadPartial:'Bazı kaynaklar başarısız; aşağıdaki kaynak durumlarını kontrol edin.',
+    leadSatellitePartial:'Bazı uydu kaynakları başarısız; liste eksik olabilir.',
+    leadUnknown:'Doğrulanmış veri görüntüsü yok.'}
 };
 
 export function parseState(hash = '') {
