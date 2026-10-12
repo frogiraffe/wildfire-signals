@@ -10,6 +10,7 @@ import json
 import math
 import sqlite3
 from collections import Counter, defaultdict
+from contextlib import closing
 from datetime import datetime, timedelta
 from pathlib import Path
 from urllib.parse import quote
@@ -140,7 +141,7 @@ def archived_weather_context(weather_db: str | Path, incidents: list[dict],
     """
     cutoff = _timestamp(at)
     instant = datetime.fromisoformat(cutoff)
-    with _readonly(weather_db) as db:
+    with closing(_readonly(weather_db)) as db:
         rows = db.execute("""
             SELECT id,source_id,observed_at,captured_at,source_url,rights_url,payload_json
             FROM observations
