@@ -63,6 +63,9 @@ The local [decision-time evidence audit](docs/decision-time-evidence-audit-2026-
 reads an explicitly selected agency event and NWS forecast from separate SQLite
 archives. It excludes late receipts, distant weather points, and forecast values
 that do not cover the decision time. It does not create training labels or a model.
+The local [CWFIS status time-series pilot](docs/agency-status-series-2026-10-12.md)
+reports source-status intervals, gaps, corrections, and an under-control to
+out-of-control reversal without turning those records into extinguishment labels.
 
 NASA FIRMS requires a free MAP_KEY. See <https://firms.modaps.eosdis.nasa.gov/api/area/>.
 NIFC data comes from the [WFIGS current incident layer](https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Incident_Locations_Current/FeatureServer/0).
