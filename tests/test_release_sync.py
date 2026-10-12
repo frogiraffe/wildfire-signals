@@ -76,7 +76,7 @@ class ReleaseSyncTests(unittest.TestCase):
         self.input=self.root/"official"
         self.destination=self.root/"downloaded"
         self.database=self.root/"history.sqlite3"
-        self.record=_release_files(self.input,STAMP)
+        self.record=_release_files(self.root/"restored",STAMP)
         self.data={a["browser_download_url"]:(self.input/a["name"]).read_bytes()
                    for a in self.record["assets"]}
         self.calls=[]
@@ -109,10 +109,11 @@ class ReleaseSyncTests(unittest.TestCase):
         self.assertEqual(stats["candidate_cell_hours"],1)
         self.assertEqual(stats["latest_source_state"][FIRMS_SOURCES[0]]["status"],"complete")
         self.assertFalse(stats["fire_confirmation"])
+        gets_before=sum(call[0]=="get" for call in self.calls)
         again=self.sync()
         self.assertEqual(again["downloaded_releases"],0)
         self.assertEqual(again["skipped_verified_releases"],1)
-        self.assertFalse(any(call[0]=="get" for call in self.calls[-2:]))
+        self.assertEqual(sum(call[0]=="get" for call in self.calls),gets_before)
         self.assertEqual(import_release_assets(self.database,self.destination)["imported_scans"],0)
 
     def test_bad_download_digest_cannot_publish_partial_day(self):
@@ -144,7 +145,7 @@ class ReleaseSyncTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"not canonical"):
             self.sync()
         self.assertFalse(self.destination.exists())
-        self.record=_release_files(self.input,STAMP)
+        self.record=_release_files(self.root/"restored",STAMP)
         self.record["assets"][0]["name"]="../oops"
         with self.assertRaisesRegex(ValueError,"unexpected research release asset"):
             _plan_one(self.record)
@@ -153,7 +154,7 @@ class ReleaseSyncTests(unittest.TestCase):
         self.record["assets"][0]["digest"]=None
         with self.assertRaisesRegex(ValueError,"SHA-256"):
             self.sync()
-        self.record=_release_files(self.input,STAMP)
+        self.record=_release_files(self.root/"restored",STAMP)
         self.record["assets"][0]["size"]=0
         with self.assertRaisesRegex(ValueError,"invalid release asset size"):
             self.sync()
