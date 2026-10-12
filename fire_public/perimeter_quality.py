@@ -33,11 +33,11 @@ def _usable(value) -> bool:
 def _lon_span(points: list[float]) -> tuple[float, bool]:
     # Smallest covering longitude arc, not a country extent or exact polygon
     # width. Longitude-wrap ambiguity is reported explicitly.
-    lon = sorted(((float(v) + 360.0) % 360.0) for v in points)
+    lon = sorted(set(((float(v) + 360.0) % 360.0) for v in points))
     if len(lon) < 2:
         return 0.0, False
-    gaps = [(lon[(i+1) % len(lon)] - lon[i]) % 360.0
-            for i in range(len(lon))]
+    gaps = [lon[i+1] - lon[i] for i in range(len(lon)-1)]
+    gaps.append(lon[0] + 360.0 - lon[-1])
     width = 360.0 - max(gaps)
     return round(width, 6), max(points) - min(points) > 180
 
