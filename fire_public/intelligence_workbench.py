@@ -327,6 +327,10 @@ def main() -> None:
         targets = [p for p in (args.json,args.html) if p is not None]
         if len({p.resolve() for p in targets}) != len(targets):
             parser.error("JSON and HTML output must be different files")
+        if any(p.resolve() == args.db.resolve() for p in targets):
+            parser.error("reports cannot overwrite the source SQLite archive")
+        if any(p.exists() and not p.is_file() for p in targets):
+            parser.error("report output must be a regular file")
         if any(p.exists() for p in targets) and not args.overwrite:
             parser.error("output already exists; specify --overwrite to replace")
         result = build_workbench(args.db,at=args.at,latitude=args.latitude,
