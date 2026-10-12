@@ -124,6 +124,15 @@ negative wildfire labels. The existing bounded *real-source* multi-year CI
 now produces both quality reports from its already captured dataset, without
 more government API requests.
 
+The [live official CAL FIRE 2018 incident archive cross-reference](docs/calfire-2018-incident-source-crosswalk.md)
+now archives the state's original historical incident-page HTML with exact
+SHA-256 and compares retrospective incident names, dates, counties and acreage
+with source-verified NIFC/MTBS geographic candidates. CAL FIRE event-page
+links are preserved; name/day overlap is **only an external research lead**,
+not confirmed event identity, independent provider validation or an
+absence-of-fire label. The state archive is not geographically exhaustive and
+can share upstream incident records with NIFC and MTBS.
+
 The [private third-party incident evidence dossiers](docs/mtbs-independent-event-evidence.md)
 now create a case-by-case *empty* verification checklist from actual NIFC–MTBS
 research candidates. Researchers can privately archive original external incident
