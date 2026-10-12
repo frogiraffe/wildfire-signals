@@ -64,6 +64,15 @@ source and feature availability times, and only then exports a
 The existing real NIFC CI can now demonstrate an unadjudicated eight-real-source
 queue with explicitly synthetic control units; **no true negative samples or
 measured prediction skill are created by these integration tests**.
+The [offline interactive reviewer form](docs/offline-reviewer-form.md)
+turns each private independent review packet into a self-contained browser
+interface with explicit per-case votes or abstentions, independent evidence
+attestation and a downloaded JSON vote file compatible with the existing
+blind reconciliation pipeline. It requires no server, external requests or
+browser persistence, and historical NIFC source leads cannot be voted
+fire-negative. Browser tests cover desktop/mobile workflow and file download.
+It is not automated ground truth verification.
+
 The offline [blind review intake](docs/independent-label-review-workbench.md#independent-reviewer-intake)
 produces private per-reviewer HTML briefs and vote forms, preserves disagreements,
 and passes only matching independently recorded votes to the same cohort gate.

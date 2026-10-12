@@ -1,0 +1,49 @@
+name: Offline private reviewer form
+on:
+  pull_request:
+    paths:
+      - 'fire_public/review_form.py'
+      - 'tests/test_review_form.py'
+      - 'tests/browser/review-form-local.mjs'
+      - '.github/workflows/test-review-form.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'fire_public/review_form.py'
+      - 'tests/test_review_form.py'
+      - 'tests/browser/review-form-local.mjs'
+      - '.github/workflows/test-review-form.yml'
+permissions:
+  contents: read
+jobs:
+  privacy-and-schema:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify self-contained form and compatibility with double reviewer intake
+        run: |
+          python -m compileall -q fire_public
+          python -m unittest discover -s tests -p 'test_review_form.py' -v
+          python -m unittest discover -s tests -p 'test_review_intake.py' -v
+          python -m unittest discover -s tests -p 'test_label_review.py' -v
+  browser:
+    needs: privacy-and-schema
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run standalone file-based reviewer UI, validation and vote-download checks
+        run: node tests/browser/review-form-local.mjs
