@@ -1,0 +1,32 @@
+name: Official MTBS reference acquisition and benchmark
+on:
+  pull_request:
+    paths:
+      - 'fire_public/mtbs_reference_fetch.py'
+      - 'fire_public/perimeter_benchmark.py'
+      - 'tests/test_mtbs_reference_fetch.py'
+      - '.github/workflows/test-mtbs-reference-fetch.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'fire_public/mtbs_reference_fetch.py'
+      - 'fire_public/perimeter_benchmark.py'
+      - 'tests/test_mtbs_reference_fetch.py'
+      - '.github/workflows/test-mtbs-reference-fetch.yml'
+permissions:
+  contents: read
+jobs:
+  bounded-reference-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile, acquire official-schema reference using mock network, evaluate SQLite
+        run: |
+          python -m compileall -q fire_public
+          python -m unittest discover -s tests -p 'test_mtbs_reference_fetch.py' -v
+          python -m unittest discover -s tests -p 'test_perimeter_benchmark.py' -v
+          python -m unittest discover -s tests -p 'test_pixel_history.py' -v

@@ -409,8 +409,10 @@ def main() -> None:
     p=argparse.ArgumentParser(description="Offline positive-only MTBS perimeter/FIRMS comparison")
     p.add_argument("--pixel-db",type=Path,required=True)
     p.add_argument("--geojson",type=Path,required=True)
-    p.add_argument("--source-url",required=True)
-    p.add_argument("--reference-published-at",required=True)
+    p.add_argument("--source-url")
+    p.add_argument("--reference-published-at")
+    p.add_argument("--reference-manifest",type=Path,
+                   help="JSON metadata emitted by mtbs_reference_fetch; verify matching file SHA")
     p.add_argument("--as-of",required=True)
     p.add_argument("--observation-days",type=int,default=14)
     p.add_argument("--json",type=Path)
@@ -426,8 +428,29 @@ def main() -> None:
         p.error("report cannot overwrite reference GeoJSON or raw pixel SQLite database")
     if any(x.exists() and (not a.overwrite or not x.is_file()) for x in outputs):
         p.error("existing output requires --overwrite and must be a regular file")
-    ref=load_reference(a.geojson,source_url=a.source_url,
-                       published_at=a.reference_published_at)
+    source_url=a.source_url
+    published_at=a.reference_published_at
+    if a.reference_manifest:
+        if (not a.reference_manifest.is_file()
+                or a.reference_manifest.stat().st_size>256*1024):
+            p.error("invalid bounded MTBS reference metadata file")
+        manifest=json.loads(a.reference_manifest.read_text(encoding="utf8"))
+        if (manifest.get("provider")!="USFS_MTBS"
+                or manifest.get("schema_version")!=1
+                or manifest.get("collection_complete_within_filter") is not True):
+            p.error("unsupported or incomplete MTBS reference metadata")
+        if source_url and source_url!=manifest.get("source_url"):
+            p.error("provided source URL differs from downloaded reference metadata")
+        if published_at and _timestamp(published_at)!=_timestamp(manifest.get("retrieved_at")):
+            p.error("reference availability differs from its recorded retrieval time")
+        source_url=manifest["source_url"]
+        published_at=manifest["retrieved_at"]
+    if not source_url or not published_at:
+        p.error("provide --reference-manifest or both --source-url and --reference-published-at")
+    ref=load_reference(a.geojson,source_url=source_url,
+                       published_at=published_at)
+    if a.reference_manifest and ref["sha256"]!=manifest.get("geojson_sha256"):
+        p.error("MTBS GeoJSON content does not match downloaded metadata SHA-256")
     result=benchmark_perimeters(a.pixel_db,ref,as_of=a.as_of,
                                 observation_days=a.observation_days)
     for path,data in ((a.json,json.dumps(result,indent=2,ensure_ascii=False)+"\n"),
