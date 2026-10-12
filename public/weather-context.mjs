@@ -62,6 +62,26 @@ export function parseNwsGrid(grid, now = new Date()) {
   return {updatedAt,stale:current - updated > 12 * 3_600_000,rows};
 }
 
+export function forecastChanges(forecast) {
+  const rows = forecast?.rows;
+  if (!Array.isArray(rows) || !rows.length ||
+      rows.some(row => !row || ![0,6,12,24].includes(row.hours)) ||
+      new Set(rows.map(row => row.hours)).size !== rows.length) return [];
+  const baseline = rows.find(row => row.hours === 0);
+  if (!baseline) return [];
+  const change = (before, after) =>
+    Number.isFinite(before) && Number.isFinite(after) ? after - before : null;
+  return rows.filter(row => row.hours !== 0).sort((a,b) => a.hours - b.hours)
+    .map(row => ({hours:row.hours,
+      windKmh:change(baseline.windKmh,row.windKmh),
+      gustKmh:change(baseline.gustKmh,row.gustKmh),
+      temperatureC:change(baseline.temperatureC,row.temperatureC),
+      humidityPercent:change(baseline.humidityPercent,row.humidityPercent),
+      directionTurnDeg: Number.isFinite(baseline.directionDeg) &&
+        Number.isFinite(row.directionDeg)
+        ? ((row.directionDeg - baseline.directionDeg + 540) % 360) - 180 : null}));
+}
+
 async function readJson(url, fetchImpl, signal) {
   const response = await fetchImpl(url,{headers:{Accept:'application/geo+json'},signal});
   if (!response.ok) throw new Error(`NWS HTTP ${response.status}`);

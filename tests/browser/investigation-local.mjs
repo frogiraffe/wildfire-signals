@@ -133,14 +133,20 @@ try {
   await weatherPage.route('https://api.weather.gov/**',route => {
     weatherCalls.push(route.request().url());
     const from = new Date(Date.now()-3_600_000).toISOString();
+    const later = new Date(Date.parse(from)+6*3_600_000).toISOString();
     const response = route.request().url().includes('/points/')
       ? {properties:{forecastGridData:'https://api.weather.gov/gridpoints/TOP/32,81'}}
       : {properties:{updateTime:from,
-          windSpeed:{uom:'wmoUnit:km_h-1',values:[{validTime:`${from}/P2D`,value:20}]},
-          windDirection:{uom:'wmoUnit:degree_(angle)',values:[{validTime:`${from}/P2D`,value:270}]},
-          windGust:{uom:'wmoUnit:km_h-1',values:[{validTime:`${from}/P2D`,value:35}]},
-          temperature:{uom:'wmoUnit:degC',values:[{validTime:`${from}/P2D`,value:28}]},
-          relativeHumidity:{uom:'wmoUnit:percent',values:[{validTime:`${from}/P2D`,value:30}]},
+          windSpeed:{uom:'wmoUnit:km_h-1',values:[{validTime:`${from}/PT6H`,value:20},
+            {validTime:`${later}/P2D`,value:35}]},
+          windDirection:{uom:'wmoUnit:degree_(angle)',values:[{validTime:`${from}/PT6H`,value:350},
+            {validTime:`${later}/P2D`,value:10}]},
+          windGust:{uom:'wmoUnit:km_h-1',values:[{validTime:`${from}/PT6H`,value:35},
+            {validTime:`${later}/P2D`,value:50}]},
+          temperature:{uom:'wmoUnit:degC',values:[{validTime:`${from}/PT6H`,value:28},
+            {validTime:`${later}/P2D`,value:31}]},
+          relativeHumidity:{uom:'wmoUnit:percent',values:[{validTime:`${from}/PT6H`,value:30},
+            {validTime:`${later}/P2D`,value:20}]},
           quantitativePrecipitation:{uom:'wmoUnit:mm',values:[{validTime:`${from}/P2D`,value:0}]}}};
     return route.fulfill({status:200,contentType:'application/geo+json',body:JSON.stringify(response)});
   });
@@ -158,6 +164,11 @@ try {
   assert.match(weatherDetail,/Hamle: 35 km\/h/);
   assert.match(weatherDetail,/Tahmini yağış: 0 mm/);
   assert.match(weatherDetail,/yayılım tahmini değildir/);
+  const changeDetail = await weatherPage.locator('.weather-change-analysis').textContent();
+  assert.match(changeDetail,/Tahmini hava değişimi/);
+  assert.match(changeDetail,/Rüzgâr: \+15 km\/h/);
+  assert.match(changeDetail,/Nem: -10 %/);
+  assert.match(changeDetail,/yayılma olasılığı değildir/);
   const headings = await weatherPage.locator('#detail-content h3').allTextContents();
   assert.ok(headings.indexOf('Kayıt konumundaki hava') < headings.indexOf('Kurum kaydı değişim geçmişi'));
   await weatherPage.locator('.weather-context details summary').first().click();

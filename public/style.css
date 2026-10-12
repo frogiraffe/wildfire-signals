@@ -30,4 +30,12 @@
 .weather-context details summary{cursor:pointer}
 .weather-context details dl{grid-template-columns:90px 1fr;font-size:11px;gap:4px;margin:7px 0}
 .weather-context a{font-size:12px;color:#9edbd5}
+.weather-change-analysis{background:#203741;border:1px solid #3a5963;border-radius:8px;padding:10px;margin:14px 0}
+.weather-change-analysis h4{font-size:13px;margin:0 0 6px;color:#c2e4df}
+.weather-change-analysis p{margin:6px 0;font-size:11px}
+.weather-change-analysis ul{list-style:none;padding:0;margin:8px 0}
+.weather-change-analysis li{padding:7px 0;border-bottom:1px solid #3a5963}
+.weather-change-analysis li:last-child{border-bottom:0}
+.weather-change-analysis li strong,.weather-change-analysis li span{display:block;font-size:11px;line-height:1.45}
+.weather-change-analysis li strong{color:#c2e4df}
 @media(max-width:700px){.detail{max-height:64%}}

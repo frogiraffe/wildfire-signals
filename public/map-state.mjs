@@ -40,6 +40,10 @@ export const MESSAGES = {
     weatherHumidity:'Humidity',weatherRain:'Forecast rain',weatherFrom:'from',
     weatherMissing:'—',weatherRainWindow:'forecast interval',
     weatherIntervals:'Source validity intervals',
+    weatherChangeTitle:'Forecast changes',
+    weatherChangeScope:'Change from the current forecast at this NWS grid point. Positive direction turn means clockwise.',
+    weatherTurn:'Wind direction turn',
+    weatherChangeCaveat:'These are changes in forecast conditions, not measured effects on this fire or a spread probability.',
     weatherFootnote:'Rain is the amount for its stated interval, not a measured total. This forecast is not saved to the historical training archive.',
     statusOC:'Out of control',statusBH:'Being held',statusUC:'Under control'},
   tr: {title:'Yangın Sinyalleri', candidates:'Uydu adayları', incidents:'Kurum olayları',
@@ -83,6 +87,10 @@ export const MESSAGES = {
     weatherHumidity:'Nem',weatherRain:'Tahmini yağış',weatherFrom:'geldiği yön',
     weatherMissing:'—',weatherRainWindow:'tahmin aralığı',
     weatherIntervals:'Kaynak geçerlilik aralıkları',
+    weatherChangeTitle:'Tahmini hava değişimi',
+    weatherChangeScope:'Bu NWS grid noktasındaki mevcut tahmine göre fark. Pozitif yön dönüşü saat yönündedir.',
+    weatherTurn:'Rüzgâr yönü dönüşü',
+    weatherChangeCaveat:'Bunlar tahmini hava koşullarındaki farklardır; yangına ölçülmüş etkisi veya yayılma olasılığı değildir.',
     weatherFootnote:'Yağış belirtilen aralığın miktarıdır; ölçülen toplam değildir. Bu tahmin tarihsel eğitim arşivine kaydedilmez.',
     statusOC:'Kontrol dışı',statusBH:'Sınırları içinde tutuluyor',statusUC:'Kontrol altında'}
 };

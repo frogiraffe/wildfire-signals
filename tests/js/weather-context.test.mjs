@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseNwsGrid, fetchNwsWeather} from '../../public/weather-context.mjs';
+import {parseNwsGrid, fetchNwsWeather, forecastChanges} from '../../public/weather-context.mjs';
 
 const START = '2026-10-12T00:00:00Z';
 const value = (unit, values) => ({uom:unit,values});
@@ -83,4 +83,31 @@ test('unsupported location fails without inventing weather and older source is m
   const old = parseNwsGrid(GRID,new Date('2026-10-12T13:00:00Z'));
   assert.equal(old.stale,true);
   assert.equal(old.rows[3].rain,null);
+});
+
+test('forecast comparison preserves signed changes and short angular turn', () => {
+  const forecast = {rows:[
+    {hours:0,windKmh:20,gustKmh:30,temperatureC:25,humidityPercent:40,directionDeg:350},
+    {hours:6,windKmh:35,gustKmh:45,temperatureC:22,humidityPercent:55,directionDeg:10},
+    {hours:12,windKmh:10,gustKmh:20,temperatureC:27,humidityPercent:30,directionDeg:330},
+    {hours:24,windKmh:20,gustKmh:30,temperatureC:25,humidityPercent:40,directionDeg:350},
+  ]};
+  assert.deepEqual(forecastChanges(forecast),[
+    {hours:6,windKmh:15,gustKmh:15,temperatureC:-3,humidityPercent:15,directionTurnDeg:20},
+    {hours:12,windKmh:-10,gustKmh:-10,temperatureC:2,humidityPercent:-10,directionTurnDeg:-20},
+    {hours:24,windKmh:0,gustKmh:0,temperatureC:0,humidityPercent:0,directionTurnDeg:0},
+  ]);
+});
+
+test('forecast comparison keeps absent endpoints unknown and rejects duplicate horizons', () => {
+  const rows = [
+    {hours:0,windKmh:0,gustKmh:null,temperatureC:20,humidityPercent:0,directionDeg:null},
+    {hours:6,windKmh:15,gustKmh:30,temperatureC:null,humidityPercent:20,directionDeg:180},
+  ];
+  assert.deepEqual(forecastChanges({rows}),[
+    {hours:6,windKmh:15,gustKmh:null,temperatureC:null,humidityPercent:20,directionTurnDeg:null},
+  ]);
+  assert.deepEqual(forecastChanges({rows:[rows[0],rows[1],{...rows[1]}]}),[]);
+  assert.deepEqual(forecastChanges({rows:[rows[1]]}),[]);
+  assert.deepEqual(forecastChanges(null),[]);
 });

@@ -2,7 +2,7 @@ import * as maplibregl from 'https://unpkg.com/maplibre-gl@6.13.0/dist/maplibre-
 import {MESSAGES, parseState, stateHash, visible, effectiveStatus, featureCollection} from './map-state.mjs';
 import {summarizeArea, investigationLeads} from './area-analysis.mjs';
 import {incidentTimeline} from './incident-timeline.mjs';
-import {fetchNwsWeather} from './weather-context.mjs';
+import {fetchNwsWeather, forecastChanges} from './weather-context.mjs';
 
 const state = parseState(location.hash);
 let snapshot = {manifest:{data_status:'unknown'},events:[],incidents:[],matches:[],sources:[],details:{}};
@@ -46,6 +46,32 @@ function renderWeather(container, forecast, msg) {
   if (forecast.stale) {
     const warning = document.createElement('p'); warning.textContent = msg.weatherStale;
     container.append(warning);
+  }
+  const changes = forecastChanges(forecast);
+  if (changes.length) {
+    const analysis = document.createElement('section');
+    analysis.className = 'weather-change-analysis';
+    const title = document.createElement('h4'); title.textContent = msg.weatherChangeTitle;
+    const scope = document.createElement('p'); scope.textContent = msg.weatherChangeScope;
+    const changeList = document.createElement('ul');
+    const signed = (value, unit) => value === null ? msg.weatherMissing
+      : `${value > 0 ? '+' : ''}${Math.round(value * 10) / 10} ${unit}`;
+    for (const row of changes) {
+      const item = document.createElement('li');
+      const time = document.createElement('strong');
+      time.textContent = msg.weatherHour.replace('{hours}',row.hours);
+      const wind = document.createElement('span');
+      wind.textContent = `${msg.weatherWind}: ${signed(row.windKmh,'km/h')} · ` +
+        `${msg.weatherGust}: ${signed(row.gustKmh,'km/h')} · ` +
+        `${msg.weatherTurn}: ${signed(row.directionTurnDeg,'°')}`;
+      const air = document.createElement('span');
+      air.textContent = `${msg.weatherTemp}: ${signed(row.temperatureC,'°C')} · ` +
+        `${msg.weatherHumidity}: ${signed(row.humidityPercent,'%')}`;
+      item.append(time,wind,air); changeList.append(item);
+    }
+    const caveat = document.createElement('p'); caveat.textContent = msg.weatherChangeCaveat;
+    analysis.append(title,scope,changeList,caveat);
+    container.append(analysis);
   }
   const list = document.createElement('ol');
   for (const row of forecast.rows) {

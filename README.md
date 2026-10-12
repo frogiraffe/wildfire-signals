@@ -49,7 +49,8 @@ long-term collector or fire predictions.
 
 For a selected US NIFC incident, the draft preview can show [NWS grid forecast
 context](docs/us-weather-context-pilot-2026-10-12.md): wind, gust, temperature,
-humidity, and forecast precipitation intervals at the recorded point. The browser
+humidity, forecast precipitation intervals, and 6/12/24-hour condition changes
+at the recorded point. The browser
 requests this only when an incident is opened. It is not a weather observation at
 the fire or a fire-spread prediction. A separate one-point local archive pilot
 checks forecast receipt times and offline replay; the browser requests are not

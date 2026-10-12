@@ -16,6 +16,8 @@ NWS, API verisinin ücretsiz ve her amaçla kullanılabilir olduğunu, ancak kö
 
 ## Model verisi için açık kapı
 
+Olay ayrıntısı ayrıca aynı NWS grid tahminindeki **6, 12 ve 24 saatlik değişimi** 0 saatlik değere göre gösterir: rüzgâr ve hamle hızı, sıcaklık, bağıl nem ve rüzgârın geldiği yönün en kısa açısal dönüşü. Eksik iki uçtan biri varsa fark da bilinmiyor kalır; sıfır ile eksik değer ayrıdır. Yağış, aralıkları üst üste gelebileceğinden bu karşılaştırmada toplanmaz; her saat kartında kendi kaynak aralığıyla gösterilir. Karşılaştırma yangının bu havadan nasıl etkileneceğini veya nerede ilerleyeceğini hesaplamaz.
+
 Tarayıcı isteği tarihsel eğitim arşivine yazılmaz. Ayrıca geliştirilen **ayrı ve elle çalıştırılan yerel arşiv pilotu**, seçilmiş bir NWS nokta/grid yanıtını ham SHA-256 dosyaları, manifest ve SQLite `weather_forecast_snapshot` kaydı olarak saklar. Kaynak `updateTime` alanını, gerçek alım saatini ve altı değişkenin kendi geçerlilik aralıklarını ayırır. `as_of` sorgusu alım saatinden önce bu tahmini vermez. Hava kaydı otomatik olarak bir `fire_event` ile eşleşmez.
 
 ```bash
