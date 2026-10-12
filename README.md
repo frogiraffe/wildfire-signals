@@ -54,6 +54,15 @@ separate from current incident IDs, satellite thermal candidates and weather
 evidence; it reports when polygon versions were actually archived rather than
 claiming the original fire year was a prospective source-availability date.
 
+The [multi-year official NIFC study](docs/official-multiyear-nifc-study.md)
+now retrieves deterministic, seeded-hash samples of independently published
+historical US perimeter records across several years, preserving the official
+ObjectID population digests, sampled ID hashes, original polygons, real capture
+times, per-year source counts and explicit collection completeness warnings.
+GitHub CI can verify a bounded **real** two-year source sample and retain its
+research SQLite/GeoJSON evidence. This is a source-record study, not national
+wildfire incidence estimation, valid fire-negative labeling or a trained model.
+
 An additional [live NIFC provider contract probe](docs/nifc-live-source-contract.md)
 validates the official ArcGIS layer's current schema and queries exactly one
 real historical polygon, archiving source hashes, source metadata and actual
