@@ -124,6 +124,7 @@ class OfficialQualityTests(unittest.TestCase):
         exported=render_quality_html(result)
         self.assertIn("NIFC official source sample quality",exported)
         self.assertNotIn("<script>alert(1)</script>",exported)
+        self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt;",exported)
         self.assertIn("Negative sampling ready: <strong>No</strong>",exported)
 
     def test_column_span_and_degenerate_coordinate_rules(self):
