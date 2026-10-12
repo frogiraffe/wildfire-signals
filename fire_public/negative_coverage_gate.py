@@ -123,7 +123,7 @@ def admit_coverage(queue_path: Path, reviews_path: Path, protocol_path: Path,
                 frame_bbox[1]<=case.get("latitude",-999)<=frame_bbox[3]):
             reasons.append("frame_anchor_outside_study_footprint")
         if decision.get("region_id")!=case.get("region_id") or (
-                decision.get("decision_at")!=case.get("decision_at")):
+                _utc(decision["decision_at"])!=_utc(case["decision_at"])):
             reasons.append("review_region_or_time_differs_from_frame")
         start=_utc(decision["decision_at"])
         end=start+timedelta(hours=horizon)
