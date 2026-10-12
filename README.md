@@ -47,6 +47,14 @@ point-in-time source coverage reports. It has strict network/download budgets,
 does not enable or run any public collector, and does not claim that missing
 observations mean no wildfires. The researcher owns the local backup.
 
+An opt-in [official US historical perimeter evidence importer](docs/official-historical-perimeters.md)
+now retrieves bounded, year-specific NIFC IFPH GeoJSON directly from the public
+read-only ArcGIS source. The research SQLite archive versions source attributes
+and polygon geometries by actual capture time; the offline CLI produces
+location-filtered JSON and GeoJSON reports. This source only covers retrospective
+US fire perimeters through 2019, can omit fires, and **never provides automatic
+negative labels or contemporaneous prediction features**.
+
 The opt-in daily FIRMS research Releases can now be **verified and imported to a
 persistent local SQLite pixel archive** via
 [`fire_public.pixel_history`](docs/global-firms-pixel-archive.md). It validates
