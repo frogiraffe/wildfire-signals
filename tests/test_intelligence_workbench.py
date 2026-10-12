@@ -86,9 +86,15 @@ class HistoricalIntelligenceWorkbenchTests(unittest.TestCase):
         self.add_receipt(0,incidents=[
             self.fire("east",lon=179.9,lat=0),
             self.fire("west",lon=-179.9,lat=0),
-            self.fire("distant",lon=150,lat=0),
-            self.fire("missing",lon=None,lat=None)])
+            self.fire("distant",lon=150,lat=0)])
         import_receipts(self.store,self.receipts)
+        self.store.append({"subject_kind":"agency_incident","provider":"cwfis",
+                           "source_id":"missing","record_type":"incident_status",
+                           "observed_at":"2026-10-12T00:17:00Z",
+                           "captured_at":"2026-10-12T00:18:00Z",
+                           "source_url":"https://example.org/unknown",
+                           "rights_url":"https://example.org/rights",
+                           "payload":{"name":"Missing coordinates","agency_status":"OC"}})
         report = build_workbench(self.db,at="2026-10-12T05:00:00Z",
                                  latitude=0,longitude=179.95,radius_km=50)
         self.assertEqual({x["official_id"] for x in report["incidents"]},{"east","west"})
