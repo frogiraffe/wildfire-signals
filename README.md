@@ -124,6 +124,13 @@ negative wildfire labels. The existing bounded *real-source* multi-year CI
 now produces both quality reports from its already captured dataset, without
 more government API requests.
 
+The [same-region MTBS/NIFC historical investigation](docs/mtbs-nifc-shared-region-study.md)
+now queries both genuine government datasets for **the same bounded WGS84 region
+and the same year** before sampling, preserves original provider response bytes,
+source-ID population/selection digests, and geographic candidate pairs for
+manual investigation. Nearness is not verified event identity; MTBS includes
+prescribed burns and both data sources have different coverage limits.
+
 The [real USGS/USFS MTBS second-source pilot](docs/mtbs-second-source-pilot.md)
 adds a different official *post-fire large-fire mapping* source. It samples
 2017/2018 year-specific USDA ArcGIS fire-centroid layers with reproducible
