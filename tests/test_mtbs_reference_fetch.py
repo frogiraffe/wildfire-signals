@@ -166,7 +166,7 @@ class MtbsAcquisitionTests(unittest.TestCase):
         self.assertEqual(result["evaluated_reference_perimeters"],1)
         # Corrupt downloaded reference after downloading; must fail closed.
         self.geo.write_bytes(self.geo.read_bytes()+b" ")
-        corrupt=subprocess.run(args,text=True,capture_output=True)
+        corrupt=subprocess.run(args+["--overwrite"],text=True,capture_output=True)
         self.assertNotEqual(corrupt.returncode,0)
         self.assertIn("does not match",corrupt.stderr)
 
