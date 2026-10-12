@@ -56,6 +56,11 @@ the fire or a fire-spread prediction. A separate one-point local archive pilot
 checks forecast receipt times and offline replay; the browser requests are not
 archived model inputs. Canada and Türkiye do not yet have weather context.
 
+The local [decision-time evidence audit](docs/decision-time-evidence-audit-2026-10-12.md)
+reads an explicitly selected agency event and NWS forecast from separate SQLite
+archives. It excludes late receipts, distant weather points, and forecast values
+that do not cover the decision time. It does not create training labels or a model.
+
 NASA FIRMS requires a free MAP_KEY. See <https://firms.modaps.eosdis.nasa.gov/api/area/>.
 NIFC data comes from the [WFIGS current incident layer](https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Incident_Locations_Current/FeatureServer/0).
 Canadian records come from the [CWFIS current active fire layer](https://cwfis.cfs.nrcan.gc.ca/downloads/docs/en/references/cwfif/cwfis-data-placemat.pdf)

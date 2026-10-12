@@ -10,7 +10,7 @@ import os
 import re
 import shutil
 import tempfile
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
@@ -40,16 +40,17 @@ def _aware(value: str) -> datetime:
     return parsed.astimezone(timezone.utc)
 
 
-def _valid_interval(value: str) -> None:
+def _valid_interval(value: str) -> tuple[datetime, datetime]:
     if not isinstance(value, str) or "/" not in value:
         raise ValueError("invalid NWS validTime interval")
     start, duration = value.split("/", 1)
-    _aware(start)
+    beginning = _aware(start)
     match = re.fullmatch(r"P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?", duration)
     seconds = sum(int(part or 0) * factor for part, factor in
                   zip(match.groups(), (86400, 3600, 60, 1))) if match else 0
     if not 0 < seconds <= 8 * 86400:
         raise ValueError("invalid NWS validTime duration")
+    return beginning, beginning + timedelta(seconds=seconds)
 
 
 def nws_grid_record(grid: dict, *, latitude: float, longitude: float,
