@@ -26,6 +26,18 @@ export const MESSAGES = {
     leadPartial:'Some sources failed; check the source states below.',
     leadSatellitePartial:'Some satellite sources failed; this list may be incomplete.',
     leadUnknown:'No verified snapshot is available.',
+    regionTitle:'Global region explorer',regionScope:'Select any point on Earth, then inspect available satellite candidate observations. This is not a fire risk assessment.',
+    regionPick:'Choose on map',regionCancel:'Cancel selection',regionCenter:'Use map center',regionClear:'Clear',
+    regionRadius:'Radius',regionNoSelection:'Choose a center to analyze a region.',
+    regionCells:'Observed cells',regionCandidateHours:'Candidate cell-hours',regionRepeated:'Cells observed in 2+ hours',
+    regionLatest:'Latest observation',regionSensors:'Sensor memberships',regionHistory:'Observation history',
+    regionHistoryScope:'Chronological cell-hour counts, not fire growth. Incomplete satellite coverage affects comparisons.',
+    regionRecent:'Hours ago',regionNone:'No matching satellite candidates in the available observations. This does not prove no fire.',
+    regionQualityCurrent:'Snapshot current',regionQualityStale:'Snapshot stale — some observations may be missing.',
+    regionQualityPartial:'Some sources incomplete — counts may be underestimated.',
+    regionQualityUnavailable:'No verified snapshot — regional counts unavailable.',
+    regionLeads:'Observed locations to inspect',regionRepeatedHours:'{hours} observed UTC hours',
+    regionSourceIssues:'Affected sources',
     timelineTitle:'Agency record change history',
     timelineScope:'First observation here and up to four latest source record changes. This is not a history of fire spread.',
     timelineEmpty:'No record changes are retained for this incident.',
@@ -99,6 +111,18 @@ export const MESSAGES = {
     leadPartial:'Bazı kaynaklar başarısız; aşağıdaki kaynak durumlarını kontrol edin.',
     leadSatellitePartial:'Bazı uydu kaynakları başarısız; liste eksik olabilir.',
     leadUnknown:'Doğrulanmış veri görüntüsü yok.',
+    regionTitle:'Küresel bölge analizi',regionScope:'Dünyanın herhangi bir noktasını seçip eldeki uydu termal adaylarını inceleyin. Yangın riski tahmini değildir.',
+    regionPick:'Haritadan seç',regionCancel:'Seçimi iptal et',regionCenter:'Harita merkezini kullan',regionClear:'Temizle',
+    regionRadius:'Yarıçap',regionNoSelection:'Analiz için bir merkez seçin.',
+    regionCells:'Gözlenen hücre',regionCandidateHours:'Aday hücre-saat',regionRepeated:'2+ saatte gözlenen hücre',
+    regionLatest:'Son gözlem',regionSensors:'Sensör gözlemleri',regionHistory:'Gözlem zaman çizelgesi',
+    regionHistoryScope:'Kronolojik hücre-saat sayılarıdır; yangın büyümesi değildir. Eksik uydu kapsamı karşılaştırmaları etkiler.',
+    regionRecent:'Saat önce',regionNone:'Mevcut veride eşleşen termal aday yok. Bu, yangın olmadığı anlamına gelmez.',
+    regionQualityCurrent:'Veri görüntüsü güncel',regionQualityStale:'Veri eski — bazı gözlemler eksik olabilir.',
+    regionQualityPartial:'Bazı kaynaklar eksik — sayılar olduğundan düşük olabilir.',
+    regionQualityUnavailable:'Doğrulanmış veri görüntüsü yok — bölgesel sayılar kullanılamıyor.',
+    regionLeads:'İncelenecek konumlar',regionRepeatedHours:'{hours} farklı UTC saati',
+    regionSourceIssues:'Etkilenen kaynaklar',
     timelineTitle:'Kurum kaydı değişim geçmişi',
     timelineScope:'Burada ilk gözlem ve en fazla dört son kaynak kaydı değişikliği. Yangının yayılma geçmişi değildir.',
     timelineEmpty:'Bu olay için saklanan kayıt değişimi yok.',
@@ -158,12 +182,20 @@ export function parseState(hash = '') {
     source: params.get('source') || 'all',
     kind: ['all', 'candidate', 'incident'].includes(params.get('kind')) ? params.get('kind') : 'all',
     lat: numeric('lat', 15, -85, 85), lon: numeric('lon', -60, -180, 180),
-    zoom: numeric('zoom', 3, 1, 18)};
+    zoom: numeric('zoom', 3, 1, 18),
+    regionLat: params.has('rlat') && params.has('rlon') ? numeric('rlat',null,-90,90) : null,
+    regionLon: params.has('rlat') && params.has('rlon') ? numeric('rlon',null,-180,180) : null,
+    radiusKm: [25,50,100,250].includes(Number(params.get('rr'))) ? Number(params.get('rr')) : 50};
 }
 
 export function stateHash(state) {
   const params = new URLSearchParams();
   for (const key of ['lang', 'hours', 'source', 'kind', 'lat', 'lon', 'zoom']) params.set(key, String(state[key]));
+  if (Number.isFinite(state.regionLat) && Number.isFinite(state.regionLon)) {
+    params.set('rlat',String(state.regionLat));
+    params.set('rlon',String(state.regionLon));
+    params.set('rr',String(state.radiusKm));
+  }
   return `#${params}`;
 }
 
