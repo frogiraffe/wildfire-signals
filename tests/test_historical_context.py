@@ -60,7 +60,7 @@ class CrossSourceContextTests(unittest.TestCase):
             {"latitude":0,"longitude":lon,
              "observed_at":observed,"sources":sources or ["VIIRS_NOAA20_NRT"]}))
 
-    def forecast(self, captured="2026-10-12T09:00:00Z",lon=-179.9,
+    def forecast(self, captured="2026-10-12T09:00:00Z",lon=179.91,
                  valid="2026-10-12T06:00:00Z/PT12H",value=20):
         return self.wx.append(record(
             "weather_forecast_snapshot","nws_grid","XYZ/1,1",
