@@ -20,6 +20,7 @@ MAX_RESPONSE_BYTES = 50 * 1024 * 1024
 MAX_CSV_ROWS = 250_000
 MAX_NIFC_PAGES = 10
 PAGE_SIZE = 1000
+MAX_TIMELINE_INCIDENTS = 2000
 
 
 class SourceDeferred(RuntimeError):
@@ -32,7 +33,8 @@ def _utc(value: datetime) -> datetime:
     return value.astimezone(timezone.utc)
 
 
-def parse_firms_csv(raw: str, source: str, *, at: datetime) -> list[dict]:
+def parse_firms_csv(raw: str, source: str, *, at: datetime,
+                    pixel_sink=None) -> list[dict]:
     """Group pixels by 0.05-degree cell and hour; no fire confirmation implied."""
     at = _utc(at)
     if source not in FIRMS_SOURCES:
@@ -65,11 +67,35 @@ def parse_firms_csv(raw: str, source: str, *, at: datetime) -> list[dict]:
                 "longitude": round((cell[1] + .5) / 20, 4),
                 "first_at": observed.isoformat(), "observed_at": observed.isoformat(),
                 "received_at": at.isoformat(), "sources": [source],
-                "detection_count": 0, "radius_km": 8, "source_agreement": False,
+                "detection_count": 0, "detections_by_source": {source: 0},
+                "radius_km": 8, "source_agreement": False,
                 "aggregation": "0.05 degree cell by UTC hour"}
         item["detection_count"] += 1
+        item["detections_by_source"][source] += 1
         item["observed_at"] = max(item["observed_at"], observed.isoformat())
         item["first_at"] = min(item["first_at"], observed.isoformat())
+        if pixel_sink is not None:
+            def number(name):
+                try:
+                    value = float(row.get(name, ""))
+                    return value if math.isfinite(value) and value >= 0 else None
+                except (TypeError, ValueError):
+                    return None
+            content = json.dumps(row, sort_keys=True, separators=(",", ":"),
+                                 ensure_ascii=False).encode()
+            digest = hashlib.sha256(content).hexdigest()
+            pixel_sink({"kind":"thermal_detection", "source":source,
+                "source_record_id":f"{source}:{digest}", "content_sha256":digest,
+                "source_fields":dict(row),
+                "candidate_id":item["event_id"], "observed_at":observed.isoformat(),
+                "received_at":at.isoformat(), "valid_from":observed.isoformat(),
+                "valid_until":observed.isoformat(), "latitude":lat,"longitude":lon,
+                "frp_mw":number("frp"), "confidence":row.get("confidence") or None,
+                "brightness_kelvin":number("bright_ti4") or number("brightness"),
+                "daynight":row.get("daynight") or None,
+                "resolution_km":[number("scan"),number("track")],
+                "rights_url":"https://www.earthdata.nasa.gov/engage/open-data-services-software/data-use-policy",
+                "source_url":"https://firms.modaps.eosdis.nasa.gov/api/area/"})
     return list(groups.values())
 
 
@@ -114,11 +140,11 @@ def _get(url: str) -> bytes:
     return data
 
 
-def fetch_firms(key: str, source: str, *, at: datetime) -> list[dict]:
+def fetch_firms(key: str, source: str, *, at: datetime, pixel_sink=None) -> list[dict]:
     if not key or any(char in key for char in "/?#"):
         raise ValueError("invalid FIRMS map key")
     raw = _get(FIRMS_URL.format(key=key, source=source)).decode("utf-8-sig")
-    return parse_firms_csv(raw, source, at=at)
+    return parse_firms_csv(raw, source, at=at, pixel_sink=pixel_sink)
 
 
 def fetch_nifc(*, at: datetime) -> list[dict]:
@@ -241,8 +267,18 @@ def build_snapshot(firms: dict[str, list[dict]], incidents: list[dict], *,
         for item in items:
             old = events.get(item["event_id"])
             if old:
+                old_counts = old.get("detections_by_source")
+                if not isinstance(old_counts, dict):
+                    old_counts = ({old["sources"][0]:old["detection_count"]}
+                                  if len(old.get("sources", [])) == 1 else {})
+                counts = {**old_counts}
+                for source, count in item["detections_by_source"].items():
+                    counts[source] = max(counts.get(source, 0), count)
                 item = {**item, "sources": sorted(set(item["sources"] + old["sources"])),
-                        "detection_count": max(item["detection_count"], old["detection_count"])}
+                        "detections_by_source":counts,
+                        "detection_count":max(sum(counts.values()),
+                                              old["detection_count"])}
+            item["source_agreement"] = len(item["sources"]) > 1
             events[item["event_id"]] = item
     prior_sources = {row["key"]: row for row in (previous or {}).get("sources", [])}
     sources = []
@@ -268,10 +304,43 @@ def build_snapshot(firms: dict[str, list[dict]], incidents: list[dict], *,
                         if failed else 0})
     if errors and len(errors) == len(FIRMS_SOURCES) + 2:
         raise RuntimeError("all public sources failed; preserve last published snapshot")
+    prior_history = ((previous or {}).get("details") or {}).get("incident_history") or {}
+    history = {}
+    for incident in incidents:
+        key = f"{incident['provider']}:{incident['official_id']}"
+        entries = [row for row in prior_history.get(key, [])
+                   if isinstance(row, dict)]
+        status = incident.get("agency_status")
+        source_modified = incident.get("modified_at")
+        # A collection timestamp is not a source change. Keep only stable source fields.
+        source_fields = {field: incident.get(field) for field in
+                         ("name", "incident_kind", "latitude", "longitude",
+                          "modified_at", "agency_status")}
+        fingerprint = hashlib.sha256(json.dumps(source_fields, sort_keys=True,
+            separators=(",", ":")).encode()).hexdigest()
+        if not entries or (entries[-1].get("agency_status") != status
+                           or entries[-1].get("source_modified_at") != source_modified
+                           or (entries[-1].get("source_fingerprint") is not None
+                               and entries[-1]["source_fingerprint"] != fingerprint)):
+            entries.append({"change": "record_changed" if entries else "first_seen",
+                            "seen_at": at.isoformat(), "source_modified_at": source_modified,
+                            "agency_status": status, "source_fingerprint": fingerprint})
+        history[key] = [entries[0], *entries[-4:]] if len(entries) > 5 else entries
+    for key, entries in prior_history.items():
+        provider = key.split(":", 1)[0]
+        if key not in history and provider in errors:
+            valid = [row for row in entries if isinstance(row, dict)]
+            if valid:
+                history[key] = [valid[0], *valid[-4:]] if len(valid) > 5 else valid
+    if len(history) > MAX_TIMELINE_INCIDENTS:
+        recent_keys = sorted(history, key=lambda key: (history[key][-1]["seen_at"], key),
+                             reverse=True)[:MAX_TIMELINE_INCIDENTS]
+        history = {key: history[key] for key in recent_keys}
     status = "partial" if errors else "fresh"
     event_list = sorted(events.values(), key=lambda item: item["observed_at"], reverse=True)
     return {"manifest":{"schema_version":1,"generated_at":at.isoformat(),
         "last_scan_at":at.isoformat(),"data_status":status,"candidate_count":len(event_list),
         "incident_count":len(incidents),"truncated":False,"source_errors":sorted(errors)},
         "events":event_list,"incidents":incidents,
-        "matches":provisional_matches(event_list, incidents),"sources":sources,"details":{}}
+        "matches":provisional_matches(event_list, incidents),"sources":sources,
+        "details":{"incident_history":history}}

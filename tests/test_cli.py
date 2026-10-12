@@ -3,6 +3,7 @@ import gzip
 import json
 import io
 import os
+from pathlib import Path
 from urllib.error import HTTPError
 from contextlib import redirect_stdout
 from datetime import datetime, timedelta, timezone
@@ -12,6 +13,28 @@ from fire_public.cli import current_pointer, main, previous_snapshot, verify_fre
 
 
 class FreePlanTests(unittest.TestCase):
+    def test_enabled_pixel_scan_receipt_is_written_after_publication(self):
+        env = {"CLOUDFLARE_ACCOUNT_ID":"a" * 32,
+               "CLOUDFLARE_KV_NAMESPACE_ID":"b" * 32,
+               "CLOUDFLARE_API_TOKEN":"test-token", "FIRMS_MAP_KEY":"test-key",
+               "PUBLIC_SNAPSHOT_URL":"https://wildfire-signals.pages.dev/api/snapshot",
+               "ANALYSIS_RECEIPT_DIR":"/tmp/wildfire-test-receipts",
+               "ENABLE_ANALYSIS_ARCHIVE":"true"}
+        with patch.dict(os.environ,env,clear=True), \
+                patch('fire_public.cli.should_archive_analysis',return_value=True), \
+                patch('fire_public.cli.verify_free'), \
+                patch('fire_public.cli.previous_snapshot',return_value=None), \
+                patch('fire_public.cli.current_pointer',return_value=None), \
+                patch('fire_public.cli.fetch_firms_with_archive',return_value=[]), \
+                patch('fire_public.cli.fetch_nifc',return_value=[]), \
+                patch('fire_public.cli.fetch_cwfis',return_value=[]), \
+                patch('fire_public.cli.publish',return_value='snapshot:'+'a'*64), \
+                patch('fire_public.cli.write_scan_receipt',return_value=Path('receipt.json.gz')) as receipt, \
+                patch('fire_public.cli.maybe_write_analysis_receipt',return_value={}), \
+                redirect_stdout(io.StringIO()):
+            main()
+        receipt.assert_called_once()
+
     def test_pointer_read_failure_aborts_before_provider_requests_or_publication(self):
         prior = {"manifest":{"schema_version":1,
                              "last_scan_at":(datetime.now(timezone.utc) -

@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 
-const url = 'https://wildfire-signals.pages.dev/#3/15/-60';
+const host = process.env.PAGES_HOST || 'wildfire-signals.pages.dev';
+assert.match(host, /^(?:[a-f0-9]{8}\.)?wildfire-signals\.pages\.dev$/);
+const url = `https://${host}/#lat=15&lon=-60&zoom=3`;
 const browser = await chromium.launch({headless: true});
 
 try {
@@ -38,9 +40,38 @@ try {
       const threeDayCount = Number((await page.locator('#candidate-count').textContent()).replace(/\D/g, ''));
       assert.ok(threeDayCount > result.candidateCount,
         '72-hour view should contain observations absent from the 24-hour view');
+      await page.goto(`https://${host}/#lang=tr&hours=24&lat=-8.5&lon=140.5&zoom=7`,
+        {waitUntil: 'domcontentloaded', timeout: 30000});
+      await page.waitForFunction(() =>
+        Number((document.querySelector('#area-candidates')?.textContent || '').replace(/\D/g, '')) > 0,
+      null, {timeout: 60000});
+      const area = await page.evaluate(() => ({
+        title: document.querySelector('#area-title').textContent,
+        candidateCount: Number(document.querySelector('#area-candidates').textContent.replace(/\D/g, '')),
+        latest: document.querySelector('#area-latest').textContent,
+        horizontalOverflow: document.documentElement.scrollWidth > innerWidth + 1,
+      }));
+      assert.equal(area.title, 'Görünen harita alanı');
+      assert.ok(area.candidateCount > 0, 'Merauke viewport should show observed candidates');
+      assert.notEqual(area.latest, '—', 'area should show the latest observation');
+      assert.equal(area.horizontalOverflow, false, 'area analysis should fit the viewport');
+      const firstLead = page.locator('#lead-list button').first();
+      assert.equal(await page.locator('#investigation-title').textContent(), 'İncelenecek konumlar');
+      if (await firstLead.count()) {
+        const eventId = await firstLead.getAttribute('data-event-id');
+        await firstLead.click();
+        assert.equal(await page.locator('#detail').isVisible(), true,
+          'choosing a lead should open the underlying record');
+        assert.ok((await page.locator('#detail-content').textContent()).includes(eventId),
+          'record detail should identify the selected observation');
+      } else {
+        assert.match(await page.locator('#lead-empty').textContent(), /yangın olmadığı anlamına gelmez/);
+      }
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1),
+        false, 'investigation list should fit the viewport');
       assert.deepEqual(failures, [], 'page should have no uncaught JavaScript errors');
       console.log(JSON.stringify({viewport: `${viewport.width}x${viewport.height}`,
-        ...result, threeDayCount}));
+        ...result, threeDayCount, meraukeArea:area}));
     } finally {
       await page.close();
     }

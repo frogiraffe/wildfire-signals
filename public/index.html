@@ -19,6 +19,26 @@
       <aside class="sidebar" aria-label="Map filters and sources">
         <p class="intro" data-i18n="about">Thermal detections are candidates, not confirmed fires.</p>
         <div class="counts"><div><strong id="candidate-count">–</strong><span data-i18n="candidates">Satellite candidates</span></div><div><strong id="incident-count">–</strong><span data-i18n="incidents">Agency incidents</span></div></div>
+        <section class="area-analysis" aria-labelledby="area-title">
+          <h2 id="area-title" data-i18n="areaTitle">Visible map area</h2>
+          <p data-i18n="areaScope">Counts use the map viewport, not a country boundary.</p>
+          <dl>
+            <dt data-i18n="areaCandidates">Candidate cell-hours</dt><dd id="area-candidates">–</dd>
+            <dt data-i18n="areaLocations">Observed cells</dt><dd id="area-locations">–</dd>
+            <dt data-i18n="areaRepeated">Cells seen in 2+ hours</dt><dd id="area-repeated">–</dd>
+            <dt data-i18n="areaLatest">Latest observation</dt><dd id="area-latest">–</dd>
+          </dl>
+          <p id="area-comparison"></p>
+          <p id="area-quality"></p>
+          <p data-i18n="areaCaveat">Thermal candidates only. Counts do not measure fire size or spread.</p>
+        </section>
+        <section class="investigation" aria-labelledby="investigation-title">
+          <h2 id="investigation-title" data-i18n="leadTitle">Places to inspect</h2>
+          <p data-i18n="leadScope">Cells observed within the last 12 hours in this map view (or the shorter selected window). Ordered for review, not by danger.</p>
+          <p id="lead-quality" role="status"></p>
+          <ol id="lead-list"></ol>
+          <p id="lead-empty" data-i18n="leadEmpty">No matching recent observations in the available data. This does not mean no fire.</p>
+        </section>
         <label for="hours" data-i18n="time">Time window</label><select id="hours"><option value="6">6 h</option><option value="24">24 h</option><option value="72">72 h</option></select>
         <p class="intro" data-i18n="timeScope">Time window filters satellite observations. Agency records show the current source layer; check each agency update date.</p>
         <label for="source" data-i18n="source">Source</label><select id="source"><option value="all" data-i18n="all">All sources</option></select>

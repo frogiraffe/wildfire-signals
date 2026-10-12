@@ -24,6 +24,62 @@ is live with hourly hosted collection. It is not a stable 1.0 release.
 - Source failures produce `partial` status; a complete upstream outage keeps the
   previous published snapshot.
 
+The map's visible-area analysis summarizes candidate cell-hours, distinct 0.05-degree
+cells, cells observed in multiple hours, the latest observation, and counts in the
+two halves of the selected time window. It uses the current map viewport, not a
+country boundary. The comparison is observation activity, not a measure of fire
+growth. Failed VIIRS sources are shown with the summary; no-data during an outage
+must not be read as no fire. The map does not retain fire incidents or burned-area
+perimeters after the 72-hour candidate window.
+
+The preview also lists up to five recently observed cells in the visible map area.
+Cells observed in multiple UTC hours appear first; selecting one centers the map
+and opens its underlying observation. This is an investigation queue, not a danger
+ranking or fire confirmation. Source failures and stale data are shown beside it.
+The [observation investigation slice](docs/analysis-product-2026-10-12.md)
+is only an early step toward the [wildfire analysis product objective](docs/wildfire-analysis-product-vision-2026-10-12.md).
+
+Agency incident details can show the first observation here and up to four latest
+source record changes. It is not a fire perimeter or spread history; an
+unavailable source never proves that a fire ended. The separate
+[four-question analysis panel](docs/wildfire-analysis-product-vision-2026-10-12.md)
+states what the selected agency record or satellite candidate supports and why
+ignition, spread, and ending probabilities are still unavailable. The separate
+[historical evidence pilot](docs/historical-evidence-pilot-2026-10-12.md)
+stores a small official US/Canada sample with capture times and checksum-verified
+raw responses for later model research. This pilot is local and does not add a
+long-term collector or fire predictions.
+
+For a selected US NIFC incident, the draft preview can show [NWS grid forecast
+context](docs/us-weather-context-pilot-2026-10-12.md): wind, gust, temperature,
+humidity, forecast precipitation intervals, and 6/12/24-hour condition changes
+at the recorded point. The browser
+requests this only when an incident is opened. It is not a weather observation at
+the fire or a fire-spread prediction. A separate one-point local archive pilot
+checks forecast receipt times and offline replay; the browser requests are not
+archived model inputs. Canada and Türkiye do not yet have weather context.
+For an exact-ID US NIFC incident, the draft preview can also show a bounded
+[agency mapped perimeter](docs/us-perimeter-context-pilot-2026-10-12.md) directly
+from WFIGS, with its source date and a warning when old. It is a reported past
+boundary, not the current burning area or a future spread forecast. Missing
+perimeters remain unknown; no perimeter history is collected by the map.
+
+The local [decision-time evidence audit](docs/decision-time-evidence-audit-2026-10-12.md)
+reads an explicitly selected agency event and NWS forecast from separate SQLite
+archives. It excludes late receipts, distant weather points, and forecast values
+that do not cover the decision time. It does not create training labels or a model.
+The local [CWFIS status time-series pilot](docs/agency-status-series-2026-10-12.md)
+reports source-status intervals, gaps, corrections, and an under-control to
+out-of-control reversal without turning those records into extinguishment labels.
+An opt-in [prospective agency receipt pilot](docs/prospective-agency-receipts-2026-10-12.md)
+can create bounded GitHub Actions artifacts from successful collector snapshots
+at four UTC hours per day. It is disabled until `ENABLE_ANALYSIS_ARCHIVE=true` is
+set after integration; 90-day artifacts are temporary research evidence, not a
+durable training archive.
+Downloaded receipts can be imported into a local SQLite research archive with
+`python -m fire_public.receipt_history --receipts DIR --db /path/outside/repo/history.sqlite3`.
+As-of queries keep source outages and missing listings separate from a fire outcome.
+
 NASA FIRMS requires a free MAP_KEY. See <https://firms.modaps.eosdis.nasa.gov/api/area/>.
 NIFC data comes from the [WFIGS current incident layer](https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Incident_Locations_Current/FeatureServer/0).
 Canadian records come from the [CWFIS current active fire layer](https://cwfis.cfs.nrcan.gc.ca/downloads/docs/en/references/cwfif/cwfis-data-placemat.pdf)

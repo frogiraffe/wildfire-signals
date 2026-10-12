@@ -5,16 +5,54 @@ import io
 import os
 import re
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from urllib.parse import quote, urlsplit
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 from .collect import FIRMS_SOURCES, build_snapshot, fetch_cwfis, fetch_firms, fetch_nifc
 from .publish import publish
+from .analysis_receipt import build_receipt, write_receipt
+from .pixel_archive import PixelArchive, write_scan_receipt
 
 API = "https://api.cloudflare.com/client/v4"
 HEX_ID = re.compile(r"^[a-f0-9]{32}$")
 MIN_SCAN_INTERVAL = timedelta(minutes=55)
+
+
+def should_archive_analysis(at, *, enabled, forced):
+    return enabled and not forced and at.hour in {0, 6, 12, 18} and at.minute >= 17
+
+
+def fetch_firms_with_archive(key, source, *, at, directory: Path):
+    """Keep validated pixels outside KV; failed source reads leave no artifact."""
+    with PixelArchive(directory, at=at) as archive:
+        return fetch_firms(key, source, at=at, pixel_sink=archive.append)
+
+
+def maybe_write_analysis_receipt(snapshot, snapshot_key, *, scan_at, captured_at=None):
+    enabled = os.environ.get("ENABLE_ANALYSIS_ARCHIVE") == "true"
+    forced = os.environ.get("FORCE_COLLECTION") == "true"
+    if not enabled:
+        return {"status": "disabled"}
+    if forced:
+        return {"status": "manual_repair_excluded"}
+    if not should_archive_analysis(scan_at, enabled=enabled, forced=forced):
+        return {"status": "outside_pilot_window"}
+    try:
+        payload, report = build_receipt(snapshot,
+            captured_at=(captured_at or datetime.now(timezone.utc)).isoformat(),
+            run_id=os.environ.get("GITHUB_RUN_ID", ""),
+            head_sha=os.environ.get("GITHUB_SHA", ""),
+            snapshot_key=snapshot_key)
+        write_receipt(Path(os.environ["ANALYSIS_RECEIPT_DIR"]),payload,
+                      scan_at=report["scan_at"])
+        return {"status": "written", **report}
+    except Exception as exc:
+        # Publication already succeeded; an optional research receipt cannot
+        # invalidate or roll back the public map. The skip stays in the run log.
+        return {"status": "skipped", "reason": str(exc) if isinstance(exc, ValueError)
+                else type(exc).__name__}
 
 
 def api_request(url, token, *, data=None):
@@ -154,9 +192,16 @@ def main():
             print(json.dumps({"skipped":"recent_snapshot", "last_scan_at":scan_at.isoformat()}))
             return
     firms, errors = {}, {}
+    archive_pixels = should_archive_analysis(at,
+        enabled=os.environ.get("ENABLE_ANALYSIS_ARCHIVE") == "true",
+        forced=os.environ.get("FORCE_COLLECTION") == "true")
     for source in FIRMS_SOURCES:
         try:
-            firms[source] = fetch_firms(map_key, source, at=at)
+            if archive_pixels:
+                firms[source] = fetch_firms_with_archive(map_key, source, at=at,
+                    directory=Path(os.environ["ANALYSIS_RECEIPT_DIR"]))
+            else:
+                firms[source] = fetch_firms(map_key, source, at=at)
         except (OSError, ValueError, RuntimeError, UnicodeError) as exc:
             errors[source] = type(exc).__name__
     incidents = []
@@ -175,8 +220,14 @@ def main():
                     f"{quote(key, safe='')}{suffix}", token, data=value)
 
     key = publish(snapshot, put, previous_key=pointer["key"] if pointer else None)
+    pixel_receipt = None
+    if archive_pixels:
+        pixel_receipt = write_scan_receipt(snapshot,
+            Path(os.environ["ANALYSIS_RECEIPT_DIR"]),key).name
+    receipt = maybe_write_analysis_receipt(snapshot,key,scan_at=at)
     print(json.dumps({"key":key, "events":len(snapshot["events"]),
-                      "incidents":len(snapshot["incidents"]), "errors":sorted(errors)}))
+                      "incidents":len(snapshot["incidents"]), "errors":sorted(errors),
+                      "analysis_receipt":receipt,"pixel_scan_receipt":pixel_receipt}))
 
 
 if __name__ == "__main__":
