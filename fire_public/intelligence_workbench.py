@@ -356,6 +356,19 @@ def main() -> None:
     report.add_argument("--json",type=Path)
     report.add_argument("--html",type=Path)
     report.add_argument("--overwrite",action="store_true")
+    compare = commands.add_parser("compare",help="Compare two historical decision-time views")
+    compare.add_argument("--db",required=True,type=Path)
+    compare.add_argument("--earlier-at",required=True)
+    compare.add_argument("--later-at",required=True)
+    compare.add_argument("--latitude",type=float)
+    compare.add_argument("--longitude",type=float)
+    compare.add_argument("--radius-km",type=float)
+    compare.add_argument("--limit",type=int,default=200)
+    compare.add_argument("--satellite-hours",type=int,choices=(6,24,72),default=72)
+    compare.add_argument("--weather-db",type=Path)
+    compare.add_argument("--json",type=Path)
+    compare.add_argument("--html",type=Path)
+    compare.add_argument("--overwrite",action="store_true")
     args = parser.parse_args()
     if args.command == "import":
         from .history import HistoryStore
@@ -367,26 +380,41 @@ def main() -> None:
             store.close()
     else:
         if not args.json and not args.html:
-            parser.error("report requires --json and/or --html")
+            parser.error("report/compare requires --json and/or --html")
         targets = [p for p in (args.json,args.html) if p is not None]
         if len({p.resolve() for p in targets}) != len(targets):
             parser.error("JSON and HTML output must be different files")
-        if any(p.resolve() == args.db.resolve() for p in targets):
-            parser.error("reports cannot overwrite the source SQLite archive")
+        sources = [args.db] + ([args.weather_db] if args.weather_db else [])
+        if any(p.resolve() == src.resolve() for p in targets for src in sources):
+            parser.error("reports cannot overwrite any source SQLite archive")
         if any(p.exists() and not p.is_file() for p in targets):
             parser.error("report output must be a regular file")
         if any(p.exists() for p in targets) and not args.overwrite:
             parser.error("output already exists; specify --overwrite to replace")
-        result = build_workbench(args.db,at=args.at,latitude=args.latitude,
-                                 longitude=args.longitude,radius_km=args.radius_km,limit=args.limit,
-                                 satellite_hours=args.satellite_hours,weather_db=args.weather_db)
+        if args.command == "report":
+            result = build_workbench(args.db,at=args.at,latitude=args.latitude,
+                                     longitude=args.longitude,radius_km=args.radius_km,
+                                     limit=args.limit,satellite_hours=args.satellite_hours,
+                                     weather_db=args.weather_db)
+            output_html = render_html(result)
+        else:
+            from .change_explorer import compare_archive, render_changes_html
+            result = compare_archive(args.db,earlier_at=args.earlier_at,
+                                     later_at=args.later_at,latitude=args.latitude,
+                                     longitude=args.longitude,radius_km=args.radius_km,
+                                     limit=args.limit,satellite_hours=args.satellite_hours,
+                                     weather_db=args.weather_db)
+            output_html = render_changes_html(result)
         for path,value in ((args.json,json.dumps(result,indent=2,ensure_ascii=False)+"\n"),
-                           (args.html,render_html(result))):
+                           (args.html,output_html)):
             if path is not None:
                 path.parent.mkdir(parents=True,exist_ok=True)
                 path.write_text(value,encoding="utf-8")
-        print(json.dumps({"shown":result["shown"],"truncated":result["truncated"],
-                          "outputs":[str(x) for x in targets]},sort_keys=True))
+        summary = ({"shown":result["shown"],"truncated":result["truncated"]}
+                   if args.command == "report" else
+                   {"changed_events":len(result["agency"]["changed_events"]),
+                    "comparison_untruncated":result["comparison_untruncated"]})
+        print(json.dumps({**summary,"outputs":[str(x) for x in targets]},sort_keys=True))
 
 
 if __name__ == "__main__":
