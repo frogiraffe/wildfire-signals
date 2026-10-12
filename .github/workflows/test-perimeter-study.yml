@@ -4,6 +4,8 @@ on:
     paths:
       - 'fire_public/official_perimeters.py'
       - 'fire_public/mtbs_pilot.py'
+      - 'fire_public/mtbs_region_study.py'
+      - 'tests/test_mtbs_region_study.py'
       - 'tests/test_mtbs_pilot.py'
       - 'fire_public/perimeter_study.py'
       - 'fire_public/perimeter_quality.py'
@@ -23,6 +25,8 @@ on:
     paths:
       - 'fire_public/official_perimeters.py'
       - 'fire_public/mtbs_pilot.py'
+      - 'fire_public/mtbs_region_study.py'
+      - 'tests/test_mtbs_region_study.py'
       - 'tests/test_mtbs_pilot.py'
       - 'fire_public/perimeter_study.py'
       - 'fire_public/perimeter_quality.py'
@@ -55,6 +59,7 @@ jobs:
           python -m unittest discover -s tests -p 'test_perimeter_quality.py' -v
           python -m unittest discover -s tests -p 'test_official_perimeters.py' -v
           python -m unittest discover -s tests -p 'test_mtbs_pilot.py' -v
+          python -m unittest discover -s tests -p 'test_mtbs_region_study.py' -v
           python -m unittest discover -s tests -p 'test_workbench_official_perimeters.py' -v
           python -m unittest discover -s tests -p 'test_official_live_probe.py' -v
           python -m unittest discover -s tests -p 'test_official_lead_refresh.py' -v
@@ -231,5 +236,57 @@ jobs:
             /tmp/wildfire-nifc-multiyear/mtbs-real-public-source/
             /tmp/wildfire-nifc-multiyear/live-source-responses/
             /tmp/wildfire-nifc-multiyear/live.log
+          if-no-files-found: warn
+          retention-days: 7
+
+  real-same-region-mtbs-nifc:
+    needs: offline-study
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Query both genuine government services in the same 2018 Northern California region
+        shell: bash
+        run: |
+          set -o pipefail
+          python -m fire_public.mtbs_region_study \
+            --year 2018 --bbox -123 38 -120 41 \
+            --limit-per-source 30 --radius-km 20 \
+            --seed wildfire-region-2018-v1 \
+            --output-dir /tmp/wildfire-real-same-region \
+            | tee /tmp/wildfire-real-same-region-cli.log
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          root=Path("/tmp/wildfire-real-same-region")
+          r=json.loads((root/"aligned-study.json").read_text())
+          assert r["roi_wgs84_bbox"]==[-123.0,38.0,-120.0,41.0]
+          assert r["year"]==2018
+          assert r["nifc_transport"]=="direct_pinned_nifc_https"
+          assert r["mtbs_transport"]=="direct_fixed_usfs_https"
+          assert len(r["nifc_polygons"])>0 and len(r["mtbs_points"])>0
+          assert len(r["nifc_polygons"])<=30 and len(r["mtbs_points"])<=30
+          assert r["negative_labels_created"]==0
+          assert r["same_fire_event_identifications_verified"]==0
+          assert r["forecast_model_skill_measured"] is False
+          for entry in r["raw_source_files"]:
+            data=(root/entry["filename"]).read_bytes()
+            assert hashlib.sha256(data).hexdigest()==entry["sha256"]
+            assert len(data)==entry["bytes"]
+          print("AUTHENTIC shared-region source records: NIFC",len(r["nifc_polygons"]),
+                "MTBS",len(r["mtbs_points"]),
+                "proximity-only candidate pairs",len(r["candidate_pairs"]))
+          PY
+      - name: Preserve exact official shared-region original source bytes and report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: authentic-2018-mtbs-nifc-shared-region
+          path: |
+            /tmp/wildfire-real-same-region/
+            /tmp/wildfire-real-same-region-cli.log
           if-no-files-found: warn
           retention-days: 7
