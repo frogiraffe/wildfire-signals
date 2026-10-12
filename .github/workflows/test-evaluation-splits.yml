@@ -1,0 +1,28 @@
+name: Leakage-aware split tests
+on:
+  push:
+    paths:
+      - 'fire_public/evaluation_splits.py'
+      - 'tests/test_evaluation_splits.py'
+      - '.github/workflows/test-evaluation-splits.yml'
+  pull_request:
+    paths:
+      - 'fire_public/evaluation_splits.py'
+      - 'tests/test_evaluation_splits.py'
+      - '.github/workflows/test-evaluation-splits.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile and run evaluation tests
+        run: |
+          python -m compileall -q fire_public/evaluation_splits.py fire_public/model_evaluation.py
+          python -m unittest discover -s tests -p 'test_evaluation_splits.py' -v
+          python -m unittest discover -s tests -p 'test_model_evaluation.py' -v
