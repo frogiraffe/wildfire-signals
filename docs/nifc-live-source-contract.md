@@ -27,7 +27,7 @@ python -m fire_public.official_live_probe \
 
 The output is source-provenance and reproducibility evidence, including captured date/time, hashed official metadata and feature, source identity, archived source properties count, sample source area and explicit limitations. The SQLite file preserves the original verified geometry and attributes. It will not overwrite an existing report. The original perimeter importer remains suitable for intentional larger but bounded research imports.
 
-GitHub Actions `Live official NIFC ArcGIS read-only contract verification` runs an offline regression job first and then makes the **real** source requests from GitHub's runner. Successful live proof writes `source-contract.json` into the short-lived `nifc-real-provider-contract` Actions artifact, retained for seven days, plus the check log. This is source integration proof, not a production weather or fire dataset. The artifact itself is not a long-term research repository.
+GitHub Actions `Live official NIFC ArcGIS read-only contract verification` runs an offline regression job first and then makes the **real** source requests from GitHub's runner. Successful live proof writes `source-contract.json` and a **real downloaded one-polygon SQLite archive** into the short-lived `nifc-real-provider-contract` Actions artifact, retained for seven days, plus the check log. This is source integration proof, not a production weather or fire dataset. The artifact itself is not a long-term research repository.
 
 ## Science and provider boundary
 
