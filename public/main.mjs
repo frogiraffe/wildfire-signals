@@ -5,6 +5,7 @@ import {incidentTimeline} from './incident-timeline.mjs';
 import {fetchNwsWeather, forecastChanges} from './weather-context.mjs';
 import {fetchNifcPerimeter} from './perimeter-context.mjs';
 import {recordAnalysis} from './analysis-answers.mjs';
+import {createRegionExplorer} from './region-explorer-view.mjs';
 
 const state = parseState(location.hash);
 let snapshot = {manifest:{data_status:'unknown'},events:[],incidents:[],matches:[],sources:[],details:{}};
@@ -289,6 +290,9 @@ function showRecord(kind, id) {
   el('detail-close').focus();
 }
 
+const regionExplorer = createRegionExplorer({map,state,getSnapshot:() => snapshot,
+  saveState,showRecord,messages:MESSAGES});
+
 function draw() {
   translate();
   const msg = MESSAGES[state.lang];
@@ -352,6 +356,7 @@ function draw() {
     });
     row.append(button); leadList.append(row);
   }
+  regionExplorer.draw();
   el('last-scan').textContent = snapshot.manifest?.last_scan_at || '—';
   const sources = el('source-list'); sources.replaceChildren();
   for (const source of snapshot.sources || []) {
@@ -372,6 +377,10 @@ map.on('load', () => {
     paint:{'fill-color':'#f28b4b','fill-opacity':0.18}});
   map.addLayer({id:'nifc-perimeter-line',type:'line',source:'nifc-perimeter',
     paint:{'line-color':'#f28b4b','line-width':2}});
+  map.addSource('selected-region',{type:'geojson',
+    data:{type:'FeatureCollection',features:[]}});
+  map.addLayer({id:'selected-region-outline',type:'line',source:'selected-region',
+    paint:{'line-color':'#f8df7a','line-width':3,'line-dasharray':[2,2]}});
   map.addSource('candidates',{type:'geojson',data:featureCollection([],'candidate'),cluster:true,clusterRadius:42});
   map.addSource('incidents',{type:'geojson',data:featureCollection([],'incident'),cluster:true,clusterRadius:42});
   for (const [source,color] of [['candidates','#f19b53'],['incidents','#5dc2c7']]) {
@@ -379,6 +388,7 @@ map.on('load', () => {
       paint:{'circle-color':color,'circle-radius':['case',['has','point_count'],17,8],
         'circle-stroke-color':'#10202a','circle-stroke-width':2,'circle-opacity':.92}});
     map.on('click',source,e => {
+      if (regionExplorer.isPicking()) return;
       const feature = e.features?.[0]; if (!feature) return;
       if (feature.properties.cluster) {
         map.getSource(source).getClusterExpansionZoom(feature.properties.cluster_id).then(
@@ -388,6 +398,7 @@ map.on('load', () => {
     map.on('mouseenter',source,() => {map.getCanvas().style.cursor='pointer';});
     map.on('mouseleave',source,() => {map.getCanvas().style.cursor='';});
   }
+  map.on('click',e=>regionExplorer.handleMapClick(e));
   draw();
 });
 map.on('moveend',() => {saveState();draw();});

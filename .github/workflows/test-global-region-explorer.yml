@@ -1,0 +1,41 @@
+name: Global interactive region explorer
+on:
+  pull_request:
+    paths:
+      - 'public/**'
+      - 'tests/js/**'
+      - 'tests/browser/investigation-local.mjs'
+      - '.github/workflows/test-global-region-explorer.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'public/**'
+      - 'tests/js/**'
+      - 'tests/browser/investigation-local.mjs'
+      - '.github/workflows/test-global-region-explorer.yml'
+permissions:
+  contents: read
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm run test:public
+  browser:
+    needs: unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Desktop/mobile local fixture smoke
+        run: node tests/browser/investigation-local.mjs

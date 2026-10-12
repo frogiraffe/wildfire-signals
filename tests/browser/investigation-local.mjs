@@ -24,7 +24,7 @@ const server = createServer(async (request,response) => {
   const name = request.url === '/' ? 'index.html' : request.url.slice(1);
   if (!['index.html','style.css','main.mjs','map-state.mjs','area-analysis.mjs',
     'incident-timeline.mjs','weather-context.mjs','perimeter-context.mjs',
-    'analysis-answers.mjs'].includes(name)) {
+    'analysis-answers.mjs','region-explorer.mjs','region-explorer-view.mjs'].includes(name)) {
     response.writeHead(404).end(); return;
   }
   response.setHeader('Content-Type',name.endsWith('.css') ? 'text/css'
@@ -42,6 +42,19 @@ try {
     await page.goto(`http://127.0.0.1:${server.address().port}/#lang=tr&lat=-6&lon=145&zoom=7`);
     const lead = page.locator('#lead-list button').first();
     await lead.waitFor({timeout:30000});
+    // Global explorer: real UI, local snapshot fixture, and shareable region.
+    await page.locator('#region-center').click();
+    await page.locator('#region-results:not([hidden])').waitFor();
+    assert.equal(await page.locator('#region-candidates').textContent(),'2');
+    assert.equal(await page.locator('#region-cells').textContent(),'1');
+    assert.equal(await page.locator('#region-repeat').textContent(),'1');
+    assert.equal(await page.locator('.region-chart-col').count(),6);
+    await page.locator('#region-radius').selectOption('100');
+    assert.match(await page.evaluate(()=>location.hash),/rr=100/);
+    assert.match(await page.evaluate(()=>location.hash),/rlat=/);
+    await page.locator('#region-clear').click();
+    assert.equal(await page.locator('#region-results').isHidden(),true);
+    assert.equal(await page.evaluate(()=>location.hash.includes('rlat=')),false);
     assert.equal(await lead.getAttribute('data-event-id'),'latest');
     assert.match(await lead.textContent(),/2 ayrı saatte gözlendi/);
     await lead.click();

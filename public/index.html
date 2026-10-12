@@ -32,6 +32,36 @@
           <p id="area-quality"></p>
           <p data-i18n="areaCaveat">Thermal candidates only. Counts do not measure fire size or spread.</p>
         </section>
+        <section class="region-explorer" aria-labelledby="region-title">
+          <h2 id="region-title" data-i18n="regionTitle">Global region explorer</h2>
+          <p data-i18n="regionScope">Select any point on Earth, then inspect available satellite candidate observations.</p>
+          <div class="region-controls">
+            <button type="button" id="region-pick" aria-pressed="false" data-i18n="regionPick">Choose on map</button>
+            <button type="button" id="region-center" data-i18n="regionCenter">Use map center</button>
+            <button type="button" id="region-clear" data-i18n="regionClear">Clear</button>
+          </div>
+          <label for="region-radius" data-i18n="regionRadius">Radius</label>
+          <select id="region-radius"><option value="25">25 km</option><option value="50">50 km</option><option value="100">100 km</option><option value="250">250 km</option></select>
+          <p id="region-location" class="region-location" role="status"></p>
+          <div id="region-results" hidden>
+            <p id="region-quality" role="status"></p>
+            <dl>
+              <dt data-i18n="regionCandidateHours">Candidate cell-hours</dt><dd id="region-candidates">—</dd>
+              <dt data-i18n="regionCells">Observed cells</dt><dd id="region-cells">—</dd>
+              <dt data-i18n="regionRepeated">Cells observed in 2+ hours</dt><dd id="region-repeat">—</dd>
+              <dt data-i18n="regionLatest">Latest observation</dt><dd id="region-latest">—</dd>
+            </dl>
+            <h3 data-i18n="regionHistory">Observation history</h3>
+            <p data-i18n="regionHistoryScope">Chronological candidate counts, not fire growth.</p>
+            <div id="region-chart" class="region-chart" role="img" aria-label="Regional observation cell-hours over time"></div>
+            <h3 data-i18n="regionSensors">Sensor memberships</h3>
+            <ul id="region-sensors" class="region-sensors"></ul>
+            <p id="region-source-issues"></p>
+            <h3 data-i18n="regionLeads">Observed locations to inspect</h3>
+            <ol id="region-leads" class="region-leads"></ol>
+            <p id="region-empty" data-i18n="regionNone">No matching observations in available data does not prove no fire.</p>
+          </div>
+        </section>
         <section class="investigation" aria-labelledby="investigation-title">
           <h2 id="investigation-title" data-i18n="leadTitle">Places to inspect</h2>
           <p data-i18n="leadScope">Cells observed within the last 12 hours in this map view (or the shorter selected window). Ordered for review, not by danger.</p>
