@@ -13,6 +13,8 @@ Bir kullanıcı seçtiği bölge ve zaman için şu dört soruyu sorabilmelidir:
 
 Amaç yangın yönetimine yardımcı **kanıtlı durum ve olasılık bilgisi** sunmaktır. Acil müdahale kararını otomatikleştirme veya resmî kurumun yerini alma iddiası değildir.
 
+İlk hedef kullanıcı **genel kullanıcıdır**; analiz yine ayrıntılı ve derin olmalıdır. Harita ilk bakışta anlaşılır bir yanıt verir. Her sonucun ayrıntı görünümü kaynakların zaman çizelgesini, verinin nasıl eşleştirildiğini, hava/arazi girdilerini, model ve referans karşılaştırmasını, belirsizliği, eksik veriyi ve geçmiş doğruluk ölçümünü açar. Tek bir renk veya puan bu açıklamanın yerine geçmez.
+
 ## Veri ve ürün sınırları
 
 | Girdi | Üründeki görevi | Şimdiki durum |
@@ -30,7 +32,9 @@ Bu herkese açık depoya özel geliştirme deposunun kodu, veritabanı, anahtar�
 
 ## Aşamalar ve geçiş ölçütleri
 
-1. **Olay zemini:** uydu adayından ayrı, zaman içinde kimliği korunan kurum olayı; kaynak tazeliği, olay türü, çevre ve kanıt bağlantıları. Bölge pilotu, bağımsız olay ve geçmiş çevre verisi bulunan yerden seçilir; küresel harita kapsamı, küresel model doğruluğu iddiası yaratmaz. İlk geçiş: yanlış eşleşme ve kaçan olaylar bağımsız veriyle ölçülür.
+Dört ana yanıtın tamamı ürün hedefindedir; biri seçilip diğerleri kapsam dışına çıkarılmıyor. Aşağıdaki sıra, veri ve bilimsel doğrulama bağımlılıklarını anlatır; kullanıcının hangi işlevi daha değerli bulduğunu sıralamaz. İlk kullanılabilir sürümün hepsini birlikte mi açacağı, yoksa doğrulananları aşamalı mı yayımlayacağı ayrıca kararlaştırılacak. Kullanıcının istediği ek özellikler bu temel hedeflerin üzerine ayrı gereksinim olarak eklenecek.
+
+1. **Olay zemini:** uydu adayından ayrı, zaman içinde kimliği korunan kurum olayı; kaynak tazeliği, olay türü, çevre ve kanıt bağlantıları. Pilot coğrafyalar ABD, Kanada ve Türkiye'dir. ABD/Kanada'da mevcut NIFC/CWFIS olay kayıtlarıyla ilk ölçüm kurulur; Türkiye'de bağımsız resmî olay akışı, geçmiş çevreler ve yeniden kullanım hakkı ayrıca doğrulanır. Bir bölgede doğrulanan model diğerine otomatik taşınmaz; küresel harita kapsamı, küresel model doğruluğu iddiası yaratmaz. İlk geçiş: yanlış eşleşme ve kaçan olaylar bölge bazında bağımsız veriyle ölçülür.
 2. **Tarihsel ve çevresel veri:** olay/çevre zaman dizisi, hava, yakıt ve topoğrafyayı aynı konum ve *o anda bilinen* zamanla birleştir. Sağlayıcı hakları, güncellik, eksik aralık, indirme boyutu ve Free kota pilotu geçilmeden sürekli toplama açılmaz.
 3. **Yangın oluşma olasılığı:** önce hava/kuraklık koşullarını açıklayıcı göster; sonra yeni olay hedefi için basit tarihsel taban oranı ile model karşılaştırması yap. Negatif örneklerin gözlem kapsamı belgelenir. Farklı yıl ve bölgelerde geriye dönük sınama, kalibrasyon ve ileriye dönük izleme olmadan yüzde yayımlanmaz.
 4. **Aktif yangın yayılımı:** başlangıç çevresi ve çevresel girdiler olan olaylarda önce referans/senaryo modeli, ardından olasılıksal alanlar. Rüzgâr oku bir yayılım modeli yerine geçmez. Geçmiş çevre ilerlemesiyle mekânsal örtüşme, varış zamanı hatası ve güven aralığı kapsamı ölçülür. [US Forest Service FARSITE çalışması](https://research.fs.usda.gov/treesearch/27413) hava/rüzgâr değişimi ile arazi verisinin birlikte gerektiğini gösterir.
@@ -41,6 +45,6 @@ Bu herkese açık depoya özel geliştirme deposunun kodu, veritabanı, anahtar�
 
 Mevcut gözlem listesini daha fazla süslemek yerine **olay ve doğrulama veri sözleşmesini** tasarla: `satellite_candidate`, `agency_incident`, `fire_event`, `perimeter_observation`, `weather_field`, `forecast`, `outcome_label` ayrı varlıklar olsun. Her biri kaynak, gözlem/üretim/geçerlilik zamanı, geometri, sürüm ve eksiklik durumu taşısın. İki bölgeden küçük bir geçmiş olay örneklemiyle bu sözleşmenin veriyle kurulabildiğini ve Free kaynak sınırında kalabildiğini ölç; ancak sonra model ve yeni harita çıktısı geliştir.
 
-İlk kullanıcı grubu, ölçülebilir pilot bölgesi ve dört çıktının teslim sırası kullanıcıyla netleşecek. Bunlar seçilmeden küresel doğruluk, operasyonel kullanıma uygunluk veya bir ilk model tarihi varsayılmaz.
+İlk kullanıcı grubu genel kullanıcı, pilot coğrafyalar ABD/Kanada/Türkiye ve dört ana analizin tamamı hedef olarak seçildi. İlk sürümün birlikte açılma koşulu ve ek özellikler kullanıcıyla netleşecek. Bölgesel veri ve değerlendirme kapıları geçilmeden küresel doğruluk, operasyonel kullanıma uygunluk veya bir ilk model tarihi varsayılmaz.
 
 Bu aşamalar bir 1.0 vaadi veya tarihlendirilmiş sürüm sözü değildir. USGS'nin [yangın olasılığı değerlendirmesi](https://www.usgs.gov/data/evaluations-fsim-burn-probability-maps-pyromes-conterminous-united-states-based-observed) de tarihsel olasılık haritalarını sonraki gerçek çevrelerle karşılaştırma gereğini örnekler.
