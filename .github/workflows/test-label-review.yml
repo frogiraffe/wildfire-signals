@@ -1,0 +1,36 @@
+name: Independent wildfire label review and source-gated cohort
+on:
+  pull_request:
+    paths:
+      - 'fire_public/label_review.py'
+      - 'fire_public/labeled_evaluation.py'
+      - 'fire_public/perimeter_study.py'
+      - 'tests/test_label_review.py'
+      - '.github/workflows/test-label-review.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'fire_public/label_review.py'
+      - 'fire_public/labeled_evaluation.py'
+      - 'fire_public/perimeter_study.py'
+      - 'tests/test_label_review.py'
+      - '.github/workflows/test-label-review.yml'
+permissions:
+  contents: read
+jobs:
+  offline-evidence-to-evaluation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Execute source archive through frame queue double-review and baseline regressions
+        run: |
+          python -m compileall -q fire_public
+          python -m unittest discover -s tests -p 'test_label_review.py' -v
+          python -m unittest discover -s tests -p 'test_labeled_evaluation.py' -v
+          python -m unittest discover -s tests -p 'test_perimeter_study.py' -v
+          python -m unittest discover -s tests -p 'test_evaluation_splits.py' -v
+          python -m unittest discover -s tests -p 'test_historical_baseline.py' -v
