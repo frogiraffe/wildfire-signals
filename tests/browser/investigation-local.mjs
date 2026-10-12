@@ -23,7 +23,7 @@ const server = createServer(async (request,response) => {
   }
   const name = request.url === '/' ? 'index.html' : request.url.slice(1);
   if (!['index.html','style.css','main.mjs','map-state.mjs','area-analysis.mjs',
-    'incident-timeline.mjs','weather-context.mjs'].includes(name)) {
+    'incident-timeline.mjs','weather-context.mjs','analysis-answers.mjs'].includes(name)) {
     response.writeHead(404).end(); return;
   }
   response.setHeader('Content-Type',name.endsWith('.css') ? 'text/css'
@@ -46,6 +46,10 @@ try {
     await lead.click();
     assert.equal(await page.locator('#detail').isVisible(),true);
     assert.match(await page.locator('#detail-content').textContent(),/latest/);
+    assert.match(await page.locator('.analysis-answers').textContent(),
+      /Uydu termal adayı; orman\/arazi yangını doğrulanmadı/);
+    assert.match(await page.locator('.analysis-answers').textContent(),
+      /Doğrulanmış olasılık yok/);
     await page.waitForFunction(() => location.hash.includes('lat=-6.025') &&
       location.hash.includes('lon=145.025'));
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1),false);
@@ -122,6 +126,8 @@ try {
   assert.match(detail,/Kontrol dışı/);
   assert.match(detail,/Sınırları içinde tutuluyor/);
   assert.match(detail,/Yangının yayılma geçmişi değildir/);
+  assert.match(detail,/Kurum kaydı sınırları içinde tutuluyor olarak bildiriyor/);
+  assert.match(detail,/Karşılaştırılabilir zamanlı kontrol\/sönme sonuçları/);
   await incidentPage.close();
 
   activeSnapshot = {...snapshot,events:[],incidents:[{kind:'agency_incident',

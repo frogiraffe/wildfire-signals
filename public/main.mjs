@@ -3,6 +3,7 @@ import {MESSAGES, parseState, stateHash, visible, effectiveStatus, featureCollec
 import {summarizeArea, investigationLeads} from './area-analysis.mjs';
 import {incidentTimeline} from './incident-timeline.mjs';
 import {fetchNwsWeather, forecastChanges} from './weather-context.mjs';
+import {recordAnalysis} from './analysis-answers.mjs';
 
 const state = parseState(location.hash);
 let snapshot = {manifest:{data_status:'unknown'},events:[],incidents:[],matches:[],sources:[],details:{}};
@@ -134,6 +135,34 @@ function showWeather(box, incident, msg) {
     .finally(() => clearTimeout(timeout));
 }
 
+function showAnalysis(box, kind, item, msg) {
+  const result = recordAnalysis(item,kind,snapshot.manifest,snapshot.sources);
+  const section = document.createElement('section');
+  section.className = 'analysis-answers';
+  const title = document.createElement('h3'); title.textContent = msg.analysisTitle;
+  const scope = document.createElement('p'); scope.textContent = msg.analysisScope;
+  const quality = document.createElement('p');
+  quality.textContent = `${msg.analysisEvidence}: ${msg[result.quality]} · ` +
+    `${msg.analysisSourceTime}: ${result.sourceTime || msg.weatherMissing}`;
+  const list = document.createElement('ol');
+  for (const [question,answer,reason] of [
+    ['analysisWhere',result.presence,null],
+    ['analysisIgnition',result.ignition,result.ignitionReason],
+    ['analysisSpread',result.spread,result.spreadReason],
+    ['analysisEnding',result.ending,result.endingReason]]) {
+    const row = document.createElement('li');
+    const heading = document.createElement('h4'); heading.textContent = msg[question];
+    const statement = document.createElement('strong'); statement.textContent = msg[answer];
+    row.append(heading,statement);
+    if (reason) {
+      const explanation = document.createElement('p'); explanation.textContent = msg[reason];
+      row.append(explanation);
+    }
+    list.append(row);
+  }
+  section.append(title,scope,quality,list); box.append(section);
+}
+
 function showRecord(kind, id) {
   stopWeatherRequest();
   const msg = MESSAGES[state.lang];
@@ -175,6 +204,7 @@ function showRecord(kind, id) {
     }
     box.append(list);
   }
+  showAnalysis(box,kind,item,msg);
   el('detail').hidden = false;
   if (kind === 'incident') showWeather(box,item,msg);
   if (kind === 'incident') {

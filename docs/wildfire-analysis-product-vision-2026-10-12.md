@@ -15,6 +15,8 @@ Amaç yangın yönetimine yardımcı **kanıtlı durum ve olasılık bilgisi** s
 
 İlk hedef kullanıcı **genel kullanıcıdır**; analiz yine ayrıntılı ve derin olmalıdır. Harita ilk bakışta anlaşılır bir yanıt verir. Her sonucun ayrıntı görünümü kaynakların zaman çizelgesini, verinin nasıl eşleştirildiğini, hava/arazi girdilerini, model ve referans karşılaştırmasını, belirsizliği, eksik veriyi ve geçmiş doğruluk ölçümünü açar. Tek bir renk veya puan bu açıklamanın yerine geçmez.
 
+Taslak PR'daki kayıt ayrıntısı artık bu dört soruyu birlikte gösterir. İlk soruda yalnızca kurumun bildirdiği durumu veya doğrulanmamış uydu adayını belirtir; kaynak başarısızlığı, eski toplama görüntüsü ve kaynak zamanı görünür. Diğer üç soruda bölgesel model ve ilgili veri kapıları geçilmediğinden doğrulanmış olasılık bulunmadığını ve eksik girdiyi açıkça gösterir. Bu, dört analizin tamamlandığı veya yangının mevcut davranışının ölçüldüğü anlamına gelmez.
+
 ## Veri ve ürün sınırları
 
 | Girdi | Üründeki görevi | Şimdiki durum |

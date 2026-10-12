@@ -42,6 +42,9 @@ is only an early step toward the [wildfire analysis product objective](docs/wild
 Agency incident details can show the first observation here and up to four latest
 source record changes. It is not a fire perimeter or spread history; an
 unavailable source never proves that a fire ended. The separate
+[four-question analysis panel](docs/wildfire-analysis-product-vision-2026-10-12.md)
+states what the selected agency record or satellite candidate supports and why
+ignition, spread, and ending probabilities are still unavailable. The separate
 [historical evidence pilot](docs/historical-evidence-pilot-2026-10-12.md)
 stores a small official US/Canada sample with capture times and checksum-verified
 raw responses for later model research. This pilot is local and does not add a
