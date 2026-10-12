@@ -5,7 +5,7 @@ and auditable availability times. This is a baseline, not a wildfire forecast.
 """
 from __future__ import annotations
 
-from collections import Counter
+from math import isfinite
 from typing import Any, Iterable
 
 from .evaluation_splits import holdout_split
@@ -31,7 +31,7 @@ def historical_rate_experiment(
     Source evidence, feature-time integrity and completeness remain caller duties.
     """
     items = list(records)
-    if smoothing < 0 or smoothing > 1000:
+    if not isfinite(smoothing) or smoothing < 0 or smoothing > 1000:
         raise ValueError("smoothing must be between 0 and 1000")
     for r in items:
         _check_case(r)
