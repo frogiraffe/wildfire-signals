@@ -92,6 +92,22 @@ class PairReviewTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"SHA-256"):
             load_study(self.study)
 
+    def test_source_population_denominators_recomputed_from_provider_id_bytes(self):
+        file=self.study/"aligned-study.json"
+        obj=json.loads(file.read_text())
+        obj["source_population"]["mtbs_roi_object_ids"]+=1
+        file.write_text(json.dumps(obj))
+        with self.assertRaisesRegex(ValueError,"declared source ROI population"):
+            load_study(self.study)
+
+    def test_https_proof_needs_actual_source_hostname(self):
+        vote=self.sample_votes()
+        vote["votes"][0]["evidence_url"]="https://"
+        file=self.root/"bad-evidence.json"
+        file.write_text(json.dumps(vote))
+        with self.assertRaisesRegex(ValueError,"source URL required"):
+            validate_votes(self.study,file)
+
     def test_modified_candidate_provenance_rejected(self):
         file=self.study/"aligned-study.json"
         report=json.loads(file.read_text())
