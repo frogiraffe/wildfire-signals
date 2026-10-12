@@ -185,7 +185,7 @@ class LabelReviewTests(unittest.TestCase):
             if c["kind"]=="independent_frame_review"]),2)
         self.assertEqual(self.queue["state"],"unadjudicated_review_queue")
         self.assertNotIn("label",self.queue["cases"][2])
-        self.assertIn("independently",self.queue["warnings"][-1])
+        self.assertIn("independent",self.queue["warnings"][-1])
 
     def test_queue_and_frame_change_detection(self):
         self.reviews["queue_sha256"]="0"*64
