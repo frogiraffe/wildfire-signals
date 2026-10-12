@@ -52,6 +52,8 @@ def _finite(value, minimum: float, maximum: float) -> bool:
 
 
 def _validated_scan(path: Path) -> tuple[dict, str]:
+    if path.is_symlink() or not path.is_file() or path.stat().st_size > MAX_ASSET_BYTES:
+        raise ValueError("invalid scan asset")
     match = SCAN_NAME.fullmatch(path.name)
     if not match:
         raise ValueError(f"unexpected scan asset: {path.name}")
@@ -112,9 +114,14 @@ def _pixel(row: dict, receipt: dict) -> tuple:
     frp = row.get("frp_mw")
     if frp is not None and not _finite(frp, 0, 1e9):
         raise ValueError("invalid FRP")
+    for field in ("source_url", "rights_url"):
+        if (not isinstance(row.get(field), str) or
+                not row[field].startswith("https://")):
+            raise ValueError("missing upstream source/rights provenance")
     return (row["source_record_id"], digest, source, row["candidate_id"], observed,
-            _timestamp(receipt["captured_at"]), float(row["latitude"]),
-            float(row["longitude"]), frp)
+            _timestamp(receipt["captured_at"]), _timestamp(receipt["scan_at"]),
+            received, float(row["latitude"]), float(row["longitude"]), frp,
+            row["source_url"], row["rights_url"])
 
 
 def _create_tables(db: sqlite3.Connection) -> None:
@@ -140,9 +147,13 @@ def _create_tables(db: sqlite3.Connection) -> None:
             candidate_id TEXT NOT NULL,
             observed_at TEXT NOT NULL,
             first_captured_at TEXT NOT NULL,
+            first_scan_at TEXT NOT NULL,
+            source_received_at TEXT NOT NULL,
             latitude REAL NOT NULL,
             longitude REAL NOT NULL,
-            frp_mw REAL
+            frp_mw REAL,
+            source_url TEXT NOT NULL,
+            rights_url TEXT NOT NULL
         );
         CREATE INDEX IF NOT EXISTS pixel_observed_at ON pixel_observations(observed_at);
         CREATE INDEX IF NOT EXISTS pixel_received_at ON pixel_observations(first_captured_at);
@@ -216,8 +227,9 @@ def import_release_assets(db_path: str | Path, directory: str | Path) -> dict:
                         count += 1
                         cursor = db.execute("""INSERT OR IGNORE INTO pixel_observations
                             (source_record_id,raw_sha256,provider,candidate_id,observed_at,
-                             first_captured_at,latitude,longitude,frp_mw)
-                            VALUES (?,?,?,?,?,?,?,?,?)""",values)
+                             first_captured_at,first_scan_at,source_received_at,
+                             latitude,longitude,frp_mw,source_url,rights_url)
+                            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",values)
                         if cursor.rowcount:
                             rows_inserted += 1
                         else:
