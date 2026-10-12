@@ -75,6 +75,14 @@ for (const c of data.cases) {
       String(c.longitude) + ', decision time ' + String(c.decision_at) +
       '. No fire-free status is implied.'));
   }
+  if (c.official_context) {
+    article.append(node('p',
+      'Archived NIFC provider context: ' + c.official_context.source_record_status +
+      '; latest source capture ' + c.official_context.context_captured_at +
+      '; feature SHA-256 ' + c.official_context.fresh_feature_sha256 +
+      '. Retrospective context only: independent occurrence/nonfire outcome NOT verified.',
+      'notice'));
+  }
   const vote = field(article, 'Independent decision', 'select');
   for (const [value, label] of [
     ['unreviewed', 'Not reviewed'],
@@ -161,15 +169,31 @@ document.getElementById('export').addEventListener('click', () => {
 """
 
 
-def render_form(queue_path: Path, reviewer_id: str) -> str:
+def render_form(queue_path: Path, reviewer_id: str,
+                *, official_context_audit: dict | None = None) -> str:
     queue, cases, digest = _queue(queue_path)
+    context_by_id={}
+    if official_context_audit is not None:
+        if (official_context_audit.get("queue_sha256")!=digest or
+                official_context_audit.get("official_source_context_consistent") is not True or
+                official_context_audit.get("valid_binary_outcomes_created") != 0):
+            raise ValueError("official context is not validated for the exact review queue")
+        for finding in official_context_audit["case_findings"]:
+            cid=finding["case_id"]
+            if cid in context_by_id or cid not in cases or (
+                    cases[cid]["kind"]!="retrospective_official_perimeter_review"):
+                raise ValueError("official context case identities do not match review queue")
+            if finding.get("independent_outcome_verified") is not False:
+                raise ValueError("context is not an independent outcome label")
+            context_by_id[cid]=finding
     reviewer = _text(reviewer_id, "reviewer identity")
     payload = {
         "queue_sha256": digest, "reviewer_id": reviewer,
         "cases": [
-            {key: case.get(key) for key in (
+            {**{key: case.get(key) for key in (
                 "case_id", "kind", "source_fire_year", "source_object_id",
-                "source_name", "region_id", "latitude", "longitude", "decision_at")}
+                "source_name", "region_id", "latitude", "longitude", "decision_at")},
+                "official_context":context_by_id.get(case["case_id"])}
             for case in cases.values()
         ],
     }
@@ -213,10 +237,16 @@ def main() -> None:
     parser.add_argument("--queue", type=Path, required=True)
     parser.add_argument("--reviewer-id", required=True)
     parser.add_argument("--html", type=Path, required=True)
+    parser.add_argument("--official-context-store",type=Path,
+                        help="Optional private SHA-checked NIFC CONTEXT archive; does not verify binary outcomes")
     args = parser.parse_args()
     if args.html.resolve() == args.queue.resolve() or args.html.exists():
         parser.error("output must be new and must never replace source queue")
-    result = render_form(args.queue, args.reviewer_id)
+    audit=None
+    if args.official_context_store is not None:
+        from .official_context_archive import audit_context
+        audit=audit_context(args.queue,args.official_context_store)
+    result = render_form(args.queue, args.reviewer_id, official_context_audit=audit)
     _write_new(args.html, result)
     print(json.dumps({"html": str(args.html), "reviewer_id": args.reviewer_id,
                       "source_queue_sha256": hashlib.sha256(
