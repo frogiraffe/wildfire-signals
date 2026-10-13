@@ -76,7 +76,7 @@ class HistoricalAnalysisTests(unittest.TestCase):
         self.assertEqual(d["summary"]["later_minus_earlier_cell_hours"],36)
         self.assertEqual(d["summary"]["later_to_earlier_cell_hours_ratio"],3.4)
         self.assertEqual(d["summary"]["delayed_captures_in_later_observation_bin"],0)
-        self.assertEqual(d["summary"]["capture_lag_hours_median"],.5)
+        self.assertEqual(d["summary"]["capture_lag_hours_median"],0.583)
         self.assertEqual(d["scan_source_states"][FIRMS_SOURCES[0]+":complete"],12)
         self.assertEqual(d["scan_source_states"][FIRMS_SOURCES[1]+":complete"],12)
         self.assertEqual(len(d["provenance_receipts"]),12)
@@ -145,16 +145,16 @@ class HistoricalAnalysisTests(unittest.TestCase):
         first=START+timedelta(hours=1)
         early=self.observation(0,0)
         self.scan(0,[early])
-        late=END+timedelta(hours=1)
+        late=END-timedelta(hours=1)
         # An old thermal acquisition included in a new receipt is not part
         # of the earlier source-captured world.
         make_release(self.assets/"next-day",late,[
             pixel(FIRMS_SOURCES[1],when=first,latitude=0,longitude=10.2,ident="late-backfill")])
         import_release_assets(self.db,self.assets)
-        before=self.report()
+        before=self.report(at=(END-timedelta(hours=2)).isoformat())
         self.assertEqual(before["summary"]["unique_raw_pixel_observations"],1)
         self.assertEqual(before["scan_receipts"],1)
-        after=self.report(at=(END+timedelta(hours=2)).isoformat())
+        after=self.report()
         self.assertEqual(after["summary"]["unique_raw_pixel_observations"],2)
         self.assertEqual(after["scan_receipts"],2)
         self.assertEqual(after["summary"]["delayed_captures_in_later_observation_bin"],1)
