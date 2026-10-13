@@ -14,7 +14,7 @@ import zipfile
 
 from fire_public.analysis_receipt import build_receipt, write_receipt
 from fire_public.agency_vault import (
-    ingest, verify, export_bundle, restore_bundle, rebuild_sqlite)
+    ingest, verify, export_bundle, restore_bundle, rebuild_sqlite, research_workspace)
 from fire_public.prospective_replay import open_archive, replay
 from fire_public.receipt_history import incident_at
 from fire_public.history import HistoryStore
@@ -107,6 +107,23 @@ class AgencyVaultTests(unittest.TestCase):
             self.assertEqual(earlier["cases"][0]["timeline"][0]["agency_status"],"OC")
         finally:
             conn.close()
+        # One-command researcher experience from original recovered evidence,
+        # without keeping an intermediate database on disk.
+        workspace=self.root/"ready-to-open-offline-research"
+        preview=research_workspace(restored,workspace,provider="cwfis",
+                                   at="2026-10-12T15:00:00Z")
+        self.assertEqual(preview["cases"],1)
+        self.assertEqual(preview["source_receipts_replayed"],4)
+        self.assertEqual(json.loads((workspace/"evidence.json").read_text())
+                         ["cases"][0]["latest_availability"],"not_listed_in_complete_scan")
+        self.assertIn("Source receipt time machine",(workspace/"index.html").read_text())
+        self.assertEqual({p.name for p in workspace.iterdir()}, {"index.html","evidence.json"})
+        self.assertEqual((workspace/"index.html").stat().st_mode & 0o777,0o600)
+        with self.assertRaisesRegex(ValueError,"new directory"):
+            research_workspace(restored,workspace)
+        with self.assertRaisesRegex(ValueError,"requires provider"):
+            research_workspace(restored,self.root/"bad-workspace",official_id="CA-A")
+        self.assertFalse((self.root/"bad-workspace").exists())
         with self.assertRaisesRegex(ValueError,"new private output"):
             rebuild_sqlite(restored,database)
         with self.assertRaisesRegex(ValueError,"new private file"):
@@ -219,6 +236,15 @@ class AgencyVaultTests(unittest.TestCase):
         restored=self.root/"restored"
         self.assertEqual(run("restore","--bundle",str(backup),
                              "--vault",str(restored)).returncode,0)
+        direct=self.root/"source-to-html"
+        done=run("workspace","--vault",str(restored),
+                 "--provider","cwfis","--official-id","CA-A",
+                 "--at","2026-10-12T01:00:00Z",
+                 "--output-dir",str(direct))
+        self.assertEqual(done.returncode,0,done.stderr)
+        self.assertEqual(json.loads(done.stdout)["cases"],1)
+        self.assertEqual(len(json.loads((direct/"evidence.json").read_text())
+                             ["cases"][0]["timeline"]),1)
         db=self.root/"history.sqlite3"
         self.assertEqual(run("rebuild","--vault",str(restored),
                              "--db",str(db)).returncode,0)
