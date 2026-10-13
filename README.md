@@ -504,8 +504,8 @@ checked in or printed.
 # From outside the Git checkout; source data and vault stay private.
 python -m fire_public.actions_agency_sync --vault /private/wildfire-vault --dry-run
 python -m fire_public.actions_agency_sync --vault /private/wildfire-vault
-python -m fire_public.agency_vault workspace \\
-  --vault /private/wildfire-vault --provider cwfis \\
+python -m fire_public.agency_vault workspace \
+  --vault /private/wildfire-vault --provider cwfis \
   --output-dir /private/source-research-001
 ```
 
