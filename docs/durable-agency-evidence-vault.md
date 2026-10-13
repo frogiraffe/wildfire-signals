@@ -43,6 +43,20 @@ The ZIP contains an explicit `manifest.json` with the full 64-character SHA-256 
 
 The restored SQLite is created from scratch with the existing `import_receipts` function; it has a `PRAGMA integrity_check` pass and publishes only after successful completion. Historical distinctions are maintained: complete source listing, failed/deferred agency source, and absence from current source layer; no event disappearance becomes extinguishment. NIFC/CWFIS identities are *not* linked by proximity.
 
+## One-command research workspace from the archive
+
+Once original receipts are in the vault, create a complete **offline as-of incident explorer** without retaining an intermediate SQLite file:
+
+```sh
+python -m fire_public.agency_vault workspace \\
+  --vault /private/recovered-original-vault \\
+  --provider cwfis \\
+  --at 2026-10-12T15:00:00Z \\
+  --output-dir /private/agency-research-session-002
+```
+
+The command verifies and imports the original receipts into a temporary private SQLite database, performs the same source-time replay as `fire_public.prospective_replay`, writes new-only `index.html` and `evidence.json`, then removes the temporary SQLite database. Add `--official-id` with `--provider` for a large archive. Omit `--at` to use the latest **captured** source receipt, not the computer's current time. There are **no automatic event labels, source joins, predictions or network calls**.
+
 ## Security and disaster recovery limitations
 
 - **SHA-256 detects accidental or unsanctioned byte changes relative to the manifest.** Because the manifest is shipped alongside its contents and is not externally signed, it does **not** independently authenticate the origin of a governmental record, prove an event, provide a tamper-proof clock or survive an attacker who can replace the entire archive.
