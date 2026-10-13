@@ -227,7 +227,7 @@ def render_quality_html(cohort: dict) -> str:
                      "/12</td><td>"+(escape(str(metrics)) if metrics is not None else "Unknown")+
                      "</td><td>"+quality+"</td><td>Unlabeled</td><td><code>"+sample+"</code></td></tr>")
     summary = frame["counts"]
-    return """<!doctype html><html lang="en"><head><meta charset="utf-8">
+    return ("""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Wildfire Signals — Unlabeled Historical Observation Cohort</title>
 <style>
