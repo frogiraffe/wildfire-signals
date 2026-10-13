@@ -63,6 +63,33 @@ def _read_only(path: Path) -> sqlite3.Connection:
     return db
 
 
+
+def _spatial_sql(latitude: float, longitude: float, radius_km: float) -> tuple[str, tuple]:
+    """Conservative spherical bounding box before exact great-circle filtering.
+
+    A longitude-wrapped box prevents a busy region elsewhere on Earth from
+    exhausting our analysis row budget or truncating the selected circle.
+    """
+    angular = radius_km / 6371.0088
+    lat_degrees = math.degrees(angular) + 0.000001
+    south = max(-90., latitude-lat_degrees)
+    north = min(90., latitude+lat_degrees)
+    base = " AND latitude BETWEEN ? AND ?"
+    params = (south,north)
+    if south<=-90 or north>=90:
+        return base,params  # Any longitude can be within a polar circle.
+    deviation = math.degrees(math.asin(min(1.,math.sin(angular) /
+                        math.cos(math.radians(latitude))))) + 0.000001
+    if deviation >=180:
+        return base,params
+    center=(longitude+180)%360-180
+    west=(center-deviation+180)%360-180
+    east=(center+deviation+180)%360-180
+    if west<=east:
+        return base+" AND longitude BETWEEN ? AND ?",params+(west,east)
+    return base+" AND (longitude >= ? OR longitude <= ?)",params+(west,east)
+
+
 def analyze_historical_signals(
     db_path: Path | str, *, at: str, hours: int = 72,
     latitude: float, longitude: float, radius_km: float = 100,
@@ -114,14 +141,17 @@ def analyze_historical_signals(
         """, (beginning,cutoff,cutoff,MAX_SCANS+1)).fetchall()
         if len(scans)>MAX_SCANS:
             raise ValueError("historical scan population exceeds analysis budget")
-        pixels = db.execute("""
+        region_clause, region_args = _spatial_sql(latitude,longitude,radius_km)
+        query = ("""
             SELECT provider,observed_at,first_captured_at,latitude,longitude
             FROM pixel_observations
             WHERE observed_at >= ? AND observed_at < ?
               AND first_captured_at <= ?
               AND provider IN (?,?)
-            ORDER BY observed_at,source_record_id LIMIT ?
-        """, (beginning,cutoff,cutoff,*SOURCES,MAX_PIXELS+1)).fetchall()
+        """ + region_clause + " ORDER BY observed_at,source_record_id LIMIT ?")
+        pixels = db.execute(query,
+                            (beginning,cutoff,cutoff,*SOURCES,*region_args,
+                             MAX_PIXELS+1)).fetchall()
         if len(pixels)>MAX_PIXELS:
             raise ValueError("historical raw pixel population exceeds analysis budget")
 
