@@ -67,7 +67,7 @@ class FullDetailCoverageTests(unittest.TestCase):
         self.assertEqual(result["original_detail_pages_verified"],14)
         self.assertEqual(result["candidate_linked_unique_calfire_urls"],14)
         self.assertEqual(result["original_detail_page_batch_count"],3)
-        self.assertEqual(result["original_candidate_count"],len(self.fx.f.fixture.report["candidate_pairs"]) if hasattr(self.fx.f, "fixture") else 6)
+        self.assertEqual(result["original_candidate_count"],len(self.annual_report["cases"]))
         self.assertTrue(result["all_candidate_linked_detail_pages_archived"])
         self.assertEqual(result["verified_event_crosswalks"],0)
         self.assertEqual(result["verified_nonfire_labels"],0)
