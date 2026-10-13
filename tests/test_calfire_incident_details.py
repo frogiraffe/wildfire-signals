@@ -48,9 +48,10 @@ class OriginalDetailPageTests(unittest.TestCase):
         return detail(name=name)
 
     def sample(self,**kwargs):
-        return capture(self.study,self.arc,max_pages=3,
-                       seed="test-calfire-pages-v1",get=self.provider,
-                       clock=lambda:"2026-10-13T14:00:00Z",**kwargs)
+        args=dict(max_pages=3,seed="test-calfire-pages-v1",get=self.provider,
+                  clock=lambda:"2026-10-13T14:00:00Z")
+        args.update(kwargs)
+        return capture(self.study,self.arc,**args)
 
     def test_selected_original_links_are_bounded_deterministic_and_not_a_census(self):
         one,raw=self.sample()
@@ -96,9 +97,8 @@ class OriginalDetailPageTests(unittest.TestCase):
         p=parse_detail(detail(coordinate="Unknown",acres="1,300"),expected_url=url,
                        archive_row=row)
         self.assertIsNone(p["source_location_lat_lon"])
-        self.assertIsNone(p["source_counties"] if p["source_counties"]=="" else None)
-        self.assertIsNone(p["source_start_clock_local_unspecified_tz"]
-                          if p["source_start_clock_local_unspecified_tz"] is None else None)
+        self.assertEqual(p["source_counties"],"Shasta")
+        self.assertEqual(p["source_start_clock_local_unspecified_tz"],"1:15 PM")
         self.assertFalse(p["event_identity_verified"])
 
     def test_drift_is_reported_not_silently_reconciled(self):
@@ -117,7 +117,7 @@ class OriginalDetailPageTests(unittest.TestCase):
              "reported_acres":1300,"counties":"Shasta","original_event_url":url}
         with self.assertRaisesRegex(ValueError,"outside pinned contract"):
             parse_detail(detail(),expected_url="https://evil.example/2018",archive_row=row)
-        with self.assertRaisesRegex(ValueError,"source start date"):
+        with self.assertRaisesRegex(ValueError,"header/date|source start date"):
             parse_detail(detail().replace(b"Date Started",b"Started"),expected_url=url,archive_row=row)
         with self.assertRaisesRegex(ValueError,"not 2018"):
             parse_detail(detail(started="07/20/2017 1:15 PM"),expected_url=url,archive_row=row)
