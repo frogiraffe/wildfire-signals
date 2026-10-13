@@ -25,7 +25,7 @@ const server = createServer(async (request,response) => {
   if (!['index.html','style.css','main.mjs','map-state.mjs','area-analysis.mjs',
     'incident-timeline.mjs','weather-context.mjs','perimeter-context.mjs',
     'analysis-answers.mjs','region-explorer.mjs','region-explorer-view.mjs',
-    'coverage-audit.mjs'].includes(name)) {
+    'coverage-audit.mjs','region-compare.mjs'].includes(name)) {
     response.writeHead(404).end(); return;
   }
   response.setHeader('Content-Type',name.endsWith('.css') ? 'text/css'
