@@ -100,3 +100,12 @@
 .coverage-audit #coverage-download{width:100%;font-size:11px;padding:7px}
 .coverage-audit #coverage-caveat{color:#f5d5a4}
 @media(max-width:700px){.coverage-audit li{padding:6px}.coverage-audit ul{gap:5px}}
+
+/* Two worldwide circles are observational comparison, never relative fire risk. */
+.region-compare{border-top:1px solid #53707c;margin:16px 0 12px;padding-top:10px}
+.region-compare #compare-quality{color:#f9d298;font-size:11px}
+.region-compare #compare-caveat{font-size:11px;color:#b7cbd0}
+.region-compare #compare-download{width:100%;font-size:11px;padding:7px}
+.region-compare #compare-sensors{display:grid;gap:4px}
+.region-compare #compare-sensors li{font-size:10px;overflow-wrap:anywhere}
+#region-results[hidden],#compare-results[hidden]{display:none}
