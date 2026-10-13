@@ -217,15 +217,17 @@ def build_agency_review_candidates(folder: Path, agency_db: Path, *,
         })
     for key in ordered:
         ordered[key].sort(key=lambda a:(a["captured_at"],a["scan_at"]))
+    last_receipt=max((x["captured_at"] for x in scan_rows), default=None)
     for sample in samples:
         start=_timestamp(sample["decision_at"])
         stop=_timestamp(sample["outcome_window_end_exclusive"])
-        effective_stop=min(stop,limit) if limit else stop
+        available_until=min((x for x in (limit,last_receipt) if x is not None),default=start)
+        effective_stop=min(stop,available_until)
         provider_health={}
         for provider in SOURCES:
             prior=[x for x in scan_rows if x["provider"]==provider and x["captured_at"]<=start]
             future=[x for x in scan_rows if x["provider"]==provider and
-                    start<x["captured_at"]<effective_stop]
+                    start<x["captured_at"]<stop and x["captured_at"]<=effective_stop]
             last_pre=prior[-1] if prior else None
             provider_health[provider]={
                 "pre_decision_source_status":last_pre["status"] if last_pre else None,
@@ -242,8 +244,9 @@ def build_agency_review_candidates(folder: Path, agency_db: Path, *,
                 distance_km(sample["latitude"],sample["longitude"],
                             *x["point"])<=sample["radius_km"]]
             if not in_circle:continue
-            before=[x for x in in_circle if x["captured_at"]<=start]
-            future=[x for x in in_circle if start<x["captured_at"]<effective_stop]
+            before=[x for x in records if x["captured_at"]<=start]
+            future=[x for x in in_circle if start<x["captured_at"]<stop
+                    and x["captured_at"]<=effective_stop]
             if not future:continue
             first=future[0]
             latest=future[-1]
