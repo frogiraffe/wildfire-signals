@@ -7,6 +7,8 @@ on:
       - 'fire_public/calfire_lineage_audit.py'
       - 'tests/test_research_workbench.py'
       - 'tests/js/research-workbench.test.mjs'
+      - 'tests/browser/research-workbench-local.mjs'
+      - 'tests/browser/generate-research-workbench-fixture.py'
       - '.github/workflows/test-research-workbench.yml'
   push:
     branches: [main]
@@ -41,3 +43,20 @@ jobs:
         run: |
           node --check fire_public/research_workbench.js
           node --test tests/js/research-workbench.test.mjs
+  real-browser-offline:
+    needs: offline-workbench
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Verify generated private research HTML in real Chromium desktop/mobile
+        run: node tests/browser/research-workbench-local.mjs
