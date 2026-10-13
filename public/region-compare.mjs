@@ -43,7 +43,8 @@ export function compareRegions(snapshot,first,second,{
     schemaVersion:1,status:!matchingSatelliteFilter?'unsupported_source_filter':
       !a.available||!b.available?'unavailable':
       overlaps?'overlapping_areas':
-      a.quality!=='current'||b.quality!=='current'?'incomplete_source_evidence':
+      a.quality!=='current'||b.quality!=='current'||
+      auditA.snapshotTruncated||auditB.snapshotTruncated?'incomplete_source_evidence':
       'descriptive_thermal_comparison_only',
     createdAt:now.toISOString(),
     hours,source,unit:'distinct_0_05_degree_cell_hours_not_fire_count',
