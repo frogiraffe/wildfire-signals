@@ -122,8 +122,8 @@ jobs:
                           'longitude':float(os.environ['ANALYSIS_LON']),
                           'radius_km':float(os.environ['ANALYSIS_RADIUS'])}],handle)
           with open(os.environ['GITHUB_ENV'],'a',encoding='utf-8') as env:
-              env.write('STUDY_START='+start.isoformat()+'\\n')
-              env.write('STUDY_END='+end.isoformat()+'\\n')
+              env.write('STUDY_START='+start.isoformat()+'\n')
+              env.write('STUDY_END='+end.isoformat()+'\n')
           PY
           python -m fire_public.observational_cohort \
             --pixel-db "$RUNNER_TEMP/firms-source.sqlite3" \
