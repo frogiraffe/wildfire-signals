@@ -33,6 +33,27 @@ Outputs, all local/private, new-only and explicitly verified by manifest SHA-256
 - `manifest.json`: original archive capture support, locked geographic sampling frame, parameters and counts of censored/model-ineligible rows
 - `quality.html`: responsive, local-only overview of sample coverage and source-data censoring, not a wildfire risk map
 
+## Real original-FIRMS release integration test
+
+[The research cohort CI workflow](../.github/workflows/test-observational-cohort.yml)
+includes an isolated pull-request job that **pins the original published 12 and
+13 October 2026 FIRMS evidence releases**. It verifies their release digests
+and raw source-file checksums using the already existing importer, then runs
+this study-frame engine against two widely separated illustrative regions.
+It asserts zero fabricated outcome labels and publishes **aggregate-only**
+research readiness reports as seven-day test artifacts; the verified raw
+pixel files and SQLite database remain in the temporary CI environment.
+The test has a strict 90 MiB compressed-download budget and fails if pinned
+research source assets disappear rather than substituting synthetic data.
+
+The [manual historical analysis workflow](../.github/workflows/run-historical-signal-analysis.yml)
+also exports `observations.csv`, `observations.jsonl`, `manifest.json`
+and `quality.html` for a single user-selected worldwide region alongside
+the existing historical-statistical-analysis report. Its eight fixed
+six-hourly decisions cover the 48 hours before the newest verified original
+scan capture. This is a *readiness analysis*, not validation of wildfire
+prediction accuracy.
+
 ## Scientific limitations and the next experiment
 
 - An original collection receipt is **not** a geographic satellite detection opportunity. V3 flags any row with even a complete collector audit as `orbital_exposure_validated:false` and disallows model fitting without an external orbital/revisit and cloud/visibility audit.
