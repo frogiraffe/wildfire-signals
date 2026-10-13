@@ -124,6 +124,15 @@ negative wildfire labels. The existing bounded *real-source* multi-year CI
 now produces both quality reports from its already captured dataset, without
 more government API requests.
 
+The [original CAL FIRE incident detail-page research](docs/calfire-2018-original-incident-pages.md)
+now follows a bounded, reproducible set of actual 2018 event URLs from the
+source-verified annual archive. It preserves original full HTML source bytes,
+SHA-256 and the historical title/day/acreage/county/location fields, flags
+disagreement with archive metadata and offers retrospective proximity context
+to MTBS centroids and NIFC polygons. Source point location is **not** proven
+ignition geometry; linked government pages still do not provide independent
+same-event confirmation or wildfire-negative labels.
+
 The [live official CAL FIRE 2018 incident archive cross-reference](docs/calfire-2018-incident-source-crosswalk.md)
 now archives the state's original historical incident-page HTML with exact
 SHA-256 and compares retrospective incident names, dates, counties and acreage
