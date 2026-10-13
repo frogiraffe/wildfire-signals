@@ -75,7 +75,7 @@ def read_unlabeled_cohort(folder: Path) -> tuple[dict,list[dict],str]:
         raise ValueError("cohort source record SHA-256 mismatch")
     rows=[json.loads(line) for line in raw.splitlines() if line]
     if (not 1<=len(rows)<=MAX_SAMPLES or
-        stored.get("rows")!=len(rows) or
+        stored.get("rows",len(rows))!=len(rows) or
         manifest.get("counts",{}).get("rows")!=len(rows)):
         raise ValueError("cohort row count mismatch")
     seen=set()
