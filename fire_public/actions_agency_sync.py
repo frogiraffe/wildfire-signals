@@ -6,6 +6,7 @@ uploads. Preserve only original NIFC/CWFIS agency receipt bytes in private vault
 from __future__ import annotations
 
 import argparse
+import hashlib
 from datetime import datetime, timezone, timedelta
 from io import BytesIO
 import json
@@ -19,7 +20,7 @@ from urllib.parse import urlsplit
 from urllib.request import build_opener, HTTPRedirectHandler, Request
 import zipfile
 
-from .agency_vault import _private_path, ingest, verify
+from .agency_vault import _private_path, _prepare, _scan, _inventory, ingest, verify
 from .analysis_receipt import MAX_COMPRESSED_BYTES
 from .history import _timestamp
 from .receipt_audit import _read
@@ -193,6 +194,69 @@ def _extract_agency(payload: bytes, *, run_id: int, head_sha: str,
     return item.filename, raw
 
 
+
+PROGRESS_FILE = ".actions-sync-state.json"
+MAX_PROGRESS_ENTRIES = 20000
+
+
+def _read_progress(vault: Path) -> dict:
+    path = vault / PROGRESS_FILE
+    if not path.exists() and not path.is_symlink():
+        return {}
+    if (path.is_symlink() or not path.is_file() or
+            path.stat().st_size > 2 * 1024 * 1024):
+        raise ValueError("unsafe private Actions sync progress file")
+    document = json.loads(path.read_text(encoding="utf-8"))
+    rows = document.get("checked") if isinstance(document, dict) else None
+    if document.get("schema_version") != 1 or not isinstance(rows, dict) or len(rows)>MAX_PROGRESS_ENTRIES:
+        raise ValueError("invalid local Actions sync progress format")
+    for key, value in rows.items():
+        if (not re.fullmatch(r"[1-9]\\d*",key) or not isinstance(value,dict) or
+                not isinstance(value.get("run_id"),int) or value["run_id"] <= 0 or
+                not isinstance(value.get("attempt"),int) or value["attempt"] <= 0 or
+                value.get("kind") not in ("agency","pixel_only") or
+                (value["kind"]=="agency" and
+                 (not RECEIPT_NAME.fullmatch(str(value.get("receipt_name",""))) or
+                  not re.fullmatch(r"[a-f0-9]{64}",str(value.get("receipt_sha256","")))))):
+            raise ValueError("invalid source archive progress record")
+    return rows
+
+
+def _atomic_progress(vault: Path, rows: dict) -> None:
+    if len(rows) > MAX_PROGRESS_ENTRIES:
+        raise ValueError("Actions progress capacity exceeded")
+    _prepare(vault,create=True)
+    fd, temporary = tempfile.mkstemp(prefix=".actions-sync-",suffix=".tmp",dir=vault)
+    try:
+        with os.fdopen(fd,"w",encoding="utf-8") as stream:
+            json.dump({"schema_version":1,"checked":rows},stream,sort_keys=True,
+                      ensure_ascii=False,separators=(",",":"))
+            stream.write("\\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary,vault/PROGRESS_FILE)
+    finally:
+        Path(temporary).unlink(missing_ok=True)
+
+
+def _is_checked(vault: Path, progress: dict, artifact: dict,
+                run_id: int, attempt: int) -> bool:
+    item=progress.get(str(artifact["id"]))
+    if item is None:
+        return False
+    if item["run_id"] != run_id or item["attempt"] != attempt:
+        raise ValueError("GitHub Actions artifact conflicts with saved local progress")
+    if item["kind"] == "pixel_only":
+        return True  # Artifact IDs are immutable; no agency source was present.
+    path=vault/"receipts"/item["receipt_name"]
+    if not path.is_file() or path.is_symlink():
+        return False  # Recover the removed original if the Actions artifact still exists.
+    original=_scan(path)
+    if original["sha256"] != item["receipt_sha256"]:
+        raise ValueError("archived original changed since Actions progress")
+    return True
+
+
 def sync(vault: Path, client, *, pages: int = 5, max_downloads: int = 32,
          since: str | None = None, dry_run: bool = False) -> dict:
     """Idempotent bounded pull: classify expiry/incomplete discovery explicitly."""
@@ -203,6 +267,8 @@ def sync(vault: Path, client, *, pages: int = 5, max_downloads: int = 32,
     if vault.exists() and not (vault / "receipts").is_dir():
         raise ValueError("existing destination is not a private receipt vault")
     selected = []
+    progress = _read_progress(vault) if vault.exists() else {}
+    cached = 0
     listed = 0
     page_exhausted = False
     known = set()
@@ -229,7 +295,10 @@ def sync(vault: Path, client, *, pages: int = 5, max_downloads: int = 32,
                 continue
             if row["size_in_bytes"] > MAX_DOWNLOAD:
                 raise ValueError("original collection artifact ZIP exceeds 100 MiB")
-            selected.append((row, *identity))
+            if _is_checked(vault,progress,row,*identity):
+                cached += 1
+            else:
+                selected.append((row, *identity))
         if len(artifacts) < PER_PAGE:
             page_exhausted = True
             break
@@ -240,7 +309,8 @@ def sync(vault: Path, client, *, pages: int = 5, max_downloads: int = 32,
         "schema_version": 1,
         "source": "github_actions_official_collection_artifacts",
         "discovered_artifacts": listed,
-        "candidate_archives": len(selected) + omitted,
+        "candidate_archives": len(selected) + omitted + cached,
+        "already_checked_archives": cached,
         "selected_archives": len(selected),
         "expired_candidates": expired,
         "outside_download_limit": omitted,
@@ -269,6 +339,10 @@ def sync(vault: Path, client, *, pages: int = 5, max_downloads: int = 32,
             artifact_created_at=artifact["created_at"])
         if candidate is None:
             result["pixel_only_or_no_agency_receipt"] += 1
+            _atomic_progress(vault, {**progress, str(artifact["id"]): {
+                "run_id":run_id,"attempt":attempt,"kind":"pixel_only"}})
+            progress[str(artifact["id"])] = {
+                "run_id":run_id,"attempt":attempt,"kind":"pixel_only"}
             continue
         name, raw = candidate
         with tempfile.TemporaryDirectory(prefix="agency-original-") as folder:
@@ -277,7 +351,11 @@ def sync(vault: Path, client, *, pages: int = 5, max_downloads: int = 32,
             added = ingest(vault, Path(folder))
         result["new_original_agency_receipts"] += added["new_original_receipts"]
         result["existing_original_agency_receipts"] += added["already_present"]
-    if vault.exists():
+        progress[str(artifact["id"])] = {"run_id":run_id,"attempt":attempt,
+            "kind":"agency","receipt_name":name,
+            "receipt_sha256":hashlib.sha256(raw).hexdigest()}
+        _atomic_progress(vault, progress)
+    if vault.exists() and _inventory(vault/"receipts",allow_empty=True):
         state = verify(vault)
         result["vault_receipts"] = state["manifest"]["file_count"]
         result["vault_manifest_sha256"] = state["manifest_sha256"]
