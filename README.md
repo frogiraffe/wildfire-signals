@@ -489,6 +489,33 @@ Chromium against the public preview. It checks loaded data, source state, map
 canvas, the 72-hour filter and horizontal fit; visual quality and real device
 interaction still need review.
 
+## Private agency evidence recovery (experimental)
+
+GitHub Actions source receipts expire; the live map's KV snapshots are not a
+durable training/evidence archive. To keep prospectively captured NIFC/CWFIS
+agency source bytes locally before expiry, use the **read-only**
+[GitHub Actions recovery sync](docs/github-actions-agency-recovery-sync.md),
+which verifies the official collector run and imports only exact source receipts
+into the [private original evidence vault](docs/durable-agency-evidence-vault.md).
+A fine-grained GitHub credential with **Actions: read** is required; no token is
+checked in or printed.
+
+```sh
+# From outside the Git checkout; source data and vault stay private.
+python -m fire_public.actions_agency_sync --vault /private/wildfire-vault --dry-run
+python -m fire_public.actions_agency_sync --vault /private/wildfire-vault
+python -m fire_public.agency_vault workspace \\
+  --vault /private/wildfire-vault --provider cwfis \\
+  --output-dir /private/source-research-001
+```
+
+Repeated sync invocations remember already checked immutable artifact IDs and
+progress through older receipts; they do **not** automatically schedule backup or
+recover already expired ZIPs. Confirm that real agency receipts actually exist,
+then export an independent vault ZIP backup to another physical storage location.
+An agency source record, or its presence/absence in a source layer, is **not**
+independent physical wildfire validation, a negative label, or extinguishment.
+
 ## Local checks
 
 ```sh
