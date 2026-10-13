@@ -1,0 +1,33 @@
+name: Offline CAL FIRE independent review gates
+on:
+  pull_request:
+    paths:
+      - 'fire_public/calfire_blind_review.py'
+      - 'fire_public/calfire_ambiguity_dossiers.py'
+      - 'tests/test_calfire_blind_review.py'
+      - 'tests/test_calfire_ambiguity_dossiers.py'
+      - '.github/workflows/test-calfire-blind-review.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'fire_public/calfire_blind_review.py'
+      - 'fire_public/calfire_ambiguity_dossiers.py'
+      - 'tests/test_calfire_blind_review.py'
+      - 'tests/test_calfire_ambiguity_dossiers.py'
+      - '.github/workflows/test-calfire-blind-review.yml'
+permissions:
+  contents: read
+jobs:
+  private-offline-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile source replay and independent research review
+        run: |
+          python -m compileall -q fire_public
+          python -m unittest discover -s tests -p 'test_calfire_blind_review.py' -v
+          python -m unittest discover -s tests -p 'test_calfire_ambiguity_dossiers.py' -v
