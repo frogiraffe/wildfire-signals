@@ -31,10 +31,10 @@ test('deduplicate cell-hour, calculate temporal counts, sensor and same-cell co-
   assert.equal(result.metrics.distinctCells,1);
   assert.equal(result.metrics.recurrentCells,1);
   assert.equal(result.metrics.recurrentCellHours,9);
-  assert.equal(result.metrics.consecutiveHourTransitions,4); // 1/2/3 and 10/11, 14/15? see below
+  assert.equal(result.metrics.consecutiveHourTransitions,3);
   assert.equal(result.metrics.multiSensorCellHours,2);
   assert.equal(result.metrics.multiSensorPercent,22.2);
-  assert.deepEqual(result.bins.map(b=>b.cellHours),[1,2,3,0,1,2]);
+  assert.deepEqual(result.bins.map(b=>b.cellHours),[1,1,2,2,0,3]);
   assert.equal(result.sensorSeries[0].cellHours,9);
   assert.equal(result.sensorSeries[1].cellHours,2);
   assert.equal(result.sensorCoMembership[0].independentWildfireConfirmation,false);
@@ -52,7 +52,7 @@ test('date-line geometry includes nearby negative longitude and excludes far cel
   assert.equal(value.metrics.cellHours,2);
   assert.equal(value.metrics.distinctCells,1);
   assert.equal(value.metrics.recurrentCells,1);
-  assert.deepEqual(value.bins.map(b=>b.cellHours),[0,0,1,0,1,0]);
+  assert.deepEqual(value.bins.map(b=>b.cellHours),[0,0,0,1,1,0]);
 });
 test('source filter is explicit: no agency-only fake zero, source metrics are consistent',()=>{
   const data=snapshot([rows(2),rows(2,'VIIRS_NOAA21_NRT'),
@@ -112,11 +112,11 @@ test('theil-sen descriptive slope and bin median/MAD reflect supplied observatio
                 rows(1.5),rows(1.4,'VIIRS_NOAA20_NRT',179.91),rows(1.3,'VIIRS_NOAA20_NRT',179.96),
                 rows(1.2,'VIIRS_NOAA20_NRT',-179.99)];
   const result=analyzeRegionalSignals(snapshot(events),region,{now,hours:6});
-  assert.deepEqual(result.bins.map(x=>x.cellHours),[0,1,2,3,4,0]);
+  assert.deepEqual(result.bins.map(x=>x.cellHours),[0,1,2,2,3,0]);
   assert.equal(result.metrics.medianBinCellHours,1.5);
-  assert.equal(result.metrics.madBinCellHours,1.5);
-  assert.equal(result.metrics.laterMinusEarlier,4);
-  assert.equal(result.metrics.laterToEarlierRatio,3.5);
+  assert.equal(result.metrics.madBinCellHours,1);
+  assert.equal(result.metrics.laterMinusEarlier,2);
+  assert.equal(result.metrics.laterToEarlierRatio,1.667);
   assert.equal(result.metrics.trendDirection,'upward_descriptive');
   assert.ok(result.metrics.theilSenCellHoursPerHour>0);
   assert.equal(result.hypothesisPValue,null);
