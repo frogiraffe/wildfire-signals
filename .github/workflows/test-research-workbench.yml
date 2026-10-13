@@ -1,0 +1,43 @@
+name: Private historical investigation workbench
+on:
+  pull_request:
+    paths:
+      - 'fire_public/research_workbench.py'
+      - 'fire_public/research_workbench.js'
+      - 'fire_public/calfire_lineage_audit.py'
+      - 'tests/test_research_workbench.py'
+      - 'tests/js/research-workbench.test.mjs'
+      - '.github/workflows/test-research-workbench.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'fire_public/research_workbench.py'
+      - 'fire_public/research_workbench.js'
+      - 'fire_public/calfire_lineage_audit.py'
+      - 'tests/test_research_workbench.py'
+      - 'tests/js/research-workbench.test.mjs'
+      - '.github/workflows/test-research-workbench.yml'
+permissions:
+  contents: read
+jobs:
+  offline-workbench:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Compile complete Python research workflow
+        run: |
+          python -m compileall -q fire_public
+          python -m unittest discover -s tests -p 'test_research_workbench.py' -v
+          python -m unittest discover -s tests -p 'test_calfire_lineage_audit.py' -v
+          python -m unittest discover -s tests -p 'test_calfire_blind_review.py' -v
+      - name: Test offline browser worklist, import and export contracts
+        run: |
+          node --check fire_public/research_workbench.js
+          node --test tests/js/research-workbench.test.mjs
