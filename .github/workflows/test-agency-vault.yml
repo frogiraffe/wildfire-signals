@@ -1,0 +1,44 @@
+name: Durable private prospective agency source vault
+on:
+  pull_request:
+    paths:
+      - 'fire_public/agency_vault.py'
+      - 'fire_public/analysis_receipt.py'
+      - 'fire_public/receipt_audit.py'
+      - 'fire_public/receipt_history.py'
+      - 'fire_public/prospective_replay.py'
+      - 'tests/test_agency_vault.py'
+      - 'tests/test_receipt_history.py'
+      - 'tests/test_prospective_replay.py'
+      - '.github/workflows/test-agency-vault.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'fire_public/agency_vault.py'
+      - 'fire_public/analysis_receipt.py'
+      - 'fire_public/receipt_audit.py'
+      - 'fire_public/receipt_history.py'
+      - 'fire_public/prospective_replay.py'
+      - 'tests/test_agency_vault.py'
+      - 'tests/test_receipt_history.py'
+      - 'tests/test_prospective_replay.py'
+      - '.github/workflows/test-agency-vault.yml'
+permissions:
+  contents: read
+jobs:
+  original-source-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile prospective offline original receipt vault
+        run: python -m compileall -q fire_public
+      - name: Original bytes, ZIP disaster recovery and SQLite replay
+        run: |
+          python -m unittest discover -s tests -p 'test_agency_vault.py' -v
+          python -m unittest discover -s tests -p 'test_receipt_history.py' -v
+          python -m unittest discover -s tests -p 'test_prospective_replay.py' -v
+          python -m unittest discover -s tests -p 'test_analysis_receipt.py' -v
