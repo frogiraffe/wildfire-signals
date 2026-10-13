@@ -55,11 +55,14 @@ def _records(db: sqlite3.Connection, provider: str, official_id: str,
         SELECT id, payload_json, observed_at, captured_at, rights_url
         FROM observations WHERE subject_kind = 'agency_incident'
           AND record_type = 'incident_status'
-          AND provider = ? AND source_id = ? AND captured_at = ?
-        ORDER BY id
+          AND provider = ? AND source_id = ? AND captured_at <= ?
+        ORDER BY captured_at DESC, id
+        LIMIT 2
     """, (provider, official_id, captured_at)).fetchall()
-    if len(rows) != 1:
+    if not rows or (len(rows)>1 and rows[0]["captured_at"]==rows[1]["captured_at"]):
         raise ValueError("listed original agency identity has missing/ambiguous captured evidence")
+    # HistoryStore deduplicates identical original source bytes across scans.
+    # The last preserved original observation can predate the current scan.
     obs = rows[0]
     data = json.loads(obs["payload_json"])
     if (not isinstance(data, dict) or data.get("provider") != provider or
