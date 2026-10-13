@@ -1,0 +1,62 @@
+name: Prospective agency as-of time machine
+on:
+  pull_request:
+    paths:
+      - 'fire_public/prospective_replay.py'
+      - 'fire_public/prospective_replay.js'
+      - 'fire_public/receipt_history.py'
+      - 'fire_public/history.py'
+      - 'tests/test_prospective_replay.py'
+      - 'tests/js/prospective-replay.test.mjs'
+      - 'tests/browser/prospective-replay-local.mjs'
+      - '.github/workflows/test-prospective-replay.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'fire_public/prospective_replay.py'
+      - 'fire_public/prospective_replay.js'
+      - 'fire_public/receipt_history.py'
+      - 'fire_public/history.py'
+      - 'tests/test_prospective_replay.py'
+      - 'tests/js/prospective-replay.test.mjs'
+      - 'tests/browser/prospective-replay-local.mjs'
+      - '.github/workflows/test-prospective-replay.yml'
+permissions:
+  contents: read
+jobs:
+  source-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test exact source replay and as-of visibility contract
+        run: |
+          python -m compileall -q fire_public
+          python -m unittest discover -s tests -p 'test_prospective_replay.py' -v
+          python -m unittest discover -s tests -p 'test_receipt_history.py' -v
+          python -m unittest discover -s tests -p 'test_history.py' -v
+          node --check fire_public/prospective_replay.js
+          node --test tests/js/prospective-replay.test.mjs
+  real-browser-offline:
+    needs: source-replay
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Test source receipt time machine in desktop/mobile Chromium
+        run: node tests/browser/prospective-replay-local.mjs
