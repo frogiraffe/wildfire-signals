@@ -11,6 +11,8 @@ on:
       - 'fire_public/calfire_incident_archive.py'
       - 'fire_public/calfire_incident_details.py'
       - 'fire_public/calfire_incident_matrix.py'
+      - 'fire_public/calfire_ambiguity_dossiers.py'
+      - 'tests/test_calfire_ambiguity_dossiers.py'
       - 'tests/test_calfire_incident_matrix.py'
       - 'tests/test_calfire_incident_details.py'
       - 'tests/test_calfire_incident_archive.py'
@@ -44,6 +46,8 @@ on:
       - 'fire_public/calfire_incident_archive.py'
       - 'fire_public/calfire_incident_details.py'
       - 'fire_public/calfire_incident_matrix.py'
+      - 'fire_public/calfire_ambiguity_dossiers.py'
+      - 'tests/test_calfire_ambiguity_dossiers.py'
       - 'tests/test_calfire_incident_matrix.py'
       - 'tests/test_calfire_incident_details.py'
       - 'tests/test_calfire_incident_archive.py'
@@ -90,6 +94,7 @@ jobs:
           python -m unittest discover -s tests -p 'test_calfire_incident_archive.py' -v
           python -m unittest discover -s tests -p 'test_calfire_incident_details.py' -v
           python -m unittest discover -s tests -p 'test_calfire_incident_matrix.py' -v
+          python -m unittest discover -s tests -p 'test_calfire_ambiguity_dossiers.py' -v
           python -m unittest discover -s tests -p 'test_workbench_official_perimeters.py' -v
           python -m unittest discover -s tests -p 'test_official_live_probe.py' -v
           python -m unittest discover -s tests -p 'test_official_lead_refresh.py' -v
@@ -325,6 +330,13 @@ jobs:
             --json /tmp/wildfire-real-calfire-complete-matrix.json \
             --csv /tmp/wildfire-real-calfire-complete-matrix.csv \
             --html /tmp/wildfire-real-calfire-complete-matrix.html
+          python -m fire_public.calfire_ambiguity_dossiers \
+            --study-dir /tmp/wildfire-real-same-region \
+            --calfire-archive-dir /tmp/wildfire-real-calfire-2018 \
+            --batch /tmp/wildfire-real-calfire-details-batch-0 \
+            --batch /tmp/wildfire-real-calfire-details-batch-6 \
+            --batch /tmp/wildfire-real-calfire-details-batch-12 \
+            --output-dir /tmp/wildfire-real-calfire-ambiguity-dossiers
           python - <<'PY'
           import hashlib, json
           from pathlib import Path
@@ -384,6 +396,21 @@ jobs:
           assert matrix['verified_event_crosswalks']==0
           assert matrix['verified_nonfire_labels']==0
           assert sum(matrix['candidate_outcomes'].values())==len(r['candidate_pairs'])
+          ambiguity=json.loads(Path("/tmp/wildfire-real-calfire-ambiguity-dossiers/ambiguity-dossiers.json").read_text())
+          assert ambiguity['research_candidate_count']==len(r['candidate_pairs'])
+          assert ambiguity['candidate_linked_unique_pages_verified']==total_pages
+          assert sum(ambiguity['case_priority_counts'].values())==len(r['candidate_pairs'])
+          assert ambiguity['validated_same_fire_event_crosswalks']==0
+          assert ambiguity['independent_nonfire_observations']==0
+          assert ambiguity['measured_wildfire_forecast_skill'] is False
+          assert all(not x['event_identity_verified'] for x in ambiguity['cases'])
+          assert ambiguity['alternative_event_page_pair_comparisons']==sum(
+            len(x['alternative_page_pairs']) for x in ambiguity['cases'])
+          assert Path("/tmp/wildfire-real-calfire-ambiguity-dossiers/ambiguity-dossiers.csv").exists()
+          assert Path("/tmp/wildfire-real-calfire-ambiguity-dossiers/ambiguity-dossiers.html").exists()
+          print("CAL FIRE authentic incident ambiguity review:",
+                json.dumps(ambiguity['case_priority_counts'],sort_keys=True),
+                "page-option contrasts",ambiguity['alternative_event_page_pair_comparisons'])
           print("CAL FIRE genuine detail source pages fully replayed:",total_pages,
                 "research cases:",matrix['original_candidate_count'])
           assert triage['source_population']['nifc_roi_published_object_ids']>=len(r['nifc_polygons'])
@@ -416,5 +443,6 @@ jobs:
             /tmp/wildfire-real-calfire-complete-matrix.json
             /tmp/wildfire-real-calfire-complete-matrix.csv
             /tmp/wildfire-real-calfire-complete-matrix.html
+            /tmp/wildfire-real-calfire-ambiguity-dossiers/
           if-no-files-found: warn
           retention-days: 7
