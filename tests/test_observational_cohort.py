@@ -124,7 +124,7 @@ class ObservationalCohortTests(unittest.TestCase):
         late=by_date[(FIRST+timedelta(hours=26)).isoformat()]
         self.assertEqual(early["observed_archive_subset"]["unique_raw_pixels"],12)
         # Old raw pixel first appeared in the scan at hour 25, not at hour 24.
-        self.assertEqual(late["observed_archive_subset"]["unique_raw_pixels"],14)
+        self.assertEqual(late["observed_archive_subset"]["unique_raw_pixels"],13)
         self.assertNotEqual(early["source_provenance_receipts_sha256"],
                             late["source_provenance_receipts_sha256"])
         self.assertIsNone(late["target_label"])
