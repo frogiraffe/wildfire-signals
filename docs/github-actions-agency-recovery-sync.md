@@ -8,29 +8,29 @@ Set a token with **Actions: read** permission on `frogiraffe/wildfire-signals`. 
 
 ```sh
 export GH_TOKEN="...your Actions-read credential..."
-python -m fire_public.actions_agency_sync \\
-  --vault /private/wildfire-original-vault \\
+python -m fire_public.actions_agency_sync \
+  --vault /private/wildfire-original-vault \
   --dry-run
 
 # Explicitly pull the selected bounded set into the existing/new private vault.
-python -m fire_public.actions_agency_sync \\
-  --vault /private/wildfire-original-vault \\
+python -m fire_public.actions_agency_sync \
+  --vault /private/wildfire-original-vault \
   --pages 5 --max-downloads 32
 
 # For a smaller rolling catch-up window:
-python -m fire_public.actions_agency_sync \\
-  --vault /private/wildfire-original-vault \\
+python -m fire_public.actions_agency_sync \
+  --vault /private/wildfire-original-vault \
   --since 2026-10-12T00:00:00Z --pages 5 --max-downloads 32
 
-python -m fire_public.agency_vault verify \\
+python -m fire_public.agency_vault verify \
   --vault /private/wildfire-original-vault
 
-python -m fire_public.agency_vault export \\
-  --vault /private/wildfire-original-vault \\
+python -m fire_public.agency_vault export \
+  --vault /private/wildfire-original-vault \
   --output /different-physical-disk/agency-backup-001.zip
 
-python -m fire_public.agency_vault workspace \\
-  --vault /private/wildfire-original-vault --provider cwfis \\
+python -m fire_public.agency_vault workspace \
+  --vault /private/wildfire-original-vault --provider cwfis \
   --output-dir /private/research-workspace-001
 ```
 
@@ -40,7 +40,8 @@ Download redirects are limited to official HTTPS Actions/Blob delivery hosts and
 
 ## Completeness and retention caveats
 
-- Discovery scans at most 5 pages × 100 repository artifacts by default, with at most 32 ZIP downloads per invocation; use `--pages` and `--max-downloads` to widen. The `discovery_exhaustive`, `listing_page_cap_reached` and `outside_download_limit` fields communicate whether the requested search is complete. With a `--since` filter, a full historical discovery is **not** claimed.
+- Discovery scans at most 5 pages × 100 repository artifacts by default, with at most 32 **previously unchecked** ZIP downloads per invocation; use `--pages` and `--max-downloads` to widen. The `discovery_exhaustive`, `listing_page_cap_reached` and `outside_download_limit` fields communicate whether the requested search is complete. With a `--since` filter, a full historical discovery is **not** claimed.
+- The sync keeps a local `.actions-sync-state.json` **progress index inside the private vault**. Each successful download is recorded with the immutable GitHub artifact ID. Original agency data is skipped only while the archived receipt still exists with its original SHA; a removed original is re-downloaded if the ZIP still exists. Pixel-only ZIPs are noted as checked without creating a fake agency receipt. A progress-only private vault can be created when an archive contains no agency originals. The index is bookkeeping, **not source evidence** and is not in the portable ZIP backup. Repeated bounded calls advance to older unchecked ZIPs rather than forever re-downloading the most recent set.
 - **The ZIP artifacts expire (up to 90 days).** Sync only preserves *still available* originals. An expired or missing job artifact cannot be recreated or inferred from the current live map.
 - Running a command once does not make backups ongoing. Run this locally at a regular cadence using your own scheduler if desired, but verify its logs and maintain an independent ZIP copy on another physical medium. This PR does **not** create a background job or ongoing automation.
 - A green collector run does not prove an agency receipt was written. Collection can be skipped, research archiving is opt-in, and oversized records or source errors can prevent the original receipt. The program separately counts ZIP files with no agency original.
