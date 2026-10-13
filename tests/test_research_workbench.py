@@ -114,7 +114,7 @@ class WorkbenchEndToEndTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "forged"):
             offline_html(fake)
         fake = copy.deepcopy(report)
-        fake["rows"][0]["mtbs"]["name"] = '=HYPERLINK("https://evil.example", "bad")'
+        fake["rows"][0]["next_action"] = '=HYPERLINK("https://evil.example", "bad")'
         self.assertIn("'=HYPERLINK", csv_queue(fake))
         # The page carries base64-encoded UTF-8 JSON, never raw remote HTML.
         fake["rows"][0]["mtbs"]["name"] = '<img src=x onerror=alert(1)>'
