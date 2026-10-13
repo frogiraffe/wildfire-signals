@@ -120,11 +120,13 @@ def parse_detail(raw:bytes,*,expected_url:str,archive_row:dict)->dict:
     }
 
 
-def select_leads(archived:dict,max_pages:int,seed:str=SEED)->list[dict]:
+def select_leads(archived:dict,max_pages:int,seed:str=SEED,offset:int=0)->list[dict]:
     if type(max_pages) is not int or not 1<=max_pages<=MAX_PAGES:
         raise ValueError("at most 8 incident detail pages per research run")
     if not isinstance(seed,str) or not 1<=len(seed)<=128 or not seed.isascii():
         raise ValueError("source selection seed must be bounded ASCII")
+    if type(offset) is not int or not 0<=offset<=1000:
+        raise ValueError("source selection offset must be an integer between 0 and 1000")
     by_url={}
     for case in archived["cases"]:
         for lead in case["calfire_name_only_leads"]:
@@ -138,9 +140,11 @@ def select_leads(archived:dict,max_pages:int,seed:str=SEED)->list[dict]:
     if not by_url:
         raise ValueError("no original CAL FIRE candidate-linked event page URL available")
     ordered=sorted(by_url,key=lambda u:(hashlib.sha256((seed+":"+u).encode()).hexdigest(),u))
+    if offset >= len(ordered):
+        raise ValueError("selected page offset is beyond original candidate-linked CAL FIRE URLs")
     return [{
         "source_url":url,"referencing_candidate_ids":sorted(by_url[url])}
-        for url in ordered[:max_pages]]
+        for url in ordered[offset:offset+max_pages]]
 
 
 def _get(url:str)->bytes:
@@ -157,14 +161,14 @@ def _get(url:str)->bytes:
 
 
 def capture(study_dir:Path,archive_dir:Path,*,max_pages:int=4,
-            seed:str=SEED,get=None,clock=None)->tuple[dict,dict[str,bytes]]:
+            seed:str=SEED,offset:int=0,get=None,clock=None)->tuple[dict,dict[str,bytes]]:
     # The preceding source archive is *replayed* against exact original bytes,
     # not trusted from a possibly edited derived name-lead report.
     archive=replay_archive(study_dir,archive_dir)
     study,digest,cases=load_study(study_dir)
     rows={x["original_event_url"]:x for x in parse_archive(
         (archive_dir/"original-calfire-2018.html").read_bytes())}
-    selected=select_leads(archive,max_pages,seed)
+    selected=select_leads(archive,max_pages,seed,offset=offset)
     now=clock() if clock else datetime.now(timezone.utc).isoformat()
     captured=datetime.fromisoformat(now.replace("Z","+00:00"))
     if captured.tzinfo is None:
@@ -216,11 +220,16 @@ def capture(study_dir:Path,archive_dir:Path,*,max_pages:int=4,
         "details_source_capture_at":captured.astimezone(timezone.utc).isoformat(),
         "selection_seed":seed,
         "max_selected_urls":max_pages,
+        "selection_offset":offset,
         "archive_unique_candidate_link_urls":len({
             item["calfire_event_url"]
             for case in archive["cases"] for item in case["calfire_name_only_leads"]}),
         "selected_original_source_urls":selected,
         "selected_page_count":len(records),
+        "covers_all_candidate_linked_urls_in_single_batch":(
+            offset==0 and len(records)==len({
+                item["calfire_event_url"]
+                for case in archive["cases"] for item in case["calfire_name_only_leads"]})),
         "pages_with_original_archive_name_or_date_drift":sum(
             x["source_archive_name_or_day_drift"] for x in records),
         "pages_with_reported_location":sum(
@@ -291,7 +300,8 @@ def replay(study_dir:Path,archive_dir:Path,output:Path)->dict:
         return by_url[url]
     reconstructed,_=capture(
         study_dir,archive_dir,max_pages=original["max_selected_urls"],
-        seed=original["selection_seed"],get=offline_get,
+        seed=original["selection_seed"],offset=original.get("selection_offset",0),
+        get=offline_get,
         clock=lambda:original["details_source_capture_at"])
     # The offline re-evaluation uses injected bytes, but transport is not
     # promoted into trusted new live capture; no transport identity claimed.
@@ -307,18 +317,21 @@ def main()->None:
     p.add_argument("--calfire-archive-dir",type=Path,required=True)
     p.add_argument("--output-dir",type=Path,required=True)
     p.add_argument("--max-pages",type=int,default=4)
+    p.add_argument("--offset",type=int,default=0,
+                   help="Zero-based offset in stable hashed CAL FIRE candidate-link order; use batches <=8 pages")
     p.add_argument("--seed",default=SEED)
     args=p.parse_args()
     if (args.output_dir.resolve().is_relative_to(args.study_dir.resolve())
             or args.output_dir.resolve().is_relative_to(args.calfire_archive_dir.resolve())):
         p.error("detail archive output must be outside original provider source archives")
     report,raws=capture(args.study_dir,args.calfire_archive_dir,
-                        max_pages=args.max_pages,seed=args.seed)
+                        max_pages=args.max_pages,seed=args.seed,offset=args.offset)
     save(args.output_dir,report,raws)
     replay(args.study_dir,args.calfire_archive_dir,args.output_dir)
     print(json.dumps({
         "status":report["status"],
         "selected_original_incident_pages":report["selected_page_count"],
+        "page_offset":report["selection_offset"],
         "total_referenced_unique_incident_urls":report["archive_unique_candidate_link_urls"],
         "pages_with_source_location":report["pages_with_reported_location"],
         "pages_with_archive_metadata_drift":report["pages_with_original_archive_name_or_date_drift"],
