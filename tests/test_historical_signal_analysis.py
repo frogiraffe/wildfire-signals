@@ -13,6 +13,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from fire_public.collect import FIRMS_SOURCES
 from fire_public.pixel_history import import_release_assets
@@ -179,6 +180,26 @@ class HistoricalAnalysisTests(unittest.TestCase):
         self.assertEqual(r["summary"]["unique_raw_pixel_observations"],3)
         self.assertEqual(r["summary"]["distinct_candidate_cell_hours"],2)
         self.assertEqual(r["summary"]["multi_sensor_cell_hours"],1)
+
+    def test_geographic_prefilter_applies_before_strict_row_budget(self):
+        # Another worldwide hotspot must not occupy the selected region's
+        # query limit before exact geodesic evaluation.
+        self.scan(0,[self.observation(0,0,lon=100.0),
+                     self.observation(0,1,lon=10.01)])
+        import_release_assets(self.db,self.assets)
+        with patch("fire_public.historical_signal_analysis.MAX_PIXELS",1):
+            report=self.report()
+        self.assertEqual(report["summary"]["unique_raw_pixel_observations"],1)
+        self.assertEqual(report["summary"]["distinct_candidate_cell_hours"],1)
+
+    def test_high_latitude_polar_geodesic_scope_has_no_false_longitude_exclusion(self):
+        self.scan(0,[self.observation(0,0,lat=89.85,lon=-179.9),
+                     self.observation(0,1,lat=89.85,lon=179.9),
+                     self.observation(0,2,lat=0,lon=10)])
+        import_release_assets(self.db,self.assets)
+        report=self.report(latitude=89.8,longitude=0,radius_km=100)
+        self.assertEqual(report["summary"]["unique_raw_pixel_observations"],2)
+        self.assertEqual(report["summary"]["distinct_candidate_cell_hours"],2)
 
     def test_input_and_nonexistent_data_fail_without_creating_new_storage(self):
         cases=[
