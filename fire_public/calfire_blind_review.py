@@ -276,6 +276,9 @@ def _load_votes(path: Path) -> dict:
 
 def _write_new(destination: Path, data: dict[str, bytes], sources: list[Path]) -> None:
     resolved = destination.resolve()
+    public_tree = Path(__file__).resolve().parents[1]
+    if resolved.is_relative_to(public_tree):
+        raise ValueError("private reviewer material must not be written inside the public Git repository")
     if (destination.exists() or destination.is_symlink() or
             any(resolved.is_relative_to(p.resolve()) or
                 p.resolve().is_relative_to(resolved) for p in sources)):
