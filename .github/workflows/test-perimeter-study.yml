@@ -9,6 +9,8 @@ on:
       - 'fire_public/mtbs_candidate_triage.py'
       - 'fire_public/mtbs_event_corroboration.py'
       - 'fire_public/calfire_incident_archive.py'
+      - 'fire_public/calfire_incident_details.py'
+      - 'tests/test_calfire_incident_details.py'
       - 'tests/test_calfire_incident_archive.py'
       - 'tests/test_mtbs_event_corroboration.py'
       - 'tests/test_mtbs_candidate_triage.py'
@@ -38,6 +40,8 @@ on:
       - 'fire_public/mtbs_candidate_triage.py'
       - 'fire_public/mtbs_event_corroboration.py'
       - 'fire_public/calfire_incident_archive.py'
+      - 'fire_public/calfire_incident_details.py'
+      - 'tests/test_calfire_incident_details.py'
       - 'tests/test_calfire_incident_archive.py'
       - 'tests/test_mtbs_event_corroboration.py'
       - 'tests/test_mtbs_candidate_triage.py'
@@ -80,6 +84,7 @@ jobs:
           python -m unittest discover -s tests -p 'test_mtbs_candidate_triage.py' -v
           python -m unittest discover -s tests -p 'test_mtbs_event_corroboration.py' -v
           python -m unittest discover -s tests -p 'test_calfire_incident_archive.py' -v
+          python -m unittest discover -s tests -p 'test_calfire_incident_details.py' -v
           python -m unittest discover -s tests -p 'test_workbench_official_perimeters.py' -v
           python -m unittest discover -s tests -p 'test_official_live_probe.py' -v
           python -m unittest discover -s tests -p 'test_official_lead_refresh.py' -v
@@ -295,6 +300,12 @@ jobs:
           python -m fire_public.calfire_incident_archive \
             --study-dir /tmp/wildfire-real-same-region \
             --output-dir /tmp/wildfire-real-calfire-2018
+          python -m fire_public.calfire_incident_details \
+            --study-dir /tmp/wildfire-real-same-region \
+            --calfire-archive-dir /tmp/wildfire-real-calfire-2018 \
+            --max-pages 4 \
+            --seed calfire-incident-detail-v1 \
+            --output-dir /tmp/wildfire-real-calfire-details
           python - <<'PY'
           import hashlib, json
           from pathlib import Path
@@ -331,6 +342,16 @@ jobs:
           assert all(not c['candidate_fire_event_identity_verified'] for c in calfire['cases'])
           raw=(Path("/tmp/wildfire-real-calfire-2018/original-calfire-2018.html").read_bytes())
           assert hashlib.sha256(raw).hexdigest()==calfire['source_original_html_sha256']
+          details=json.loads(Path("/tmp/wildfire-real-calfire-details/detail-study.json").read_text())
+          assert details['selected_page_count']==4
+          assert details['event_identity_crosswalks_verified']==0
+          assert details['negative_fire_labels_created']==0
+          assert details['nifc_mtbs_source_study_sha256']==calfire['nifc_mtbs_source_study_sha256']
+          assert details['calfire_original_archive_sha256']==calfire['source_original_html_sha256']
+          assert all(not p['event_identity_verified'] for p in details['pages'])
+          for evidence in details['raw_source_files']:
+            source=(Path("/tmp/wildfire-real-calfire-details")/evidence['filename']).read_bytes()
+            assert hashlib.sha256(source).hexdigest()==evidence['sha256']
           assert triage['source_population']['nifc_roi_published_object_ids']>=len(r['nifc_polygons'])
           assert triage['source_population']['mtbs_roi_published_object_ids']>=len(r['mtbs_points'])
           for entry in r["raw_source_files"]:
@@ -355,5 +376,6 @@ jobs:
             /tmp/wildfire-real-same-region-triage.html
             /tmp/wildfire-real-same-region-external-evidence-queue.json
             /tmp/wildfire-real-calfire-2018/
+            /tmp/wildfire-real-calfire-details/
           if-no-files-found: warn
           retention-days: 7
