@@ -377,6 +377,47 @@ def rebuild_sqlite(vault: Path, output: Path) -> dict:
             "extinguishment_labels_created":0}
 
 
+
+def research_workspace(vault: Path, output: Path, *, at: str | None = None,
+                       provider: str | None = None,
+                       official_id: str | None = None) -> dict:
+    """Rebuild source evidence inside a temporary database, then ship offline UI.
+
+    The temporary SQLite is removed after rendering. No source evidence,
+    reviewer notes, or locally reconstructed DB is uploaded anywhere.
+    """
+    from .prospective_replay import replay, open_archive, _write_private
+
+    output = _private_path(output)
+    if output.exists() or output.is_symlink() or not output.parent.is_dir():
+        raise ValueError("workspace must be a new directory in an existing private parent")
+    if official_id is not None and provider is None:
+        raise ValueError("exact official agency ID requires provider")
+    with tempfile.TemporaryDirectory(prefix=".agency-workspace-", dir=output.parent) as stage:
+        scratch=Path(stage)/"recovered.sqlite3"
+        reconstructed=rebuild_sqlite(vault, scratch)
+        db=open_archive(scratch)
+        try:
+            cutoff=at
+            if cutoff is None:
+                row=db.execute("SELECT MAX(captured_at) FROM receipt_scans").fetchone()
+                if not row or not row[0]:
+                    raise ValueError("archive has no prospective agency receipt times")
+                cutoff=row[0]
+            report=replay(db,at=cutoff,provider=provider,official_id=official_id)
+        finally:
+            db.close()
+        _write_private(output,report)
+    return {
+        "source_receipts_replayed": reconstructed["source_receipts_replayed"],
+        "historical_scans": reconstructed["historical_scans"],
+        "cases": report["known_source_identities"],
+        "as_of": report["as_of"],
+        "output_files": ["index.html","evidence.json"],
+        "verified_fire_outcomes":0,
+    }
+
+
 def main() -> None:
     parser=argparse.ArgumentParser(description="Durable private agency evidence ingestion, verification, export and disaster recovery")
     sub=parser.add_subparsers(dest="command",required=True)
@@ -389,12 +430,19 @@ def main() -> None:
     a.add_argument("--vault",type=Path,required=True)
     a=sub.add_parser("rebuild");a.add_argument("--vault",type=Path,required=True)
     a.add_argument("--db",type=Path,required=True)
+    a=sub.add_parser("workspace");a.add_argument("--vault",type=Path,required=True)
+    a.add_argument("--output-dir",type=Path,required=True)
+    a.add_argument("--at")
+    a.add_argument("--provider",choices=["cwfis","nifc_wfigs"])
+    a.add_argument("--official-id")
     args=parser.parse_args()
     if args.command=="ingest":result=ingest(args.vault,args.input)
     elif args.command=="verify":result=verify(args.vault)
     elif args.command=="export":result=export_bundle(args.vault,args.output)
     elif args.command=="restore":result=restore_bundle(args.bundle,args.vault)
-    else:result=rebuild_sqlite(args.vault,args.db)
+    elif args.command=="rebuild":result=rebuild_sqlite(args.vault,args.db)
+    else:result=research_workspace(args.vault,args.output_dir,at=args.at,
+                                   provider=args.provider,official_id=args.official_id)
     print(json.dumps(result,sort_keys=True,ensure_ascii=False))
 
 
