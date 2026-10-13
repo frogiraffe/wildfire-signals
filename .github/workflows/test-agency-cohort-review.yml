@@ -1,0 +1,41 @@
+name: Prospective agency-to-satellite cohort review bridge
+on:
+  pull_request:
+    paths:
+      - 'fire_public/agency_cohort_review.py'
+      - 'fire_public/observational_cohort.py'
+      - 'fire_public/receipt_history.py'
+      - 'tests/test_agency_cohort_review.py'
+      - 'tests/test_observational_cohort.py'
+      - 'tests/test_receipt_history.py'
+      - '.github/workflows/test-agency-cohort-review.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'fire_public/agency_cohort_review.py'
+      - 'fire_public/observational_cohort.py'
+      - 'fire_public/receipt_history.py'
+      - 'tests/test_agency_cohort_review.py'
+      - 'tests/test_observational_cohort.py'
+      - 'tests/test_receipt_history.py'
+      - '.github/workflows/test-agency-cohort-review.yml'
+permissions:
+  contents: read
+jobs:
+  source-linked-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile evidence and label modules
+        run: python -m compileall -q fire_public
+      - name: Replay genuine-format independent research source receipts end to end
+        run: |
+          python -m unittest discover -s tests -p 'test_agency_cohort_review.py' -v
+          python -m unittest discover -s tests -p 'test_observational_cohort.py' -v
+          python -m unittest discover -s tests -p 'test_receipt_history.py' -v
+          python -m unittest discover -s tests -p 'test_label_review.py' -v
+          python -m unittest discover -s tests -p 'test_labeled_evaluation.py' -v
