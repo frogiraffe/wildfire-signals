@@ -65,7 +65,7 @@ test('No snapshot, stale source, partial source, and truncated source block clea
   const stale=compareRegions(snapshot([record('one',5,179.9)],{manifest:{
     last_scan_at:new Date(now.getTime()-3*3_600_000).toISOString()}}),a,b,{now});
   assert.equal(stale.status,'incomplete_source_evidence');
-  assert.equal(stale.first.candidateCellHours,0); // Observed after snapshot cannot be seen.
+  assert.equal(stale.first.candidateCellHours,1); // Existing older observation survives, freshness is degraded.
   const failed=compareRegions(snapshot([record('one',1,179.9)],{sources:[
     {key:'VIIRS_NOAA20_NRT',status:'failed'}]}),a,b,{now});
   assert.equal(failed.status,'incomplete_source_evidence');
