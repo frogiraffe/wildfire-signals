@@ -9,6 +9,7 @@ import argparse
 from pathlib import Path
 import sys
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from test_calfire_incident_matrix import FullDetailCoverageTests
 from fire_public.calfire_ambiguity_dossiers import build_from_matrix
