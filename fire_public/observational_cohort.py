@@ -258,7 +258,7 @@ Completed collection requests are NOT confirmed VIIRS orbital coverage.</p>
         "".join(cells) + """</tbody></table></div>
 <p class="muted">Archive provenance is included in the JSONL/manifest. No probability,
 p-value, land denominator, fire absence or independent fire identity is inferred.</p>
-</main></body></html>\n"""
+</main></body></html>\n""")
 
 
 def export_cohort(cohort: dict, destination: Path) -> dict:
