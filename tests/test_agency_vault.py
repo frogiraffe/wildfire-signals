@@ -182,7 +182,6 @@ class AgencyVaultTests(unittest.TestCase):
         original=self.receipt(0)
         nested=self.source/"nested"
         nested.mkdir()
-        (nested/"agency-20261012T000000000000Z-"+"0"*16+".json.gz") if False else None
         try:
             (nested/original.name).symlink_to(original)
         except OSError:
