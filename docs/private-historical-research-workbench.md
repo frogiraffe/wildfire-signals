@@ -45,3 +45,15 @@ node --test tests/js/research-workbench.test.mjs
 ```
 
 The GitHub workflow also reruns the upstream lineage and blind-review regression suites. All test incident pages, reviewer votes and external documents are explicitly synthetic fixtures; no human source adjudication has been conducted as part of the test.
+
+## Actual browser smoke test (desktop and mobile)
+
+The additional [Chromium smoke test](../tests/browser/research-workbench-local.mjs) constructs a full synthetic original-source-replayed research casebook using the same Python pipeline as the CLI, renders its local HTML, and opens it using a `file://` URL (not a web server). It checks real user actions on 1280 px desktop and 390 px mobile: case search, empty result, source detail, note/status edits, JSON export, session restore, rejection of a changed study fingerprint, HTML-in-note nonexecution, CSP restrictions, runtime exceptions and unexpected network requests.
+
+```sh
+npm ci
+npx playwright install chromium
+node tests/browser/research-workbench-local.mjs
+```
+
+The GitHub Actions browser job runs after the earlier Python/JS validation, with an ephemeral test-generated dataset. It does not access real private review artifacts, upload any sources, or change the live map.

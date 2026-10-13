@@ -218,7 +218,10 @@ button[aria-pressed=true]{background:#8e4a12}button:disabled{opacity:.5;cursor:n
 section,article{margin:16px 0 22px}section{border-top:1px solid #becfd2;padding-top:14px}
 h2{font-size:1.35rem}h3{font-size:1.06rem}ul{padding-left:20px}li{margin:6px 0;overflow-wrap:anywhere}
 .source{padding:12px;margin:8px 0;border:1px solid #b9d0d6;border-radius:7px;background:white}
-code{font-size:.84rem;overflow-wrap:anywhere}a{color:#07516d}
+code{font-size:.84rem;overflow-wrap:anywhere}a{color:#07516d;overflow-wrap:anywhere}
+header,aside,.content,#detail,.source{min-width:0;overflow-wrap:anywhere}
+input,select{max-width:100%}
+#case-list button{overflow-wrap:anywhere;white-space:normal}
 .metrics{display:flex;gap:18px;flex-wrap:wrap}.metrics strong{font-variant-numeric:tabular-nums}
 .muted{color:#48616e}.status{font-weight:600}#flash{min-height:1.5rem;color:#7c4010}
 .action-strip{display:flex;gap:8px;flex-wrap:wrap}#session-file{max-width:260px}
