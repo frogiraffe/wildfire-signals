@@ -223,6 +223,10 @@ export function parseState(hash = '') {
     zoom: numeric('zoom', 3, 1, 18),
     regionLat: params.has('rlat') && params.has('rlon') ? numeric('rlat',null,-90,90) : null,
     regionLon: params.has('rlat') && params.has('rlon') ? numeric('rlon',null,-180,180) : null,
+    compareLat: params.has('rlat') && params.has('rlon') && params.has('clat') && params.has('clon')
+      ? numeric('clat',null,-90,90) : null,
+    compareLon: params.has('rlat') && params.has('rlon') && params.has('clat') && params.has('clon')
+      ? numeric('clon',null,-180,180) : null,
     radiusKm: [25,50,100,250].includes(Number(params.get('rr'))) ? Number(params.get('rr')) : 50};
 }
 
@@ -233,6 +237,10 @@ export function stateHash(state) {
     params.set('rlat',String(state.regionLat));
     params.set('rlon',String(state.regionLon));
     params.set('rr',String(state.radiusKm));
+    if (Number.isFinite(state.compareLat) && Number.isFinite(state.compareLon)) {
+      params.set('clat',String(state.compareLat));
+      params.set('clon',String(state.compareLon));
+    }
   }
   return `#${params}`;
 }
