@@ -1,0 +1,116 @@
+name: Run historical FIRMS statistical analysis (manual)
+on:
+  workflow_dispatch:
+    inputs:
+      latitude:
+        description: 'WGS84 center latitude (-90..90); default Antalya demonstration'
+        required: true
+        type: string
+        default: '36.9'
+      longitude:
+        description: 'WGS84 center longitude (-180..180)'
+        required: true
+        type: string
+        default: '30.7'
+      radius_km:
+        description: 'Geodesic circle radius km (0.01..250)'
+        required: true
+        type: string
+        default: '100'
+      hours:
+        description: 'Window in UTC hours'
+        required: true
+        type: choice
+        options: ['24','48','72','168','336']
+        default: '72'
+      max_releases:
+        description: 'Maximum verified published daily FIRMS research releases to import'
+        required: true
+        type: choice
+        options: ['1','2','4','8']
+        default: '4'
+      sensor:
+        description: 'Original satellite sensor filter'
+        required: true
+        type: choice
+        options: ['all','VIIRS_NOAA20_NRT','VIIRS_NOAA21_NRT']
+        default: 'all'
+permissions:
+  contents: read
+concurrency:
+  group: offline-historical-analysis
+  cancel-in-progress: false
+jobs:
+  verify-and-analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      ANALYSIS_LAT: ${{ inputs.latitude }}
+      ANALYSIS_LON: ${{ inputs.longitude }}
+      ANALYSIS_RADIUS: ${{ inputs.radius_km }}
+      ANALYSIS_HOURS: ${{ inputs.hours }}
+      ANALYSIS_RELEASES: ${{ inputs.max_releases }}
+      ANALYSIS_SENSOR: ${{ inputs.sensor }}
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Offline statistical and release integrity tests
+        run: |
+          python -m compileall -q fire_public
+          python -m unittest discover -s tests -p 'test_historical_signal_analysis.py' -q
+      - name: Check analysis coordinates and finite resource bounds
+        run: |
+          python - <<'PY'
+          import os,math
+          lat=float(os.environ['ANALYSIS_LAT'])
+          lon=float(os.environ['ANALYSIS_LON'])
+          rad=float(os.environ['ANALYSIS_RADIUS'])
+          if not (math.isfinite(lat) and -90<=lat<=90 and
+                  math.isfinite(lon) and -180<=lon<=180 and
+                  math.isfinite(rad) and .01<=rad<=250):
+              raise ValueError('invalid worldwide analysis circle')
+          PY
+      - name: Synchronize and verify bounded public historical FIRMS releases
+        run: |
+          mkdir -p "$RUNNER_TEMP/firms-source" "$RUNNER_TEMP/firms-reports"
+          python -m fire_public.release_sync \
+            --assets-dir "$RUNNER_TEMP/firms-source" \
+            --db "$RUNNER_TEMP/firms-source.sqlite3" \
+            --max-releases "$ANALYSIS_RELEASES" \
+            --max-total-mb 256 \
+            --latitude "$ANALYSIS_LAT" --longitude "$ANALYSIS_LON" \
+            --radius-km "$ANALYSIS_RADIUS" \
+            --hours "$ANALYSIS_HOURS" \
+            --coverage-json "$RUNNER_TEMP/firms-reports/source-sync-and-coverage.json" > /dev/null
+      - name: Generate real regional statistics from verified source pixels
+        run: |
+          LATEST_CAPTURE="$(python - <<'PY'
+          import sqlite3,os
+          with sqlite3.connect(os.environ['RUNNER_TEMP']+'/firms-source.sqlite3') as db:
+              latest=db.execute('SELECT MAX(captured_at) FROM pixel_scans').fetchone()[0]
+          if latest is None:
+              raise SystemExit('No historical scan receipts exist: refuse fabricated analysis')
+          print(latest)
+          PY
+          )"
+          python -m fire_public.historical_signal_analysis \
+            --pixel-db "$RUNNER_TEMP/firms-source.sqlite3" \
+            --at "$LATEST_CAPTURE" --hours "$ANALYSIS_HOURS" \
+            --latitude "$ANALYSIS_LAT" --longitude "$ANALYSIS_LON" \
+            --radius-km "$ANALYSIS_RADIUS" --source "$ANALYSIS_SENSOR" \
+            --json "$RUNNER_TEMP/firms-reports/historical-thermal-statistics.json" \
+            --html "$RUNNER_TEMP/firms-reports/historical-thermal-statistics.html"
+      - name: Retain aggregate-only analysis and source audit for inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: historical-firms-descriptive-statistics-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/firms-reports/historical-thermal-statistics.json
+            ${{ runner.temp }}/firms-reports/historical-thermal-statistics.html
+            ${{ runner.temp }}/firms-reports/source-sync-and-coverage.json
+          retention-days: 7
+          if-no-files-found: error
+          compression-level: 6

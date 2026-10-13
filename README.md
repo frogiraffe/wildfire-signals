@@ -516,6 +516,41 @@ then export an independent vault ZIP backup to another physical storage location
 An agency source record, or its presence/absence in a source layer, is **not**
 independent physical wildfire validation, a negative label, or extinguishment.
 
+## Historical statistical Analysis Engine v2
+
+The worldwide map includes the real-time **Analysis Engine v1** with six-bin
+descriptive thermal signal statistics. A second, fully reproducible
+[historical statistical analysis engine](docs/historical-statistical-analysis-v2.md)
+now works directly from previously verified **original NASA FIRMS pixel
+research releases** held in a local SQLite history index. It distinguishes
+original satellite acquisition time from first captured archive receipt time,
+groups independent 0.05° / UTC-hour thermal candidates, audits collector
+availability per source, and computes a descriptive robust trend **only when
+each UTC time bin has completed source receipts**.
+
+```sh
+python -m fire_public.historical_signal_analysis \
+  --pixel-db /private/wildfire-research/pixels.sqlite3 \
+  --at 2026-10-13T00:00:00Z --hours 72 \
+  --latitude 36.9 --longitude 30.7 --radius-km 100 \
+  --json /private/wildfire-research/antalya-stats.json \
+  --html /private/wildfire-research/antalya-stats.html
+```
+
+Alternatively, run the [manual historical FIRMS statistical analysis workflow](.github/workflows/run-historical-signal-analysis.yml)
+from the GitHub Actions tab. It fetches available public research releases,
+validates their original source receipts, generates real-data reports for a
+selected global circle, and retains **only** an aggregate HTML/JSON analysis
+artifact for seven days. It is manual only; no recurring job or raw government
+incident uploads are configured.
+
+It produces a portable local-source JSON + HTML research report, not a
+commercial fire forecast. Collector receipt counts **do not** measure satellite
+overpass or cloud-free acquisition opportunities; source completeness is an
+audit of what can be analyzed, not proof of no fire. Ignition probability,
+physical wildfire severity/spread and validated predictive scores remain
+explicitly unavailable.
+
 ## Local checks
 
 ```sh
