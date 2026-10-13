@@ -48,10 +48,10 @@ The restored SQLite is created from scratch with the existing `import_receipts` 
 Once original receipts are in the vault, create a complete **offline as-of incident explorer** without retaining an intermediate SQLite file:
 
 ```sh
-python -m fire_public.agency_vault workspace \\
-  --vault /private/recovered-original-vault \\
-  --provider cwfis \\
-  --at 2026-10-12T15:00:00Z \\
+python -m fire_public.agency_vault workspace \
+  --vault /private/recovered-original-vault \
+  --provider cwfis \
+  --at 2026-10-12T15:00:00Z \
   --output-dir /private/agency-research-session-002
 ```
 
