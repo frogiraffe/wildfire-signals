@@ -381,6 +381,10 @@ map.on('load', () => {
     data:{type:'FeatureCollection',features:[]}});
   map.addLayer({id:'selected-region-outline',type:'line',source:'selected-region',
     paint:{'line-color':'#f8df7a','line-width':3,'line-dasharray':[2,2]}});
+  map.addSource('comparison-region',{type:'geojson',
+    data:{type:'FeatureCollection',features:[]}});
+  map.addLayer({id:'comparison-region-outline',type:'line',source:'comparison-region',
+    paint:{'line-color':'#75d8e8','line-width':3,'line-dasharray':[1,2]}});
   map.addSource('candidates',{type:'geojson',data:featureCollection([],'candidate'),cluster:true,clusterRadius:42});
   map.addSource('incidents',{type:'geojson',data:featureCollection([],'incident'),cluster:true,clusterRadius:42});
   for (const [source,color] of [['candidates','#f19b53'],['incidents','#5dc2c7']]) {

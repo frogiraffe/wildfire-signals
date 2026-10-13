@@ -38,6 +38,18 @@ export const MESSAGES = {
     regionQualityUnavailable:'No verified snapshot — regional counts unavailable.',
     regionLeads:'Observed locations to inspect',regionRepeatedHours:'{hours} observed UTC hours',
     regionSourceIssues:'Affected sources',
+    compareTitle:'Compare two regions',compareScope:'Region A and B use the same UTC time window, satellite filter and geodesic radius. A difference in cell-hours is NOT relative fire risk or wildfire frequency.',
+    comparePick:'Choose B on map',compareCenter:'Map center for B',compareClear:'Clear B',
+    compareFirstCount:'Region A candidate cell-hours',compareSecondCount:'Region B candidate cell-hours',
+    compareDifference:'Difference A − B (candidate cell-hours)',compareDistance:'Center separation',
+    compareSensors:'Sensor memberships: A / B',compareDownload:'Export comparison JSON',
+    compareNoSelection:'Choose a second center; A remains selected.',
+    compareOverlap:'Areas overlap; some observations may be counted in both circles.',
+    comparePartial:'Incomplete, stale or truncated observations; numbers are not comparable fire counts.',
+    compareCurrent:'Descriptive thermal comparison only; equal acquisition coverage is NOT verified.',
+    compareNoSnapshot:'No usable snapshot; no count difference is available.',
+    compareUnsupported:'Source filter excludes satellite candidates; choose All or a VIIRS sensor.',
+    compareCaveat:'Satellite candidates are not confirmed wildfires. Land, satellite overpasses and observation completeness differ; zero is not proof of no fire.',
     coverageTitle:'Regional source evidence',
     coverageScope:'What the current snapshot actually reports for this circle. Provider scope is not verified regional observation completeness.',
     coverageCaveat:'A successful world request is not a guarantee of complete satellite acquisition or detection. Zero records does not prove no wildfire.',
@@ -142,6 +154,18 @@ export const MESSAGES = {
     regionQualityUnavailable:'Doğrulanmış veri görüntüsü yok — bölgesel sayılar kullanılamıyor.',
     regionLeads:'İncelenecek konumlar',regionRepeatedHours:'{hours} farklı UTC saati',
     regionSourceIssues:'Etkilenen kaynaklar',
+    compareTitle:'İki bölgeyi karşılaştır',compareScope:'A ve B aynı UTC zaman aralığını, uydu kaynak filtresini ve jeodezik yarıçapı kullanır. Hücre-saat farkı yangın riski veya yangın sıklığı değildir.',
+    comparePick:'B bölgesini haritadan seç',compareCenter:'Harita merkezini B yap',compareClear:'B bölgesini temizle',
+    compareFirstCount:'A bölgesi aday hücre-saat',compareSecondCount:'B bölgesi aday hücre-saat',
+    compareDifference:'A − B farkı (aday hücre-saat)',compareDistance:'Merkezlerin uzaklığı',
+    compareSensors:'Sensör gözlemleri: A / B',compareDownload:'Karşılaştırma JSON indir',
+    compareNoSelection:'İkinci merkezi seçin; A bölgesi korunur.',
+    compareOverlap:'Bölgeler çakışıyor; aynı gözlem her iki çemberde sayılabilir.',
+    comparePartial:'Eksik, eski veya kesilmiş gözlemler; sayılar karşılaştırılabilir yangın sayısı değildir.',
+    compareCurrent:'Yalnızca termal adayların betimsel karşılaştırması; eşit gözlem kapsamı doğrulanmadı.',
+    compareNoSnapshot:'Kullanılabilir veri görüntüsü yok; sayısal fark hesaplanamaz.',
+    compareUnsupported:'Kaynak filtresi uydu adaylarını dışlıyor; Tümü veya VIIRS seçin.',
+    compareCaveat:'Uydu adayları doğrulanmış yangın değildir. Arazi, uydu geçişleri ve gözlem bütünlüğü farklıdır; sıfır, yangın yok demek değildir.',
     coverageTitle:'Bölgesel kaynak kanıtları',
     coverageScope:'Seçilen çember için son veri görüntüsünde gerçekten bulunan kayıtlar. Kaynak yetki alanı, bölgenin eksiksiz gözlendiği anlamına gelmez.',
     coverageCaveat:'Başarılı bir dünya sorgusu bütün uydu geçişlerinin ve tespitlerin eksiksiz olduğu anlamına gelmez. Sıfır kayıt yangın olmadığını kanıtlamaz.',
@@ -223,6 +247,10 @@ export function parseState(hash = '') {
     zoom: numeric('zoom', 3, 1, 18),
     regionLat: params.has('rlat') && params.has('rlon') ? numeric('rlat',null,-90,90) : null,
     regionLon: params.has('rlat') && params.has('rlon') ? numeric('rlon',null,-180,180) : null,
+    compareLat: params.has('rlat') && params.has('rlon') && params.has('clat') && params.has('clon')
+      ? numeric('clat',null,-90,90) : null,
+    compareLon: params.has('rlat') && params.has('rlon') && params.has('clat') && params.has('clon')
+      ? numeric('clon',null,-180,180) : null,
     radiusKm: [25,50,100,250].includes(Number(params.get('rr'))) ? Number(params.get('rr')) : 50};
 }
 
@@ -233,6 +261,10 @@ export function stateHash(state) {
     params.set('rlat',String(state.regionLat));
     params.set('rlon',String(state.regionLon));
     params.set('rr',String(state.radiusKm));
+    if (Number.isFinite(state.compareLat) && Number.isFinite(state.compareLon)) {
+      params.set('clat',String(state.compareLat));
+      params.set('clon',String(state.compareLon));
+    }
   }
   return `#${params}`;
 }
