@@ -109,9 +109,9 @@ class ProspectiveTimeMachineTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             replay(db,at="2026-10-12T03:00:00Z",provider="madeup")
 
-    def test_identical_source_records_at_later_receipts_are_reused_safely(self):
-        # Distinct scan receipts with stable modified_at but changing last_seen_at
-        # are still distinct records; exact identical replay needs a constant row.
+    def test_stable_incident_payload_with_distinct_capture_run_provenance(self):
+        # The source payload is identical, but different Actions run URLs are
+        # deliberately distinct archival receipts (not duplicate evidence).
         time="2026-10-12T00:17:00Z"
         self.add(0,modified_at=time,last_seen_at=time)
         self.add(6,modified_at=time,last_seen_at=time)
@@ -120,7 +120,7 @@ class ProspectiveTimeMachineTests(unittest.TestCase):
         report=replay(db,at="2026-10-12T09:00:00Z",provider="cwfis")
         self.assertEqual(len(report["cases"][0]["timeline"]),2)
         self.assertEqual(self.store.connection.execute(
-            "SELECT COUNT(*) FROM observations WHERE provider='cwfis'").fetchone()[0],1)
+            "SELECT COUNT(*) FROM observations WHERE provider='cwfis'").fetchone()[0],2)
         self.assertEqual(report["cases"][0]["timeline"][0]["source_modified_at"],time)
         self.assertEqual(report["cases"][0]["timeline"][1]["source_modified_at"],time)
 
