@@ -287,7 +287,7 @@ export function createRegionExplorer({map,state,getSnapshot,saveState,showRecord
 
   byId('stats-download').addEventListener('click',() => {
     if(!lastAnalysis)return;
-    const data=new Blob([JSON.stringify(lastAnalysis,null,2)+'\\n'],
+    const data=new Blob([JSON.stringify(lastAnalysis,null,2)+'\n'],
       {type:'application/json'});
     const url=URL.createObjectURL(data);
     const link=document.createElement('a');
