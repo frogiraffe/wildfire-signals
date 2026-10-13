@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#101a23">
+  <title>Historical analytics · Wildfire Signals</title>
+  <link rel="stylesheet" href="./style.css"><link rel="stylesheet" href="./analytics.css">
+</head>
+<body>
+  <div class="analytics-shell">
+    <header class="analytics-header">
+      <div><span class="eyebrow">WILDFIRE SIGNALS · RESEARCH PREVIEW</span><h1>Historical thermal observations</h1></div>
+      <nav aria-label="Primary"><a href="./index.html">← Global map</a></nav>
+    </header>
+    <main class="analytics-main">
+      <p class="analytics-warning">Archived NASA FIRMS thermal candidates are observations, not confirmed wildfires, burned area, or a validated forecast. This fixed pilot covers selected circles and partial days only.</p>
+      <p id="analytics-status" role="status" aria-live="polite">Loading verified archive summary…</p>
+      <section aria-labelledby="controls-heading" class="analytics-card">
+        <h2 id="controls-heading">Explore the archived pilot</h2>
+        <div class="analytics-controls">
+          <label>Region <select id="analytics-region"></select></label>
+          <label>From (UTC) <input id="analytics-from" type="date"></label>
+          <label>To (UTC) <input id="analytics-to" type="date"></label>
+        </div>
+        <p id="analytics-selection-note"></p>
+      </section>
+      <section aria-labelledby="series-heading" class="analytics-card">
+        <h2 id="series-heading">Daily observed thermal activity</h2>
+        <p>Distinct 0.05° cell × UTC hour candidates first archived in these scans. The three observed day average is descriptive; incomplete days stay incomplete.</p>
+        <div id="analytics-chart" class="analytics-chart" role="img" aria-label="Daily thermal candidate cell-hours"></div>
+        <div class="analytics-table-wrap"><table><thead><tr><th scope="col">UTC day</th><th scope="col">Candidate cell-hours</th><th scope="col">Raw pixels</th><th scope="col">3 observed day average</th><th scope="col">Coverage</th></tr></thead><tbody id="analytics-days"></tbody></table></div>
+      </section>
+      <section aria-labelledby="compare-heading" class="analytics-card">
+        <h2 id="compare-heading">Selected region comparison</h2>
+        <p>Counts reflect selected circles and sensor acquisition patterns; they are not comparable fire rates. Regions were chosen for this exploratory pilot, so this is not a representative global sample.</p>
+        <div class="analytics-table-wrap"><table><thead><tr><th scope="col">Region</th><th scope="col">Candidate cell-hours</th><th scope="col">Raw pixels</th></tr></thead><tbody id="analytics-comparison"></tbody></table></div>
+      </section>
+      <section aria-labelledby="methods-heading" class="analytics-card">
+        <h2 id="methods-heading">Sources, scope and method</h2>
+        <dl id="analytics-methods"></dl>
+        <p id="analytics-limits"></p>
+        <p><a href="./data/thermal-capture-pilot-2026-10-13.json" download>Download aggregate evidence JSON</a> · <a href="https://firms.modaps.eosdis.nasa.gov/" rel="noopener noreferrer" target="_blank">NASA FIRMS</a> · <a href="https://www.earthdata.nasa.gov/engage/open-data-services-software/data-use-policy" rel="noopener noreferrer" target="_blank">NASA data use policy</a></p>
+      </section>
+    </main>
+  </div>
+  <script type="module" src="./analytics-page.mjs"></script>
+</body>
+</html>

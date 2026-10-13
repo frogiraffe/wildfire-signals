@@ -1,5 +1,5 @@
 export const MESSAGES = {
-  en: {title:'Wildfire Signals', candidates:'Satellite candidates', incidents:'Agency incidents',
+  en: {title:'Wildfire Signals', analyticsLink:'Historical analytics', candidates:'Satellite candidates', incidents:'Agency incidents',
     timeScope:'Time window filters satellite observations. Agency records show the current source layer; check each agency update date.',
     all:'All sources', time:'Time window', source:'Source', status:'Status',
     fresh:'Updated', stale:'Data is stale. Missing observations are possible.',
@@ -133,7 +133,7 @@ export const MESSAGES = {
     weatherChangeCaveat:'These are changes in forecast conditions, not measured effects on this fire or a spread probability.',
     weatherFootnote:'Rain is the amount for its stated interval, not a measured total. This forecast is not saved to the historical training archive.',
     statusOC:'Out of control',statusBH:'Being held',statusUC:'Under control'},
-  tr: {title:'Yangın Sinyalleri', candidates:'Uydu adayları', incidents:'Kurum olayları',
+  tr: {title:'Yangın Sinyalleri', analyticsLink:'Geçmiş analiz', candidates:'Uydu adayları', incidents:'Kurum olayları',
     timeScope:'Zaman aralığı uydu gözlemlerini süzer. Kurum kayıtları güncel kaynak katmanından gelir; her kaydın kurum güncelleme tarihini kontrol edin.',
     all:'Tüm kaynaklar', time:'Zaman aralığı', source:'Kaynak', status:'Durum',
     fresh:'Güncel', stale:'Veri eski. Eksik gözlem aralıkları olabilir.',
