@@ -124,6 +124,15 @@ negative wildfire labels. The existing bounded *real-source* multi-year CI
 now produces both quality reports from its already captured dataset, without
 more government API requests.
 
+The [complete CAL FIRE candidate-detail investigation matrix](docs/calfire-2018-complete-incident-matrix.md)
+extends the four-detail-page pilot to the entire original set of 18
+name-linked historical incident pages using bounded, non-overlapping
+batches of six original CAL FIRE URLs. Full SHA-256 source replay is
+required before exporting original event, date, county and location
+comparisons as private JSON, formula-safe CSV and offline HTML. All
+relations remain **retrospective research leads**, not validated same
+fires, independent no-fire events or forecast quality measures.
+
 The [original CAL FIRE incident detail-page research](docs/calfire-2018-original-incident-pages.md)
 now follows a bounded, reproducible set of actual 2018 event URLs from the
 source-verified annual archive. It preserves original full HTML source bytes,
