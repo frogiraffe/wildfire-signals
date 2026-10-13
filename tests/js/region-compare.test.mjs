@@ -71,7 +71,7 @@ test('No snapshot, stale source, partial source, and truncated source block clea
   assert.equal(failed.status,'incomplete_source_evidence');
   assert.equal(failed.sourceEvidence.first.rows.find(s=>s.key==='VIIRS_NOAA20_NRT').status,'failed');
   const partial=compareRegions(snapshot([], {manifest:{truncated:true}}),a,b,{now});
-  assert.equal(partial.status,'descriptive_thermal_comparison_only');
+  assert.equal(partial.status,'incomplete_source_evidence');
   assert.ok(partial.limitations.some(s=>s.includes('truncated')));
   assert.equal(partial.sourceEvidence.first.snapshotTruncated,true);
   assert.equal(partial.wildfireRiskRankingAvailable,false);
