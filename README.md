@@ -124,6 +124,15 @@ negative wildfire labels. The existing bounded *real-source* multi-year CI
 now produces both quality reports from its already captured dataset, without
 more government API requests.
 
+The [CAL FIRE alternative-event casebooks](docs/calfire-alternative-event-dossiers.md)
+explain why seven of the fourteen Northern California historical
+NIFC–MTBS research candidates have **multiple** CAL FIRE name-linked incident
+pages. Replaying all genuine original government source bytes, they compare
+alternative page dates, reported source-point separations, repeated URL
+references across cases and unresolved evidence requirements. They yield
+JSON, formula-safe CSV and offline HTML for **human research only**, never
+verified event IDs or independent wildfire negatives.
+
 The [complete CAL FIRE candidate-detail investigation matrix](docs/calfire-2018-complete-incident-matrix.md)
 extends the four-detail-page pilot to the entire original set of 18
 name-linked historical incident pages using bounded, non-overlapping
