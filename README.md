@@ -578,6 +578,28 @@ are audited. The existing
 now includes the source-censored study frame as an extra aggregate-only output
 without publishing raw agency events or satellite pixels.
 
+## Analysis Engine v4 — original agency source review leads
+
+The [prospective agency-to-cohort review bridge](docs/agency-cohort-review-v4.md)
+combines the **unlabeled** global region/decision sampling frame produced by
+Analysis Engine v3 with previously imported **original NIFC/CWFIS prospective
+receipts**. It creates a private set of provider-specific agency listing leads
+and a separate source completeness and right-censoring audit for **every
+sample**, including samples with no agency listing. Source points near a region
+are candidate links for investigation only, **not verified identical wildfire
+events or independent fire/non-fire labels**.
+
+```sh
+python -m fire_public.agency_cohort_review \
+  --cohort-dir /private/firms-study-20261013 \
+  --agency-db /private/agency-prospective.sqlite3 \
+  --output-dir /private/agency-review-20261013
+```
+
+The bridge does not train a model, publish actual agency records or treat
+first listing as ignition time. Every sampled target and outcome remains
+unresolved pending independent scientific review.
+
 ## Local checks
 
 ```sh
