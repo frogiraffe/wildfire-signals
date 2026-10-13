@@ -116,6 +116,29 @@ class ReleaseSyncTests(unittest.TestCase):
         self.assertEqual(sum(call[0]=="get" for call in self.calls),gets_before)
         self.assertEqual(import_release_assets(self.database,self.destination)["imported_scans"],0)
 
+    def test_two_scans_in_one_daily_release_import_atomically_and_replay(self):
+        from fire_public.pixel_history import import_release_assets
+        second=_release_files(self.root/"second",STAMP+timedelta(hours=5))
+        self.assertEqual(second["tag_name"],self.record["tag_name"])
+        self.record["assets"].extend(second["assets"])
+        self.data.update({a["browser_download_url"]:(self.root/"second"/a["name"]).read_bytes()
+                          for a in second["assets"]})
+        planned=discover(list_page=self.list_page)
+        self.assertEqual(len(planned[0]["scan_names"]),2)
+        self.assertEqual(self.sync()["downloaded_releases"],1)
+        imported=import_release_assets(self.database,self.destination)
+        self.assertEqual(imported["imported_scans"],2)
+        self.assertEqual(self.sync()["skipped_verified_releases"],1)
+        self.assertEqual(import_release_assets(self.database,self.destination)["imported_scans"],0)
+
+    def test_orphan_pixel_in_multi_scan_release_is_rejected_before_download(self):
+        second=_release_files(self.root/"second",STAMP+timedelta(hours=5))
+        self.record["assets"].extend(a for a in second["assets"]
+                                     if a["name"].startswith("firms-pixels"))
+        with self.assertRaisesRegex(ValueError,"matching scan|orphan"):
+            self.sync()
+        self.assertFalse(self.destination.exists())
+
     def test_bad_download_digest_cannot_publish_partial_day(self):
         for key,value in list(self.data.items()):
             if "firms-pixels" in key:

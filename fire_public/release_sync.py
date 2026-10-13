@@ -29,6 +29,7 @@ DIGEST = re.compile(r"sha256:([0-9a-f]{64})\Z")
 MAX_RELEASES = 30
 MAX_PAGES = 5
 MAX_TOTAL_BYTES = 512 * 1024 * 1024
+MAX_SCANS_PER_RELEASE = 8
 ALLOWED_REDIRECT_HOSTS = frozenset({
     "github.com", "release-assets.githubusercontent.com",
     "objects.githubusercontent.com", "github-releases.githubusercontent.com",
@@ -103,11 +104,12 @@ def _plan_one(row: dict) -> dict | None:
     except ValueError:
         raise ValueError(f"invalid research release date: {tag}") from None
     assets = row.get("assets")
-    if not isinstance(assets, list) or len(assets) > 3:
-        raise ValueError("research release must contain 1 scan and up to 2 pixel assets")
+    if not isinstance(assets, list) or len(assets) > 3 * MAX_SCANS_PER_RELEASE:
+        raise ValueError("research release exceeds bounded scan/asset count")
     names = set()
     checks = []
-    scan = None
+    scans = {}
+    pixels_by_stamp = {}
     for asset in assets:
         if not isinstance(asset, dict):
             raise ValueError("invalid release asset")
@@ -129,19 +131,37 @@ def _plan_one(row: dict) -> dict | None:
         checks.append({"name":name,"url":asset["browser_download_url"],
                        "sha256":digest.group(1),"size":size})
         if scan_match:
-            if scan:
-                raise ValueError("multiple research scan receipts in one daily release")
-            scan = name
-            if not scan_match.group(1).startswith(match.group(1).replace("-", "")):
+            stamp=scan_match.group(1)
+            if stamp in scans:
+                raise ValueError("duplicate research scan timestamp")
+            scans[stamp]=name
+            if not stamp.startswith(match.group(1).replace("-", "")):
                 raise ValueError("daily release tag and scan stamp disagree")
-    if scan is None:
+        else:
+            stamp=pixel_match.group(1)
+            pixels_by_stamp[stamp]=pixels_by_stamp.get(stamp,0)+1
+    if not scans:
         raise ValueError("missing research scan receipt")
-    stamp = SCAN_NAME.fullmatch(scan).group(1)
-    if any(PIXEL_NAME.fullmatch(x["name"]) and
-           PIXEL_NAME.fullmatch(x["name"]).group(1) != stamp for x in checks):
-        raise ValueError("mixed scan times in research release")
+    if len(scans)>MAX_SCANS_PER_RELEASE:
+        raise ValueError("research release exceeds scan count budget")
+    if any(stamp not in scans or count>2 for stamp,count in pixels_by_stamp.items()):
+        raise ValueError("pixel asset has no matching scan or exceeds sensor count")
     return {"tag":tag, "assets":sorted(checks,key=lambda x:x["name"]),
-            "bytes":sum(x["size"] for x in checks),"scan_name":scan}
+            "bytes":sum(x["size"] for x in checks),
+            "scan_names":[scans[stamp] for stamp in sorted(scans)]}
+
+
+def _verify_scan_manifests(directory: Path, release: dict) -> None:
+    """Each scan receipt signs only its own timestamped pixel assets."""
+    assets={item["name"]:item["sha256"] for item in release["assets"]}
+    for scan_name in release["scan_names"]:
+        receipt,_=_validated_scan(directory/scan_name)
+        stamp=SCAN_NAME.fullmatch(scan_name).group(1)
+        declared={item["name"]:item["sha256"] for item in receipt["pixel_files"]}
+        actual={name:digest for name,digest in assets.items()
+                if (match:=PIXEL_NAME.fullmatch(name)) and match.group(1)==stamp}
+        if declared!=actual:
+            raise ValueError("release assets do not match scan receipt manifest")
 
 
 def discover(*, since: str | None = None, max_releases: int = 8,
@@ -202,12 +222,7 @@ def sync_releases(destination: str | Path, *, since: str | None = None,
                     or path.stat().st_size != asset["size"]
                     or hashlib.sha256(path.read_bytes()).hexdigest() != asset["sha256"]):
                     raise ValueError(f"existing release asset hash conflict: {asset['name']}")
-            receipt, _ = _validated_scan(final/release["scan_name"])
-            declared = {x["name"]:x["sha256"] for x in receipt["pixel_files"]}
-            actual = {x["name"]:x["sha256"] for x in release["assets"]
-                      if x["name"] != release["scan_name"]}
-            if declared != actual:
-                raise ValueError("existing release differs from scan receipt manifest")
+            _verify_scan_manifests(final,release)
             skipped += 1
             continue
         stage = Path(tempfile.mkdtemp(prefix=".wildfire-sync-",dir=destination))
@@ -217,12 +232,7 @@ def sync_releases(destination: str | Path, *, since: str | None = None,
                 if written_digest != asset["sha256"]:
                     raise ValueError(f"downloaded asset SHA-256 mismatch: {asset['name']}")
                 total_bytes += asset["size"]
-            receipt, _ = _validated_scan(stage/release["scan_name"])
-            declared = {x["name"]:x["sha256"] for x in receipt["pixel_files"]}
-            actual = {x["name"]:x["sha256"] for x in release["assets"]
-                      if x["name"] != release["scan_name"]}
-            if declared != actual:
-                raise ValueError("release assets do not match scan receipt manifest")
+            _verify_scan_manifests(stage,release)
             # Single per-release atomic directory transition: no partial imported scans.
             if final.exists():
                 raise ValueError("release destination appeared during download")

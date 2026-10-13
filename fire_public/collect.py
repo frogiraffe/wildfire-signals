@@ -294,7 +294,11 @@ def build_snapshot(firms: dict[str, list[dict]], incidents: list[dict], *,
         product = product or prior.get("last_product_observed_at")
         product_at = datetime.fromisoformat(product) if product else None
         state = ("deferred" if errors.get(source) == "SourceDeferred" else "failed") if failed else "complete"
+        # Count accepted source records from this attempt only. Failed agency
+        # responses may carry prior incidents for display, never a new response.
+        returned_count = None if failed else len(observations)
         sources.append({"key":source, "status":state,
+                        "returned_record_count":returned_count,
                         "last_attempt_at":at.isoformat(), "last_success_at":success,
                         "age_seconds":max(0,int((at - success_at).total_seconds())) if success_at else None,
                         "last_product_observed_at":product,

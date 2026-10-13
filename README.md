@@ -275,6 +275,10 @@ and NIFC/CWFIS current agency records with the snapshot's per-source health,
 acquisition age and known scope. US NWS and perimeters are explicitly listed as
 on-demand/not monitored sources rather than implied global coverage. The panel
 also exports an auditable JSON snapshot with provenance and missingness warnings.
+Provider response counts now distinguish an accepted empty response from a zero count
+in the selected circle; failed or deferred responses remain unknown even if older
+records are retained. Regional last observation time and global provider product age
+are labeled separately.
 It is a client-side evidence tool: **zero detections never prove absence of fire,
 and a successful world API call does not validate regional observation completeness.**
 
@@ -601,6 +605,16 @@ first listing as ignition time. Every sampled target and outcome remains
 unresolved pending independent scientific review.
 
 ## Local checks
+
+The [historical analytics research preview](public/analytics.html) displays a fixed,
+real NASA FIRMS original-pixel pilot with daily activity, selected-region
+comparison, source receipts and explicit coverage limits. The reproducible
+[analytics and modeling roadmap](docs/ANALYTICS_MODELING_ROADMAP.md) documents
+the short archive, numerical baseline experiment, missing environmental and
+independent fire evidence, and the next validation gates. It does not provide
+a wildfire forecast. The 35 KiB static aggregate is committed; original
+pixel archives and SQLite remain outside the public repository.
+
 
 ```sh
 python -m unittest discover -s tests -v

@@ -5,6 +5,7 @@ on:
       - 'public/**'
       - 'tests/js/**'
       - 'tests/browser/investigation-local.mjs'
+      - 'tests/browser/analytics-local.mjs'
       - '.github/workflows/test-global-region-explorer.yml'
   push:
     branches: [main]
@@ -12,6 +13,7 @@ on:
       - 'public/**'
       - 'tests/js/**'
       - 'tests/browser/investigation-local.mjs'
+      - 'tests/browser/analytics-local.mjs'
       - '.github/workflows/test-global-region-explorer.yml'
 permissions:
   contents: read
@@ -38,4 +40,6 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - name: Desktop/mobile local fixture smoke
-        run: node tests/browser/investigation-local.mjs
+        run: |
+          node tests/browser/investigation-local.mjs
+          node tests/browser/analytics-local.mjs

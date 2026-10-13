@@ -48,9 +48,14 @@ export function createRegionExplorer({map,state,getSnapshot,saveState,showRecord
         ? msg.coverageNotMeasured : source.observedInCircle===0
           ? msg.coverageNoRecords : source.observedInCircle.toLocaleString(state.lang)}`;
       const details=document.createElement('small');
-      const age=source.productAgeSeconds===null?'—':
+      const response=source.responseState==='empty'?msg.coverageResponseEmpty:
+        source.responseState==='nonempty'?`${msg.coverageResponseRecords}: `+
+          source.returnedRecordCount.toLocaleString(state.lang):msg.coverageResponseUnknown;
+      const regional=source.latestObservedAt??msg.coverageNotMeasured;
+      const productAge=source.productAgeSeconds===null?'—':
         `${Math.round(source.productAgeSeconds/60)} min`;
-      details.textContent=`${msg.coverageAge}: ${age} · ${msg.coverageFailures}: ` +
+      details.textContent=`${response} · ${msg.coverageRegionalLatest}: ${regional} · `+
+        `${msg.coverageGlobalAge}: ${productAge} · ${msg.coverageFailures}: `+
         `${source.consecutiveFailures??'—'}`;
       const links=document.createElement('span');
       links.className='coverage-source-links';
