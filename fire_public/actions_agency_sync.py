@@ -208,10 +208,10 @@ def _read_progress(vault: Path) -> dict:
         raise ValueError("unsafe private Actions sync progress file")
     document = json.loads(path.read_text(encoding="utf-8"))
     rows = document.get("checked") if isinstance(document, dict) else None
-    if document.get("schema_version") != 1 or not isinstance(rows, dict) or len(rows)>MAX_PROGRESS_ENTRIES:
+    if not isinstance(document, dict) or document.get("schema_version") != 1 or not isinstance(rows, dict) or len(rows)>MAX_PROGRESS_ENTRIES:
         raise ValueError("invalid local Actions sync progress format")
     for key, value in rows.items():
-        if (not re.fullmatch(r"[1-9]\\d*",key) or not isinstance(value,dict) or
+        if (not re.fullmatch(r"[1-9]\d*",key) or not isinstance(value,dict) or
                 not isinstance(value.get("run_id"),int) or value["run_id"] <= 0 or
                 not isinstance(value.get("attempt"),int) or value["attempt"] <= 0 or
                 value.get("kind") not in ("agency","pixel_only") or
@@ -231,7 +231,7 @@ def _atomic_progress(vault: Path, rows: dict) -> None:
         with os.fdopen(fd,"w",encoding="utf-8") as stream:
             json.dump({"schema_version":1,"checked":rows},stream,sort_keys=True,
                       ensure_ascii=False,separators=(",",":"))
-            stream.write("\\n")
+            stream.write("\n")
             stream.flush()
             os.fsync(stream.fileno())
         os.replace(temporary,vault/PROGRESS_FILE)
@@ -328,7 +328,7 @@ def sync(vault: Path, client, *, pages: int = 5, max_downloads: int = 32,
     if dry_run:
         return result
     # Each artifact commits independently; interruptions are harmless to existing originals.
-    # Do not create an empty vault if no original agency evidence is available.
+    # A pixel-only artifact can create a progress-only vault, never false agency evidence.
     for artifact, run_id, attempt in selected:
         run = client.get_run(run_id)
         head_sha = _trusted_run(run, run_id, attempt)
