@@ -127,7 +127,8 @@ def build_observational_cohort(
                 "capture_lag_hours_median":observed["capture_lag_hours_median"],
             } if complete else {key:None for key in FEATURE_NAMES})
             identity = hashlib.sha256(_canonical([
-                region["region_id"],cut,lookback_hours,target_hours,source
+                region["region_id"],region["latitude"],region["longitude"],
+                region["radius_km"],cut,lookback_hours,target_hours,source
             ])).hexdigest()[:24]
             rows.append({
                 "sample_id":"signal-study-"+identity,
