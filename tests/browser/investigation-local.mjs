@@ -68,6 +68,34 @@ try {
     assert.equal(evidence.rows.find(r=>r.key==='VIIRS_NOAA20_NRT').observedInCircle,1);
     await page.locator('#region-radius').selectOption('100');
     assert.match(await page.evaluate(()=>location.hash),/rr=100/);
+    // Compare an actual second geodesic region within the same time/source slice.
+    await page.locator('#compare-center').click();
+    await page.locator('#compare-results:not([hidden])').waitFor();
+    assert.equal(await page.locator('#compare-a-count').textContent(),'2');
+    assert.equal(await page.locator('#compare-b-count').textContent(),'2');
+    assert.match(await page.locator('#compare-quality').textContent(),/çakışıyor/);
+    assert.match(await page.evaluate(()=>location.hash),/clat=/);
+    const [pairDownload]=await Promise.all([
+      page.waitForEvent('download'),page.locator('#compare-download').click()
+    ]);
+    assert.equal(pairDownload.suggestedFilename(),'wildfire-two-region-comparison.json');
+    const pair=JSON.parse(await readFile(await pairDownload.path(),'utf8'));
+    assert.equal(pair.areasOverlap,true);
+    assert.equal(pair.wildfireRiskRankingAvailable,false);
+    assert.equal(pair.comparableAcquisitionCoverageVerified,false);
+    assert.equal(pair.independentlyVerifiedFireDifference,null);
+    assert.equal(pair.sourceEvidence.first.confirmedFireCoverageVerified,false);
+    await page.evaluate(() => {
+      const p=new URLSearchParams(location.hash.slice(1));
+      p.set('clat','-9');p.set('clon','145');location.hash=p.toString();
+    });
+    await page.waitForFunction(() =>
+      document.getElementById('compare-b-count')?.textContent==='0');
+    assert.equal(await page.locator('#compare-a-count').textContent(),'2');
+    assert.match(await page.locator('#compare-quality').textContent(),/betimsel/);
+    await page.locator('#compare-clear').click();
+    assert.equal(await page.locator('#compare-results').isHidden(),true);
+    assert.equal(await page.evaluate(()=>location.hash.includes('clat=')),false);
     assert.match(await page.evaluate(()=>location.hash),/rlat=/);
     await page.locator('#region-clear').click();
     assert.equal(await page.locator('#region-results').isHidden(),true);
