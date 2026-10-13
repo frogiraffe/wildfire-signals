@@ -551,6 +551,33 @@ audit of what can be analyzed, not proof of no fire. Ignition probability,
 physical wildfire severity/spread and validated predictive scores remain
 explicitly unavailable.
 
+## Analysis Engine v3 — historical multi-region study frame
+
+The [source-censored historical observation cohort](docs/observational-study-cohort-v3.md)
+generates repeated, as-of `(region_id, decision_at)` observational rows from
+original validated FIRMS pixels. Declare non-overlapping worldwide circles,
+fixed UTC decisions and a future target horizon. The output is R/Python-ready
+`observations.csv` plus full source-bound JSONL, SHA256 manifest and an offline
+quality dashboard. Missing/incomplete collection periods yield **null numeric
+features** rather than invented zeros. Even complete collector requests are
+not verified satellite overpass opportunities.
+
+```sh
+python -m fire_public.observational_cohort \
+  --pixel-db /private/firms-pixels.sqlite3 \
+  --regions-json examples/observational-regions.json \
+  --start-at 2026-10-12T00:00:00Z --end-at 2026-10-13T00:00:00Z \
+  --cadence-hours 6 --lookback-hours 24 --target-hours 24 \
+  --output-dir /private/firms-study-20261013
+```
+
+**Every target remains null and model fitting is blocked** until licensed,
+independently established fire and nonfire outcomes plus source availability
+are audited. The existing
+[manual real-data analysis workflow](.github/workflows/run-historical-signal-analysis.yml)
+now includes the source-censored study frame as an extra aggregate-only output
+without publishing raw agency events or satellite pixels.
+
 ## Local checks
 
 ```sh

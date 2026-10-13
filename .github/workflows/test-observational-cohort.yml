@@ -1,0 +1,122 @@
+name: Prospective unlabeled FIRMS observational cohort research
+on:
+  pull_request:
+    paths:
+      - 'fire_public/observational_cohort.py'
+      - 'fire_public/historical_signal_analysis.py'
+      - 'tests/test_observational_cohort.py'
+      - 'tests/test_historical_signal_analysis.py'
+      - '.github/workflows/test-observational-cohort.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'fire_public/observational_cohort.py'
+      - 'fire_public/historical_signal_analysis.py'
+      - 'tests/test_observational_cohort.py'
+      - 'tests/test_historical_signal_analysis.py'
+      - '.github/workflows/test-observational-cohort.yml'
+permissions:
+  contents: read
+jobs:
+  scientific-study-frame:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile offline statistical modules
+        run: python -m compileall -q fire_public
+      - name: Verify source-time cohort and existing FIRMS scientific analysis
+        run: |
+          python -m unittest discover -s tests -p 'test_observational_cohort.py' -v
+          python -m unittest discover -s tests -p 'test_historical_signal_analysis.py' -v
+          python -m unittest discover -s tests -p 'test_pixel_history.py' -v
+          python -m unittest discover -s tests -p 'test_evaluation_splits.py' -v
+          python -m unittest discover -s tests -p 'test_model_evaluation.py' -v
+          python -m unittest discover -s tests -p 'test_historical_baseline.py' -v
+
+  bounded-real-2026-research-release:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    permissions:
+      contents: read
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify source-bound REAL 2026-10-12/13 NASA FIRMS releases
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          from fire_public.release_sync import _get_releases,sync_releases
+          from fire_public.pixel_history import import_release_assets
+          root=Path(os.environ['RUNNER_TEMP'])
+          allowed={'analysis-evidence-2026-10-12','analysis-evidence-2026-10-13'}
+          def pinned(page):
+              if page>1:return []
+              releases=_get_releases(1)
+              chosen=[row for row in releases if row.get('tag_name') in allowed]
+              if {row['tag_name'] for row in chosen}!=allowed:
+                  raise ValueError('Exact original released research dates not discoverable')
+              return chosen
+          synced=sync_releases(root/'real-firms-assets',
+              since='2026-10-12', max_releases=2,
+              max_total_bytes=90*1024*1024,list_page=pinned)
+          if synced['downloaded_releases']!=2:
+              raise ValueError('Did not retrieve both original research releases')
+          result=import_release_assets(root/'real-pixels.sqlite3',root/'real-firms-assets')
+          if result['imported_scans']!=2 or result['new_unique_pixels']<1:
+              raise ValueError('Original pixel archive import has no verified evidence')
+          print(json.dumps({'real_release_import':result},sort_keys=True))
+          PY
+      - name: Rebuild real-data source-censored global study rows and audit unknown targets
+        run: |
+          python - <<'PY'
+          import json,os,sqlite3
+          from pathlib import Path
+          from datetime import datetime,timedelta,timezone
+          from fire_public.observational_cohort import build_observational_cohort,export_cohort
+          root=Path(os.environ['RUNNER_TEMP'])
+          with sqlite3.connect(root/'real-pixels.sqlite3') as db:
+              at=db.execute('SELECT MAX(captured_at) FROM pixel_scans').fetchone()[0]
+          cutoff=datetime.fromisoformat(at.replace('Z','+00:00')).astimezone(timezone.utc)
+          end=cutoff.replace(minute=0,second=0,microsecond=0)
+          start=end-timedelta(hours=24)
+          regions=[
+              {'region_id':'ANTALYA_RESEARCH','latitude':36.9,'longitude':30.7,'radius_km':100},
+              {'region_id':'ZAMBIA_RESEARCH','latitude':-13,'longitude':27.7,'radius_km':100}
+          ]
+          cohort=build_observational_cohort(root/'real-pixels.sqlite3',regions,
+              start_at=start.isoformat(),end_at=end.isoformat(),
+              cadence_hours=6,lookback_hours=24,target_hours=24)
+          details=export_cohort(cohort,root/'real-cohort')
+          if (details['label_count']!=0 or any(
+              r['target_label'] is not None or r['model_training_allowed']
+              or r['orbital_exposure_validated'] for r in cohort['rows'])):
+              raise ValueError('Real FIRMS evidence mistakenly promoted into wildfire training ground truth')
+          summary={'original_release_days':2,
+                   'observational_samples':details['rows'],
+                   'source_censored_samples':details['censored_source_rows'],
+                   'independent_fire_labels':0,
+                   'quality_report_sha256':details['manifest_sha256']}
+          print(json.dumps({'REAL_RESEARCH_DATA_VALIDATION':summary},sort_keys=True))
+          PY
+      - name: Publish aggregate-only real-data research readiness report
+        uses: actions/upload-artifact@v4
+        with:
+          name: bounded-real-firms-cohort-source-quality-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/real-cohort/observations.jsonl
+            ${{ runner.temp }}/real-cohort/observations.csv
+            ${{ runner.temp }}/real-cohort/manifest.json
+            ${{ runner.temp }}/real-cohort/quality.html
+          retention-days: 7
+          compression-level: 6
+          if-no-files-found: error

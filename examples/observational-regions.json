@@ -1,0 +1,20 @@
+[
+  {
+    "region_id": "ANTALYA_DEMO",
+    "latitude": 36.9,
+    "longitude": 30.7,
+    "radius_km": 100
+  },
+  {
+    "region_id": "ZAMBIA_DEMO",
+    "latitude": -13.0,
+    "longitude": 27.7,
+    "radius_km": 100
+  },
+  {
+    "region_id": "CALIFORNIA_DEMO",
+    "latitude": 38.0,
+    "longitude": -120.0,
+    "radius_km": 100
+  }
+]
