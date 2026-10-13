@@ -1,0 +1,38 @@
+name: Prospective unlabeled FIRMS observational cohort research
+on:
+  pull_request:
+    paths:
+      - 'fire_public/observational_cohort.py'
+      - 'fire_public/historical_signal_analysis.py'
+      - 'tests/test_observational_cohort.py'
+      - 'tests/test_historical_signal_analysis.py'
+      - '.github/workflows/test-observational-cohort.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'fire_public/observational_cohort.py'
+      - 'fire_public/historical_signal_analysis.py'
+      - 'tests/test_observational_cohort.py'
+      - 'tests/test_historical_signal_analysis.py'
+      - '.github/workflows/test-observational-cohort.yml'
+permissions:
+  contents: read
+jobs:
+  scientific-study-frame:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile offline statistical modules
+        run: python -m compileall -q fire_public
+      - name: Verify source-time cohort and existing FIRMS scientific analysis
+        run: |
+          python -m unittest discover -s tests -p 'test_observational_cohort.py' -v
+          python -m unittest discover -s tests -p 'test_historical_signal_analysis.py' -v
+          python -m unittest discover -s tests -p 'test_pixel_history.py' -v
+          python -m unittest discover -s tests -p 'test_evaluation_splits.py' -v
+          python -m unittest discover -s tests -p 'test_model_evaluation.py' -v
+          python -m unittest discover -s tests -p 'test_historical_baseline.py' -v
