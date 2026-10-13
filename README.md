@@ -612,7 +612,7 @@ comparison, source receipts and explicit coverage limits. The reproducible
 [analytics and modeling roadmap](docs/ANALYTICS_MODELING_ROADMAP.md) documents
 the short archive, numerical baseline experiment, missing environmental and
 independent fire evidence, and the next validation gates. It does not provide
-a wildfire forecast. The 32 KiB static aggregate is committed; original
+a wildfire forecast. The 35 KiB static aggregate is committed; original
 pixel archives and SQLite remain outside the public repository.
 
 

@@ -8,7 +8,8 @@ import unittest
 
 from fire_public.collect import FIRMS_SOURCES
 from fire_public.pixel_history import import_release_assets
-from fire_public.thermal_capture_analytics import build_capture_pilot, evaluate_capture_model
+from fire_public.thermal_capture_analytics import (build_capture_pilot, evaluate_capture_model,
+                                                   verify_pilot_against_assets)
 from test_pixel_history import make_release, pixel
 
 FIRST=datetime(2026,10,12,0,tzinfo=timezone.utc)
@@ -141,6 +142,16 @@ class ThermalCaptureAnalyticsTests(unittest.TestCase):
         self.assertEqual(sum(row["new_candidate_cell_hours"] for row in doc["scan_rows"]),
                          sum(row["new_candidate_cell_hours"] for row in doc["daily_rows"]))
         self.assertFalse(doc["model_research"]["model_comparison_supported"])
+
+    def test_original_receipts_reproduce_report_and_tampering_fails(self):
+        self.populate()
+        report=build_capture_pilot(self.db,REGIONS,heldout_region_ids=["R4","R5"])
+        checked=verify_pilot_against_assets(self.root,report,REGIONS,["R4","R5"])
+        self.assertEqual(checked["reimported_scans"],5)
+        self.assertEqual(checked["evidence_sha256"],report["evidence_sha256"])
+        tampered={**report,"input_population":{**report["input_population"],"unique_raw_pixels":999}}
+        with self.assertRaisesRegex(ValueError,"does not reproduce"):
+            verify_pilot_against_assets(self.root,tampered,REGIONS,["R4","R5"])
 
 
 if __name__=="__main__":unittest.main()

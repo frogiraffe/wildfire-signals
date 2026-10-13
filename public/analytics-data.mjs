@@ -1,6 +1,7 @@
 export function validatePilot(report) {
   if (report?.schema_version !== 1 || !Array.isArray(report.regions) ||
       !Array.isArray(report.daily_rows) || !Array.isArray(report.source_receipts) ||
+      !Array.isArray(report.source_asset_manifest) ||
       report.satellite_opportunity_verified !== false || report.verified_fire_count !== null ||
       !/^[a-f0-9]{64}$/.test(report.evidence_sha256 ?? ''))
     throw new Error('Unsupported or incomplete historical evidence report');
@@ -10,6 +11,8 @@ export function validatePilot(report) {
       !Number.isSafeInteger(row.new_candidate_cell_hours) || row.new_candidate_cell_hours < 0 ||
       row.archive_period_complete !== false))
     throw new Error('Invalid pilot observation rows');
+  if (report.source_asset_manifest.some(asset => !/^[a-f0-9]{64}$/.test(asset.asset_sha256 ?? '')))
+    throw new Error('Invalid source asset manifest');
   return report;
 }
 

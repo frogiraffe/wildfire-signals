@@ -32,7 +32,7 @@ The first capture scans are at 2026-10-12 18:19, 2026-10-13 00:20, 06:35, 12:50 
 
 The experiment's target is next scan's newly archived candidate cell-hour count in a selected circle. It skips the bootstrap transition, trains a one-lag persistence baseline and log1p single-feature OLS on **20 earlier region transitions**, and reserves **10 later temporal**, **4 earlier geographic**, and **2 joint temporal/geographic** transitions. Australia North and Brazil Amazon are geographic holdouts. Training targets contain one value (zero): fitted intercept and slope are both zero. On the temporal holdout, persistence MAE = **131.8** and log-linear MAE = **131.8** candidate cell-hours; on the joint holdout both MAEs = **5.5** (n=2). Geographic holdout MAEs are 68.0 and 0.0 respectively (n=4), but a constant-zero fit and sparse acquisitions make the apparent improvement meaningless. **No model beats the baseline with supportable scientific evidence.** There are no uncertainty intervals or calibrated fire probabilities. This is executable research plumbing, not a usable forecast.
 
-The compact aggregate report is [the fixed pilot JSON](../public/data/thermal-capture-pilot-2026-10-13.json) (about 32 KiB), with report SHA-256 `5bb8fd54881e31a3788a83cc6b6f85e8bda07c56fc4698d792a9b6a57a9799ef`. Raw pixels and SQLite remain outside Git. Local research transfer used about 129 MB compressed release assets and 240 MB SQLite; neither enters Workers KV or Cloudflare. Web reads one static JSON file, with no new service, secret or paid quota.
+The compact aggregate report is [the fixed pilot JSON](../public/data/thermal-capture-pilot-2026-10-13.json) (35,621 bytes), with report SHA-256 `4864ce1661193f5d7e568977582babe5d20ac90684fefecfe2ac28aba67ec877`. The report pins all scan receipt hashes and the 10 pixel asset hashes/row counts. A second import directly from the original downloaded assets reproduced the complete JSON byte for byte and the same SHA-256. Raw pixels and SQLite remain outside Git. Local research transfer used about 129 MB compressed release assets and 240 MB SQLite; neither enters Workers KV or Cloudflare. Web reads one static JSON file, with no new service, secret or paid quota.
 
 ## Data contract and reproducibility
 
@@ -41,6 +41,7 @@ The compact aggregate report is [the fixed pilot JSON](../public/data/thermal-ca
 | `observed_at` | Original UTC FIRMS acquisition | Original source row; not ignition time. |
 | `first_captured_at`, `first_scan_at` | First local collector receipt and source scan | Must be after observation; used to prevent later data entering earlier transitions. |
 | `receipt_sha256`, asset hashes | Source evidence and exact archived bytes | Validated during import/sync. |
+| `source_asset_manifest` | Hash, scan and parsed row count of every pixel asset | Pinned in the aggregate; second original-asset import must reproduce it. |
 | `source_states` | Collector request outcome per sensor | `complete` does not verify overpass or cloud-free visibility. |
 | `new_raw_pixels` | Unique original source records first captured by a scan | Sensor duplicates remain distinct raw records. |
 | `new_candidate_cell_hours` | Distinct 0.05° WGS84 cell × observed UTC hour first captured by a scan/region | Both sensors in the same cell-hour count once; not fire count, area, or severity. |
@@ -59,10 +60,11 @@ python -m fire_public.thermal_capture_analytics \
   --pixel-db /private/firms-pixels.sqlite3 \
   --regions-json examples/thermal-capture-regions.json \
   --holdout-region AUSTRALIA_NORTH --holdout-region BRAZIL_AMAZON \
+  --verify-assets-dir /private/firms-releases \
   --output-json /private/thermal-pilot.json
 ```
 
-The CLI refuses to overwrite an existing report and does not make a network request. Public GitHub releases can change or expire; a later rerun must compare the report hash, receipt hashes, source versions and record counts before interpreting any numerical difference. No random seed is needed for deterministic one-feature OLS. The model uses Python standard library only; no ML package or runtime is added to the public app.
+The CLI refuses to overwrite an existing report and does not make a network request. `--verify-assets-dir` independently re-imports the original release assets into a temporary SQLite DB and requires an identical full report. CI tests this mechanism on source fixtures and checks the committed aggregate's internal hash/denominators; CI does not download the 123 MB original archive on every PR. Public GitHub releases can change or expire; a later rerun must compare the report hash, receipt hashes, source versions and record counts before interpreting any numerical difference. No random seed is needed for deterministic one-feature OLS. The model uses Python standard library only; no ML package or runtime is added to the public app.
 
 ## Prioritized executable backlog
 

@@ -37,6 +37,10 @@ try {
     await page.locator('#analytics-from').fill('2026-10-13');
     await page.locator('#analytics-to').fill('2026-10-13');
     assert.ok(await page.locator('#analytics-days tr').count() <= 1);
+    await page.locator('#analytics-from').fill('2026-10-13');
+    await page.locator('#analytics-to').fill('2026-10-09');
+    assert.equal(await page.locator('#analytics-days tr').count(),0);
+    assert.match(await page.locator('#analytics-status').textContent(),/Invalid region or UTC date range/);
     assert.deepEqual(errors,[]);
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
     await page.close();
