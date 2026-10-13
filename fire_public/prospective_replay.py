@@ -7,8 +7,6 @@ from __future__ import annotations
 
 import argparse
 import base64
-from collections import Counter
-from datetime import datetime, timezone
 import hashlib
 import html
 import json
@@ -24,7 +22,6 @@ MAX_CASES = 250
 MAX_SCANS = 400
 MAX_REPORT_BYTES = 3 * 1024 * 1024
 RESEARCH_STATUS = "source_bound_prospective_agency_timeline_not_fire_outcome"
-UTC = "2026-10-13T00:00:00Z"
 
 
 def open_archive(path: Path) -> sqlite3.Connection:
@@ -34,7 +31,7 @@ def open_archive(path: Path) -> sqlite3.Connection:
             path.resolve().is_relative_to(root)):
         raise ValueError("existing local archive must be outside the public repository")
     connection = sqlite3.connect(
-        f"file:{quote(str(path.resolve()))}?mode=ro&immutable=1", uri=True)
+        f"file:{quote(str(path.resolve()))}?mode=ro", uri=True)
     connection.row_factory = sqlite3.Row
     try:
         expected = {"receipt_scans", "receipt_sources", "receipt_presence",
