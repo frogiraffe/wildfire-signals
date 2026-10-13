@@ -9,6 +9,7 @@ on:
       - 'tests/test_prospective_replay.py'
       - 'tests/js/prospective-replay.test.mjs'
       - 'tests/browser/prospective-replay-local.mjs'
+      - 'tests/browser/generate-prospective-replay-fixture.py'
       - '.github/workflows/test-prospective-replay.yml'
   push:
     branches: [main]
