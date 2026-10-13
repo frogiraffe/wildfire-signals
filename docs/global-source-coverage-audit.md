@@ -6,7 +6,7 @@ This adds a **working, public map feature** in the existing Global Region Explor
 
 1. Open the global map, choose `Use map center` or `Choose on map`, and set 25, 50, 100 or 250 km.
 2. The selected circle continues to show the 6/24/72-hour candidate observations, sensor trend and evidence leads.
-3. The **Regional source evidence** panel below shows each source's *declared capability*, its snapshot collection status, whether records were observed inside this circle, latest timestamp and whether the collector is currently stale/partial. Use the full reference/rights links in the card when auditing provenance.
+3. The **Regional source evidence** panel below shows each source's *declared capability*, its snapshot collection status, whether records were observed inside this circle, latest regional observation time, and whether the collector is stale/partial. The provider response count is a separate value. Use the full reference/rights links in the card when auditing provenance.
 4. Select **Export evidence JSON** to save the exact displayed region, selection time, snapshot timestamp, independently sourced counts and warnings. It can be reviewed or compared with later exports.
 
 All region analysis is computed from the **already-fetched public `/api/snapshot` JSON**, client-side and without additional upstream, Cloudflare or rate-limited NASA requests. It uses the existing MapLibre region selection, sharing and i18n. No geocoding service or country polygon API is required.
@@ -28,6 +28,8 @@ The fixed entries are provider **capabilities**, not a claim that any given circ
 
 - Known source states are `complete`, `partial`, `failed` and `deferred`; sources not present are **unreported**, not complete by default.
 - A complete request means the service returned successfully; it is not evidence that every satellite overpass or thermal detection was captured, or that the source's geographical coverage was exhaustive.
+- `returned_record_count` is the number of accepted, source-specific candidate cell-hours or current agency records from the **latest successful attempt**. It is `null` for a failed/deferred request, including when older records remain visible. Zero here means the accepted response was empty; zero **inside the selected circle** can instead mean the response had records elsewhere. Neither zero proves no fire. Older snapshots without this field report the response as unknown.
+- The regional latest observation is derived only from records in the selected circle and satellite time window. The provider product age is a **global source value**; it cannot substitute for regional freshness. Agency current-layer records are not filtered by the satellite window.
 - A missing snapshot produces **unknown counts**, not zeros. A stale snapshot or truncated/partial response has an explicit visible warning.
 - Agency counts belong to the current provider layer; they are not filtered to the satellite's 6/24/72-hour lookback. Their known timestamps are treated as evidence times, not extinguishment outcomes.
 - Weather and perimeter capability rows explicitly say `not monitored here`: their individual on-demand requests are distinct from public collector health.
