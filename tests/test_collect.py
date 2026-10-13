@@ -122,6 +122,19 @@ class CollectTests(unittest.TestCase):
                 "VIIRS_NOAA21_NRT": "error", "nifc_wfigs": "error",
                 "cwfis": "error"})
 
+    def test_source_response_counts_distinguish_empty_from_failed_and_carried_records(self):
+        source = "VIIRS_NOAA20_NRT"
+        first = build_snapshot({source: parse_firms_csv(CSV, source, at=AT)}, [], at=AT)
+        statuses = {row["key"]: row for row in first["sources"]}
+        self.assertEqual(statuses[source]["returned_record_count"], 1)
+        self.assertEqual(statuses["cwfis"]["returned_record_count"], 0)
+        failed = build_snapshot({}, [], at=AT.replace(hour=13), previous=first,
+                                errors={source: "TimeoutError"})
+        statuses = {row["key"]: row for row in failed["sources"]}
+        self.assertIsNone(statuses[source]["returned_record_count"])
+        self.assertEqual(len(failed["events"]), 1)
+        self.assertEqual(statuses["cwfis"]["returned_record_count"], 0)
+
     def test_publication_is_pointer_last(self):
         snapshot = build_snapshot({}, [], at=AT)
         calls = []

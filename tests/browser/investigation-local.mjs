@@ -12,8 +12,10 @@ const snapshot = {manifest:{schema_version:1,last_scan_at:new Date().toISOString
   {kind:'satellite_candidate',event_id:'latest',latitude:-6.025,longitude:145.025,
     observed_at:new Date(Date.now()-3_600_000).toISOString(),sources:['VIIRS_NOAA21_NRT']}],
   incidents:[],matches:[],sources:[
-    {key:'VIIRS_NOAA20_NRT',status:'complete'},
-    {key:'VIIRS_NOAA21_NRT',status:'complete'}]};
+    {key:'VIIRS_NOAA20_NRT',status:'complete',returned_record_count:1},
+    {key:'VIIRS_NOAA21_NRT',status:'complete',returned_record_count:1},
+    {key:'nifc_wfigs',status:'complete',returned_record_count:0},
+    {key:'cwfis',status:'complete',returned_record_count:0}]};
 let activeSnapshot = snapshot;
 const server = createServer(async (request,response) => {
   if (request.url === '/api/snapshot') {
@@ -78,6 +80,10 @@ try {
       /VIIRS_NOAA20_NRT/);
     assert.match(await page.locator('#coverage-source-list').textContent(),
       /Burada izlenmiyor/);
+    assert.match(await page.locator('#coverage-source-list').textContent(),
+      /Kaynak yanıtı boş/);
+    assert.match(await page.locator('#coverage-source-list').textContent(),
+      /Bölgedeki son gözlem/);
     const [download] = await Promise.all([
       page.waitForEvent('download'),page.locator('#coverage-download').click()]);
     assert.equal(download.suggestedFilename(),'wildfire-region-coverage.json');
@@ -87,6 +93,7 @@ try {
     assert.equal(evidence.confirmedFireCoverageVerified,false);
     assert.equal(evidence.regionCoverageVerified,false);
     assert.equal(evidence.rows.find(r=>r.key==='VIIRS_NOAA20_NRT').observedInCircle,1);
+    assert.equal(evidence.rows.find(r=>r.key==='nifc_wfigs').responseState,'empty');
     await page.locator('#region-radius').selectOption('100');
     assert.match(await page.evaluate(()=>location.hash),/rr=100/);
     // Compare an actual second geodesic region within the same time/source slice.
