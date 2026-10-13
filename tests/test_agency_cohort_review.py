@@ -162,7 +162,7 @@ class AgencyCohortReviewTests(unittest.TestCase):
             self.assertEqual(hashlib.sha256((private/name).read_bytes()).hexdigest(),
                              meta["sha256"])
         html=(private/"review.html").read_text()
-        self.assertIn("Unlabeled",html)
+        self.assertIn("unlabeled",html)
         self.assertNotIn("<script",html)
         self.assertNotIn("http",html)
         with self.assertRaisesRegex(ValueError,"new private"):
