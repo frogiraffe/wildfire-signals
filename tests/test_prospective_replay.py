@@ -30,14 +30,14 @@ class ProspectiveTimeMachineTests(unittest.TestCase):
         self.receipts=self.root/"receipts"
 
     def add(self, hour: int, *, agency="complete", listed=True, status="OC",
-            name="Archive-only example", modified_at=None, nifc=False):
+            name="Archive-only example", modified_at=None, last_seen_at=None, nifc=False):
         scan=f"2026-10-12T{hour:02d}:17:00Z"
         capture=f"2026-10-12T{hour:02d}:18:00Z"
         incident={"kind":"agency_incident","provider":"cwfis","official_id":"CA-1",
                   "name":name,"incident_kind":"active_wildland_fire",
                   "latitude":45.0,"longitude":-115.0,
                   "modified_at":modified_at or scan,
-                  "agency_status":status,"last_seen_at":scan}
+                  "agency_status":status,"last_seen_at":last_seen_at or scan}
         status_rows=[{"key":"cwfis","status":agency},{"key":"nifc_wfigs","status":"complete"}]
         entries=[incident] if listed else []
         if nifc:
@@ -113,12 +113,14 @@ class ProspectiveTimeMachineTests(unittest.TestCase):
         # Distinct scan receipts with stable modified_at but changing last_seen_at
         # are still distinct records; exact identical replay needs a constant row.
         time="2026-10-12T00:17:00Z"
-        self.add(0,modified_at=time)
-        self.add(6,modified_at=time)
+        self.add(0,modified_at=time,last_seen_at=time)
+        self.add(6,modified_at=time,last_seen_at=time)
         db=self.imported()
         self.addCleanup(db.close)
         report=replay(db,at="2026-10-12T09:00:00Z",provider="cwfis")
         self.assertEqual(len(report["cases"][0]["timeline"]),2)
+        self.assertEqual(self.store.connection.execute(
+            "SELECT COUNT(*) FROM observations WHERE provider='cwfis'").fetchone()[0],1)
         self.assertEqual(report["cases"][0]["timeline"][0]["source_modified_at"],time)
         self.assertEqual(report["cases"][0]["timeline"][1]["source_modified_at"],time)
 
@@ -208,7 +210,6 @@ class ProspectiveTimeMachineTests(unittest.TestCase):
         self.assertNotEqual(subprocess.run(args,capture_output=True).returncode,0)
 
     def test_older_archive_with_no_prospective_receipts_is_rejected(self):
-        db= open_archive if False else None
         with self.assertRaisesRegex(ValueError,"no imported prospective"):
             open_archive(self.path)
 
