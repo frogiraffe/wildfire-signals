@@ -25,7 +25,7 @@ const server = createServer(async (request,response) => {
   if (!['index.html','style.css','main.mjs','map-state.mjs','area-analysis.mjs',
     'incident-timeline.mjs','weather-context.mjs','perimeter-context.mjs',
     'analysis-answers.mjs','region-explorer.mjs','region-explorer-view.mjs',
-    'coverage-audit.mjs','region-compare.mjs'].includes(name)) {
+    'coverage-audit.mjs','region-compare.mjs','analysis-engine.mjs'].includes(name)) {
     response.writeHead(404).end(); return;
   }
   response.setHeader('Content-Type',name.endsWith('.css') ? 'text/css'
@@ -51,6 +51,27 @@ try {
     assert.equal(await page.locator('#region-repeat').textContent(),'1');
     assert.equal(await page.locator('.region-chart-col').count(),6);
     assert.equal(await page.locator('#coverage-source-list > li').count(),6);
+    // Real browser: statistical source analysis, UTC bins and evidence download.
+    await page.locator('#analysis-engine-quality').getByText(/betimsel istatistikler/i).waitFor();
+    assert.equal(await page.locator('#stats-timeline-body tr').count(),6);
+    assert.equal(await page.locator('#stats-sensors li').count(),2);
+    assert.equal(await page.locator('#stats-median').textContent(),'0');
+    assert.equal(await page.locator('#stats-transitions').textContent(),'0');
+    const [statsDownload]=await Promise.all([
+      page.waitForEvent('download'),page.locator('#stats-download').click()
+    ]);
+    assert.equal(statsDownload.suggestedFilename(),'wildfire-regional-statistical-analysis.json');
+    const analysis=JSON.parse(await readFile(await statsDownload.path(),'utf8'));
+    assert.equal(analysis.metrics.cellHours,2);
+    assert.equal(analysis.metrics.distinctCells,1);
+    assert.equal(analysis.metrics.multiSensorCellHours,0);
+    assert.equal(analysis.bins.length,6);
+    assert.equal(analysis.satelliteOverpassDenominatorAvailable,false);
+    assert.equal(analysis.wildfireProbability,null);
+    assert.equal(analysis.hypothesisPValue,null);
+    assert.equal(analysis.verifiedWildfireCount,null);
+    assert.equal(analysis.status,'current');
+
     assert.match(await page.locator('#coverage-snapshot-status').textContent(),
       /Veri görüntüsü güncel/);
     assert.match(await page.locator('#coverage-source-list').textContent(),
@@ -125,6 +146,8 @@ try {
   await stale.locator('#region-center').click();
   assert.match(await stale.locator('#coverage-snapshot-status').textContent(),
     /Veri görüntüsü eski/);
+  assert.match(await stale.locator('#analysis-engine-quality').textContent(),
+    /görüntüsü eski/);
   assert.equal(await stale.locator('#lead-list button').count(),0);
   assert.match(await stale.locator('#lead-empty').textContent(),/yangın olmadığı anlamına gelmez/);
   await stale.close();
@@ -137,6 +160,8 @@ try {
   await partial.locator('#region-center').click();
   assert.match(await partial.locator('#coverage-source-list').textContent(),
     /Kaynak başarısız/);
+  assert.match(await partial.locator('#analysis-engine-quality').textContent(),
+    /Eksik veya kesilmiş kaynak/);
   await partial.close();
   activeSnapshot = {...activeSnapshot,manifest:{...activeSnapshot.manifest,
     last_scan_at:new Date(Date.now()-3*3_600_000).toISOString()}};

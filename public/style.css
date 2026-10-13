@@ -109,3 +109,24 @@
 .region-compare #compare-sensors{display:grid;gap:4px}
 .region-compare #compare-sensors li{font-size:10px;overflow-wrap:anywhere}
 #region-results[hidden],#compare-results[hidden]{display:none}
+
+
+/* Statistical analysis: observation-only, readable on narrow sidebars. */
+.regional-statistics{border-top:1px solid #53707c;margin:16px 0 12px;padding-top:10px;min-width:0}
+.regional-statistics p{font-size:11px;line-height:1.5;overflow-wrap:anywhere}
+#analysis-engine-quality{color:#f9d298;font-size:11px}
+.regional-stats-metrics{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(58px,.6fr);
+  gap:5px 9px;padding:8px;border:1px solid #44636c;border-radius:5px}
+.regional-stats-metrics dt{font-size:11px;min-width:0}
+.regional-stats-metrics dd{margin:0;text-align:right;font-size:11px;
+  font-variant-numeric:tabular-nums;font-weight:700;overflow-wrap:anywhere}
+.regional-statistics h4{margin:12px 0 5px;font-size:12px}
+.regional-stats-table-wrap{max-width:100%;overflow-x:auto}
+#stats-timeline{width:100%;border-collapse:collapse;font-size:10px;min-width:265px}
+#stats-timeline th,#stats-timeline td{text-align:right;padding:5px 4px;
+  border-bottom:1px solid #385761;font-variant-numeric:tabular-nums}
+#stats-timeline th:first-child,#stats-timeline td:first-child{text-align:left}
+#stats-timeline th{color:#c6e1e8;font-weight:600}
+.regional-statistics #stats-download{width:100%;font-size:11px;padding:7px}
+@media(max-width:700px){.regional-stats-metrics{padding:6px;gap:4px}
+  #stats-timeline{font-size:9px;min-width:255px}}

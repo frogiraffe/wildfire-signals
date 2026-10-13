@@ -57,6 +57,35 @@
             <h3 data-i18n="regionSensors">Sensor memberships</h3>
             <ul id="region-sensors" class="region-sensors"></ul>
             <p id="region-source-issues"></p>
+            <section class="regional-statistics" aria-labelledby="analysis-engine-title">
+              <h3 id="analysis-engine-title" data-i18n="statsTitle">Statistical signal analysis</h3>
+              <p data-i18n="statsScope">Six time slices, robust descriptive trend and sensor co-observation from selected satellite candidate cell-hours. No validated wildfire model.</p>
+              <p id="analysis-engine-quality" role="status"></p>
+              <dl class="regional-stats-metrics">
+                <dt data-i18n="statsMedian">Median candidate cell-hours per time slice</dt><dd id="stats-median">—</dd>
+                <dt data-i18n="statsMad">Median absolute deviation</dt><dd id="stats-mad">—</dd>
+                <dt data-i18n="statsSlope">Theil–Sen descriptive slope (cell-hours/hour)</dt><dd id="stats-slope">—</dd>
+                <dt data-i18n="statsChange">Later − earlier half (cell-hours)</dt><dd id="stats-change">—</dd>
+                <dt data-i18n="statsTransitions">Consecutive same-cell UTC-hour transitions</dt><dd id="stats-transitions">—</dd>
+                <dt data-i18n="statsCoobs">Two-sensor cell-hours</dt><dd id="stats-coobs">—</dd>
+              </dl>
+              <h4 data-i18n="statsTimeline">Time-slice statistical breakdown (UTC)</h4>
+              <div class="regional-stats-table-wrap">
+                <table id="stats-timeline">
+                  <thead><tr>
+                    <th scope="col" data-i18n="statsTimeBucket">UTC window</th>
+                    <th scope="col" data-i18n="statsCellHours">Distinct cell-hours</th>
+                    <th scope="col" data-i18n="statsCells">Distinct cells</th>
+                    <th scope="col" data-i18n="statsMemberships">Sensor memberships</th>
+                  </tr></thead>
+                  <tbody id="stats-timeline-body"></tbody>
+                </table>
+              </div>
+              <h4 data-i18n="statsSensors">Satellite source breakdown</h4>
+              <ul id="stats-sensors" class="region-sensors"></ul>
+              <p id="stats-caveat" data-i18n="statsCaveat">A trend in observed thermal candidates cannot establish increasing wildfire activity without verified satellite acquisition exposure and independent fire labels. No fire probability or p-value is calculated.</p>
+              <button type="button" id="stats-download" data-i18n="statsDownload">Export statistical evidence JSON</button>
+            </section>
             <section class="coverage-audit" aria-labelledby="coverage-title">
               <h3 id="coverage-title" data-i18n="coverageTitle">Regional source evidence</h3>
               <p data-i18n="coverageScope">Provider status, known observations and coverage gaps within the selected circle. Not a wildfire probability or verified source coverage.</p>

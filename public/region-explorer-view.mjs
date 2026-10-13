@@ -1,6 +1,7 @@
 import {analyzeRegion,circleBoundary,normalLongitude,validRegion} from './region-explorer.mjs';
 import {regionCoverageAudit} from './coverage-audit.mjs';
 import {compareRegions} from './region-compare.mjs';
+import {analyzeRegionalSignals} from './analysis-engine.mjs';
 
 // UI controller only; all statistical and geographic calculations remain pure and testable.
 export function createRegionExplorer({map,state,getSnapshot,saveState,showRecord,messages}) {
@@ -8,6 +9,7 @@ export function createRegionExplorer({map,state,getSnapshot,saveState,showRecord
   let picking = null;
   let lastCoverage = null;
   let lastComparison = null;
+  let lastAnalysis = null;
   const picker = byId('region-pick');
 
   function drawCoverage(audit,msg) {
@@ -61,6 +63,55 @@ export function createRegionExplorer({map,state,getSnapshot,saveState,showRecord
     }
   }
 
+
+  function drawStatistics(report,msg) {
+    const quality={
+      current:msg.statsQualityCurrent,incomplete:msg.statsQualityPartial,
+      stale:msg.statsQualityStale,unavailable:msg.statsQualityUnavailable
+    };
+    byId('analysis-engine-quality').textContent=
+      report ? quality[report.status] : msg.statsQualityUnsupported;
+    const stats=report?.metrics||{};
+    const fmt=value=>value===null||value===undefined?'—':
+      typeof value==='number'?value.toLocaleString(state.lang,{maximumFractionDigits:4}):
+        String(value);
+    for(const [id,value] of [
+      ['stats-median',stats.medianBinCellHours],
+      ['stats-mad',stats.madBinCellHours],
+      ['stats-slope',stats.theilSenCellHoursPerHour],
+      ['stats-change',stats.laterMinusEarlier],
+      ['stats-transitions',stats.consecutiveHourTransitions],
+      ['stats-coobs',stats.multiSensorCellHours]
+    ])byId(id).textContent=fmt(value);
+    const body=byId('stats-timeline-body');body.replaceChildren();
+    const locale=state.lang==='tr'?'tr-TR':'en-US';
+    for(const bin of report?.bins||[]) {
+      const tr=document.createElement('tr');
+      const from=new Date(bin.startAt).toLocaleString(locale,{timeZone:'UTC',
+        month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
+      const to=new Date(bin.endAt).toLocaleString(locale,{timeZone:'UTC',
+        month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
+      for(const item of [from+' – '+to+' UTC',fmt(bin.cellHours),
+        fmt(bin.distinctCells),bin.sensorCellHours===null?'—':
+          Object.entries(bin.sensorCellHours).map(([key,value])=>
+            key.replace('VIIRS_','')+': '+value).join(' / ')]) {
+        const td=document.createElement('td');
+        td.textContent=item;tr.append(td);
+      }
+      body.append(tr);
+    }
+    const sensors=byId('stats-sensors');sensors.replaceChildren();
+    for(const row of report?.sensorSeries||[]) {
+      const li=document.createElement('li');
+      const label=document.createElement('span');
+      label.textContent=row.key+' · '+row.sourceStatus;
+      const count=document.createElement('strong');
+      count.textContent=fmt(row.cellHours);
+      li.append(label,count);sensors.append(li);
+    }
+    byId('stats-download').disabled=!report;
+  }
+
   function currentRegion() {
     const region = {latitude:state.regionLat,longitude:state.regionLon,
       radiusKm:state.radiusKm};
@@ -109,6 +160,7 @@ export function createRegionExplorer({map,state,getSnapshot,saveState,showRecord
     byId('region-results').hidden = !region;
     lastCoverage = null;
     lastComparison = null;
+    lastAnalysis = null;
     byId('region-clear').disabled = !region;
     byId('region-location').textContent = region
       ? `${region.latitude.toFixed(4)}°, ${region.longitude.toFixed(4)}° · ${region.radiusKm} km`
@@ -127,9 +179,14 @@ export function createRegionExplorer({map,state,getSnapshot,saveState,showRecord
       {type:'FeatureCollection',features:[]});
     if (!region) return;
 
-    const result = analyzeRegion(getSnapshot(),region,state.hours,state.source);
-    lastCoverage=regionCoverageAudit(getSnapshot(),region,{hours:state.hours});
+    const now=new Date();
+    const result = analyzeRegion(getSnapshot(),region,state.hours,state.source,now);
+    lastCoverage=regionCoverageAudit(getSnapshot(),region,{hours:state.hours,now});
     drawCoverage(lastCoverage,msg);
+    lastAnalysis=state.source==='all'||state.source.startsWith('VIIRS_')
+      ? analyzeRegionalSignals(getSnapshot(),region,{hours:state.hours,source:state.source,now})
+      : null;
+    drawStatistics(lastAnalysis,msg);
     const missing = !result.available;
     const quality = {current:msg.regionQualityCurrent,stale:msg.regionQualityStale,
       partial:msg.regionQualityPartial,unavailable:msg.regionQualityUnavailable};
@@ -228,6 +285,16 @@ export function createRegionExplorer({map,state,getSnapshot,saveState,showRecord
     }
   }
 
+  byId('stats-download').addEventListener('click',() => {
+    if(!lastAnalysis)return;
+    const data=new Blob([JSON.stringify(lastAnalysis,null,2)+'\n'],
+      {type:'application/json'});
+    const url=URL.createObjectURL(data);
+    const link=document.createElement('a');
+    link.href=url;link.download='wildfire-regional-statistical-analysis.json';
+    document.body.append(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+  });
   byId('coverage-download').addEventListener('click',() => {
     if(!lastCoverage)return;
     const report=new Blob([JSON.stringify(lastCoverage,null,2)+'\n'],
