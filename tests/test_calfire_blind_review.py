@@ -153,6 +153,10 @@ class BlindAlternativeReviewTests(unittest.TestCase):
             _write_new(folder, {"oops.json": b"{}"}, [self.study])
         with self.assertRaisesRegex(ValueError, "overlap"):
             _write_new(self.study / "private", {"oops.json": b"{}"}, [self.study])
+        public_workspace = Path(__file__).resolve().parents[1]
+        with self.assertRaisesRegex(ValueError, "public Git repository"):
+            _write_new(public_workspace / "private-reviewer-material",
+                       {"private.json": b"{}"}, [self.study])
 
     def test_cli_replays_all_original_evidence_and_detects_source_tamper(self):
         out = self.root / "blind-packet-cli"
