@@ -1,0 +1,41 @@
+name: Prospective agency GitHub Actions recovery sync
+on:
+  pull_request:
+    paths:
+      - 'fire_public/actions_agency_sync.py'
+      - 'fire_public/agency_vault.py'
+      - 'fire_public/analysis_receipt.py'
+      - 'fire_public/receipt_audit.py'
+      - 'fire_public/receipt_history.py'
+      - 'tests/test_actions_agency_sync.py'
+      - 'tests/test_agency_vault.py'
+      - '.github/workflows/test-actions-agency-sync.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'fire_public/actions_agency_sync.py'
+      - 'fire_public/agency_vault.py'
+      - 'fire_public/analysis_receipt.py'
+      - 'fire_public/receipt_audit.py'
+      - 'fire_public/receipt_history.py'
+      - 'tests/test_actions_agency_sync.py'
+      - 'tests/test_agency_vault.py'
+      - '.github/workflows/test-actions-agency-sync.yml'
+permissions:
+  contents: read
+jobs:
+  secure-local-import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile and test isolated local sync (no GitHub token)
+        run: |
+          python -m compileall -q fire_public
+          python -m unittest discover -s tests -p 'test_actions_agency_sync.py' -v
+          python -m unittest discover -s tests -p 'test_agency_vault.py' -v
+          python -m unittest discover -s tests -p 'test_receipt_history.py' -v
+          python -m unittest discover -s tests -p 'test_prospective_replay.py' -v

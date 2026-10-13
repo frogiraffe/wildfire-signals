@@ -123,7 +123,7 @@ def _vault_dir(path: Path) -> Path:
     receipts = path / "receipts"
     if not receipts.is_dir() or receipts.is_symlink():
         raise ValueError("private vault receipts directory missing")
-    extras = {x.name for x in path.iterdir()} - {"receipts", ".ingest.lock"}
+    extras = {x.name for x in path.iterdir()} - {"receipts", ".ingest.lock", ".actions-sync-state.json"}
     if extras:
         raise ValueError("unknown entries inside private evidence vault")
     return receipts
