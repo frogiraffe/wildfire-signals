@@ -537,6 +537,13 @@ python -m fire_public.historical_signal_analysis \
   --html /private/wildfire-research/antalya-stats.html
 ```
 
+Alternatively, run the [manual historical FIRMS statistical analysis workflow](.github/workflows/run-historical-signal-analysis.yml)
+from the GitHub Actions tab. It fetches available public research releases,
+validates their original source receipts, generates real-data reports for a
+selected global circle, and retains **only** an aggregate HTML/JSON analysis
+artifact for seven days. It is manual only; no recurring job or raw government
+incident uploads are configured.
+
 It produces a portable local-source JSON + HTML research report, not a
 commercial fire forecast. Collector receipt counts **do not** measure satellite
 overpass or cloud-free acquisition opportunities; source completeness is an
