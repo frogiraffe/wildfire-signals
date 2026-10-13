@@ -12,10 +12,12 @@ import hashlib
 import json
 import math
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from .collect import FIRMS_SOURCES
 from .historical_signal_analysis import _read_only, _utc
 from .observational_cohort import validate_regions
+from .pixel_history import import_release_assets
 from .region_diagnostics import distance_km
 
 MAX_SCANS = 64
@@ -163,6 +165,12 @@ def build_capture_pilot(db_path: str | Path, regions: list[dict], *,
             raise ValueError("pixel count exceeds bounded pilot budget")
         provenance = [dict(row) for row in db.execute("""SELECT DISTINCT provider,source_url,rights_url
                   FROM pixel_observations ORDER BY provider,source_url,rights_url""")]
+        asset_manifest = [dict(row) for row in db.execute("""SELECT scan_at,asset_name,asset_sha256,rows_seen
+                  FROM pixel_scan_assets ORDER BY scan_at,asset_name""")]
+        if (any(item["scan_at"] not in {scan["scan_at"] for scan in scans} or
+                len(item["asset_sha256"]) != 64 or item["rows_seen"] < 0
+                for item in asset_manifest)):
+            raise ValueError("pixel asset provenance contradicts scan receipts")
         pixels = db.execute("""SELECT provider,observed_at,first_captured_at,first_scan_at,
                                    latitude,longitude FROM pixel_observations
                             ORDER BY source_record_id""")
@@ -224,6 +232,7 @@ def build_capture_pilot(db_path: str | Path, regions: list[dict], *,
         "observation_unit": "new 0.05-degree cell by observed UTC hour, first archived in a scan",
         "regions": chosen, "heldout_region_ids": heldout,
         "source_receipts": scans, "source_provenance": provenance,
+        "source_asset_manifest": asset_manifest,
         "input_population": {"verified_scan_receipts": len(scans),
                              "unique_raw_pixels": count,
                              "selected_region_raw_pixels": selected,
@@ -242,11 +251,27 @@ def build_capture_pilot(db_path: str | Path, regions: list[dict], *,
     return report
 
 
+def verify_pilot_against_assets(assets_dir: str | Path, report: dict,
+                                regions: list[dict], heldout_region_ids: list[str]) -> dict:
+    """Re-import original hashed assets, then require exact aggregate reproduction."""
+    with TemporaryDirectory(prefix="wildfire-pilot-verify-") as temporary:
+        db_path = Path(temporary) / "reimport.sqlite3"
+        imported = import_release_assets(db_path, assets_dir)
+        rebuilt = build_capture_pilot(db_path, regions,
+                                      heldout_region_ids=heldout_region_ids)
+    if _canonical(rebuilt) != _canonical(report):
+        raise ValueError("aggregate does not reproduce from original source assets")
+    return {"reimported_scans": imported["imported_scans"],
+            "evidence_sha256": rebuilt["evidence_sha256"]}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--pixel-db", required=True, type=Path)
     parser.add_argument("--regions-json", required=True, type=Path)
     parser.add_argument("--holdout-region", action="append", required=True)
+    parser.add_argument("--verify-assets-dir", type=Path,
+                        help="re-import original release assets and compare the report before writing")
     parser.add_argument("--output-json", required=True, type=Path)
     args = parser.parse_args()
     if args.output_json.exists() or args.output_json.is_symlink():
@@ -254,6 +279,10 @@ def main() -> None:
     regions = json.loads(args.regions_json.read_text())
     report = build_capture_pilot(args.pixel_db, regions,
                                  heldout_region_ids=args.holdout_region)
+    if args.verify_assets_dir:
+        verified = verify_pilot_against_assets(args.verify_assets_dir, report,
+                                               regions, args.holdout_region)
+        print(json.dumps({"source_reimport_verification": verified}, sort_keys=True))
     args.output_json.write_bytes(_canonical(report))
     print(json.dumps({"output": str(args.output_json),
                       "evidence_sha256": report["evidence_sha256"],

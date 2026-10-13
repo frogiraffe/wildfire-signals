@@ -70,10 +70,16 @@ async function start() {
     for (const id of ['analytics-region','analytics-from','analytics-to'])
       el(id).addEventListener('change', () => {
         try { draw(report); el('analytics-status').textContent = 'Archived pilot loaded.'; }
-        catch (error) { el('analytics-status').textContent = error.message; }
+        catch (error) {
+          el('analytics-status').textContent = error.message;
+          for (const result of ['analytics-chart','analytics-days','analytics-comparison'])
+            el(result).replaceChildren();
+          el('analytics-selection-note').textContent = 'Correct the UTC date range to view evidence.';
+        }
       });
     method('Data source', 'NASA FIRMS VIIRS NOAA-20 and NOAA-21 NRT, originally captured public research releases');
     method('Pilot archive', `${report.input_population.verified_scan_receipts} scan receipts; ${number(report.input_population.unique_raw_pixels)} unique raw pixels; ${number(report.input_population.selected_region_raw_pixels)} inside ${report.regions.length} selected circles`);
+    method('Source assets', `${report.source_asset_manifest.length} original pixel files with archived SHA-256 and parsed row counts in the downloadable JSON`);
     method('Time span', `${dates[0]} to ${dates.at(-1)} (observed UTC dates; partial archive)`);
     const sourceStates = [...new Set(report.source_receipts.flatMap(scan => Object.keys(scan.source_states)))].sort()
       .map(source => `${source}: ${report.source_receipts.filter(scan => scan.source_states[source] === 'complete').length}/${report.source_receipts.length} complete collector requests`);
