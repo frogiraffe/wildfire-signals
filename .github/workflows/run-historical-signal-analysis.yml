@@ -103,6 +103,35 @@ jobs:
             --radius-km "$ANALYSIS_RADIUS" --source "$ANALYSIS_SENSOR" \
             --json "$RUNNER_TEMP/firms-reports/historical-thermal-statistics.json" \
             --html "$RUNNER_TEMP/firms-reports/historical-thermal-statistics.html"
+      - name: Create reproducible source-censored prospective study rows for selected region
+        run: |
+          python - <<'PY'
+          import json,os,sqlite3
+          from datetime import datetime,timedelta,timezone
+          root=os.environ['RUNNER_TEMP']
+          with sqlite3.connect(root+'/firms-source.sqlite3') as db:
+              latest=db.execute('SELECT MAX(captured_at) FROM pixel_scans').fetchone()[0]
+          if latest is None:
+              raise SystemExit('No original verified FIRMS scan available')
+          at=datetime.fromisoformat(latest.replace('Z','+00:00')).astimezone(timezone.utc)
+          end=at.replace(hour=(at.hour//6)*6,minute=0,second=0,microsecond=0)
+          start=end-timedelta(hours=48)
+          with open(root+'/study-region.json','w',encoding='utf-8') as handle:
+              json.dump([{'region_id':'USER_SELECTED_GLOBAL_CIRCLE',
+                          'latitude':float(os.environ['ANALYSIS_LAT']),
+                          'longitude':float(os.environ['ANALYSIS_LON']),
+                          'radius_km':float(os.environ['ANALYSIS_RADIUS'])}],handle)
+          with open(os.environ['GITHUB_ENV'],'a',encoding='utf-8') as env:
+              env.write('STUDY_START='+start.isoformat()+'\\n')
+              env.write('STUDY_END='+end.isoformat()+'\\n')
+          PY
+          python -m fire_public.observational_cohort \
+            --pixel-db "$RUNNER_TEMP/firms-source.sqlite3" \
+            --regions-json "$RUNNER_TEMP/study-region.json" \
+            --start-at "$STUDY_START" --end-at "$STUDY_END" \
+            --cadence-hours 6 --lookback-hours 24 --target-hours 24 \
+            --source "$ANALYSIS_SENSOR" \
+            --output-dir "$RUNNER_TEMP/firms-reports/cohort"
       - name: Retain aggregate-only analysis and source audit for inspection
         uses: actions/upload-artifact@v4
         with:
@@ -111,6 +140,10 @@ jobs:
             ${{ runner.temp }}/firms-reports/historical-thermal-statistics.json
             ${{ runner.temp }}/firms-reports/historical-thermal-statistics.html
             ${{ runner.temp }}/firms-reports/source-sync-and-coverage.json
+            ${{ runner.temp }}/firms-reports/cohort/observations.jsonl
+            ${{ runner.temp }}/firms-reports/cohort/observations.csv
+            ${{ runner.temp }}/firms-reports/cohort/manifest.json
+            ${{ runner.temp }}/firms-reports/cohort/quality.html
           retention-days: 7
           if-no-files-found: error
           compression-level: 6
