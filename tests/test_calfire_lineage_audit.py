@@ -5,6 +5,7 @@ No real independent human reviews or verified fire/nonfire labels are created.
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 from pathlib import Path
 import subprocess
@@ -44,7 +45,8 @@ class IndependentDocumentLineageTests(unittest.TestCase):
                 vote.update(decision=mode,
                             selected_source_url=self.cases[vote["candidate_id"]][
                                 "official_calfire_page_options"][0]["source_url"],
-                            external_evidence_url="https://example.org/research/" + who,
+                            external_evidence_url=("https://example.org/research/" + who + "/" +
+                                                   hashlib.sha256(vote["candidate_id"].encode()).hexdigest()[:12]),
                             source_lineage="potentially_independent_not_verified")
         return data
 
@@ -52,7 +54,8 @@ class IndependentDocumentLineageTests(unittest.TestCase):
                 published="2026-10-13T12:00:00Z", captured="2026-10-13T13:00:00Z",
                 event_day="2018-07-20T00:00:00Z", relation="same_event_document_claim"):
         case = self.original[self.target]
-        source_url = "https://example.org/research/" + who
+        source_url = ("https://example.org/research/" + who + "/" +
+                      hashlib.sha256(self.target.encode()).hexdigest()[:12])
         meta = {
             "schema_version": 1,
             "candidate_id": self.target,
@@ -107,13 +110,19 @@ class IndependentDocumentLineageTests(unittest.TestCase):
         self.receipt("bob")
         result = analyze(self.casebook, first, second, self.loaded())
         row = next(x for x in result["cases"] if x["candidate_id"] == self.target)
-        self.assertEqual(row["status"], "structurally_reviewable_not_authenticated")
-        self.assertEqual(row["unresolved_gates"], [])
+        reused = any(option["candidate_pair_count_reusing_url"] > 1
+                     for option in self.cases[self.target]["official_calfire_page_options"])
+        expected = ["original_calfire_page_reused_across_candidate_pairs"] if reused else []
+        self.assertEqual(row["unresolved_gates"], expected)
+        expected_status = ("source_lineage_or_citation_gaps" if reused else
+                           "structurally_reviewable_not_authenticated")
+        self.assertEqual(row["status"], expected_status)
         self.assertEqual(row["private_documents_archived"], 2)
         self.assertEqual(len(row["cited_document_links"]), 2)
-        self.assertEqual(result["statuses"]["structurally_reviewable_not_authenticated"], 1)
+        self.assertEqual(result["statuses"]["structurally_reviewable_not_authenticated"],
+                         0 if reused else 1)
         self.assertEqual(result["statuses"]["source_lineage_or_citation_gaps"],
-                         len(self.cases) - 1)
+                         len(self.cases) if reused else len(self.cases) - 1)
         self.assertEqual(result["private_receipts_verified"], 2)
         self.assertEqual(result["verified_same_event_crosswalks"], 0)
         self.assertTrue(all(not n["independent_origin_verified"]
@@ -140,6 +149,13 @@ class IndependentDocumentLineageTests(unittest.TestCase):
             if vote["candidate_id"] == self.target:
                 vote["selected_source_url"] = self.cases[self.target][
                     "official_calfire_page_options"][-1]["source_url"]
+        others = [cid for cid in self.cases if cid != self.target]
+        self.assertTrue(others)
+        for sheet in (first, second):
+            target_url = next(v["external_evidence_url"] for v in sheet["votes"]
+                              if v["candidate_id"] == self.target)
+            next(v for v in sheet["votes"] if v["candidate_id"] == others[0])[
+                "external_evidence_url"] = target_url
         result = analyze(self.casebook, first, second)
         row = next(x for x in result["cases"] if x["candidate_id"] == self.target)
         self.assertEqual(row["status"], "unresolved_human_hypotheses")
