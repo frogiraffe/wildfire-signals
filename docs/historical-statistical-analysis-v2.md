@@ -31,6 +31,14 @@ Open the new HTML file locally. It contains no external scripts, CDNs, model cal
 
 Supported window lengths are 24, 48, 72, 168 and 336 hours, all partitioned into **12 equal, UTC-bounded bins**. All circles are geodesic with radius up to 250 km, including areas straddling the 180° meridian.
 
+## Run the analysis on real published releases in GitHub Actions
+
+Use the repository's [Run historical FIRMS statistical analysis (manual)](../.github/workflows/run-historical-signal-analysis.yml) workflow and click **Run workflow**. Select latitude, longitude, radius (up to 250 km), 24/48/72/168/336-hour UTC window, original sensor and number of daily release assets. A default Antalya center is provided as an *illustrative analysis geography*, not as an area known to contain a fire.
+
+This manual workflow downloads bounded **public** original FIRMS pixel releases, verifies all source SHA-256 hashes, imports the originals to temporary SQLite, and uses the latest captured scan as the analysis decision time. The run uploads an HTML + JSON research report and separate source integrity/coverage audit as a **7-day GitHub Actions artifact**. Raw pixels and the SQLite database are **not** uploaded or committed. No paid/cloud state mutation, cron, historical agency data publication, or model deployment occurs.
+
+As checked on 13 October 2026, the repository has genuine original research release assets for `analysis-evidence-2026-10-12` and `analysis-evidence-2026-10-13`. Only two days are presently confirmed in the release listing; this is insufficient for a complete twelve-bin 72-hour multi-source observation audit. Accordingly, a real-data report can describe available archived thermal detections and missing scan periods, but its trend statistics may correctly remain `null`.
+
 ## Two distinct clocks, not one surrogate timestamp
 
 - **Observed at:** the pixel's raw FIRMS acquisition time; this determines the statistical bin
