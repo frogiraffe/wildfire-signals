@@ -65,6 +65,29 @@
               <p id="coverage-caveat" data-i18n="coverageCaveat">Successful global API requests do not prove complete observation coverage. Agency sources do not cover every country.</p>
               <button id="coverage-download" type="button" data-i18n="coverageDownload">Export evidence JSON</button>
             </section>
+            <section class="region-compare" aria-labelledby="compare-title">
+              <h3 id="compare-title" data-i18n="compareTitle">Compare a second region</h3>
+              <p data-i18n="compareScope">Same radius and observation window; differences describe thermal candidates, not wildfire risk or absence.</p>
+              <div class="region-controls">
+                <button type="button" id="compare-pick" aria-pressed="false" data-i18n="comparePick">Choose B on map</button>
+                <button type="button" id="compare-center" data-i18n="compareCenter">Use map center for B</button>
+                <button type="button" id="compare-clear" data-i18n="compareClear">Clear B</button>
+              </div>
+              <p id="compare-location" class="region-location" role="status"></p>
+              <div id="compare-results" hidden>
+                <p id="compare-quality" role="status"></p>
+                <dl>
+                  <dt data-i18n="compareFirstCount">Region A candidate cell-hours</dt><dd id="compare-a-count">—</dd>
+                  <dt data-i18n="compareSecondCount">Region B candidate cell-hours</dt><dd id="compare-b-count">—</dd>
+                  <dt data-i18n="compareDifference">Difference A − B (cell-hours)</dt><dd id="compare-diff">—</dd>
+                  <dt data-i18n="compareDistance">Center separation</dt><dd id="compare-separation">—</dd>
+                </dl>
+                <p id="compare-caveat"></p>
+                <h3 data-i18n="compareSensors">Sensor memberships: A / B</h3>
+                <ul id="compare-sensors" class="region-sensors"></ul>
+                <button id="compare-download" type="button" data-i18n="compareDownload">Export comparison evidence JSON</button>
+              </div>
+            </section>
             <h3 data-i18n="regionLeads">Observed locations to inspect</h3>
             <ol id="region-leads" class="region-leads"></ol>
             <p id="region-empty" data-i18n="regionNone">No matching observations in available data does not prove no fire.</p>
