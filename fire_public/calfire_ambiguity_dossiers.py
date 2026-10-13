@@ -20,7 +20,6 @@ from pathlib import Path
 
 from .calfire_incident_archive import _norm
 from .calfire_incident_matrix import analyze as replay_full_matrix
-from .calfire_incident_matrix import write_reports as write_full_matrix
 from .mtbs_candidate_triage import _csv_safe
 from .region_diagnostics import distance_km
 
