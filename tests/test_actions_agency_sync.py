@@ -116,7 +116,9 @@ class ActionsAgencySyncTests(unittest.TestCase):
         self.assertEqual(verify(self.vault)["source_health"]["source_failure_counts"]["cwfis"],1)
         again=sync(self.vault,client)
         self.assertEqual(again["new_original_agency_receipts"],0)
-        self.assertEqual(again["existing_original_agency_receipts"],2)
+        self.assertEqual(again["already_checked_archives"],2)
+        self.assertEqual(again["downloaded_archives"],0)
+        self.assertEqual(again["vault_receipts"],2)
         db=self.root/"asof.sqlite3"
         rebuilt=rebuild_sqlite(self.vault,db)
         self.assertEqual(rebuilt["historical_scans"],2)
@@ -156,7 +158,8 @@ class ActionsAgencySyncTests(unittest.TestCase):
         result=sync(self.vault,c)
         self.assertEqual(result["new_original_agency_receipts"],0)
         self.assertEqual(result["vault_receipts"],0)
-        self.assertFalse(self.vault.exists())
+        self.assertTrue((self.vault/"receipts").is_dir())
+        self.assertTrue((self.vault/".actions-sync-state.json").is_file())
 
     def test_expired_and_page_limit_have_explicit_incomplete_status(self):
         client=self.client()
@@ -184,6 +187,61 @@ class ActionsAgencySyncTests(unittest.TestCase):
         with self.assertRaises(ValueError):sync(self.vault,c,since="yesterday")
         with self.assertRaises(ValueError):sync(self.vault,c,pages=0)
         with self.assertRaises(ValueError):sync(self.vault,c,max_downloads=201)
+
+    def test_bounded_catchup_advances_to_older_unprocessed_artifacts(self):
+        client=self.client()
+        first=sync(self.vault,client,max_downloads=1)
+        self.assertEqual(first["downloaded_archives"],1)
+        self.assertEqual(first["outside_download_limit"],1)
+        self.assertFalse(first["discovery_exhaustive"])
+        second=sync(self.vault,client,max_downloads=1)
+        self.assertEqual(second["downloaded_archives"],1)
+        self.assertEqual(second["already_checked_archives"],1)
+        self.assertEqual(second["new_original_agency_receipts"],1)
+        self.assertTrue(second["discovery_exhaustive"])
+        third=sync(self.vault,client,max_downloads=1)
+        self.assertEqual(third["downloaded_archives"],0)
+        self.assertEqual(third["already_checked_archives"],2)
+        self.assertEqual(third["vault_receipts"],2)
+        self.assertEqual(verify(self.vault)["manifest"]["file_count"],2)
+
+    def test_progress_recovers_missing_source_without_trusting_cached_agency_bytes(self):
+        client=self.client()
+        sync(self.vault,client)
+        original=next((self.vault/"receipts").glob("agency-*"))
+        original.unlink()
+        again=sync(self.vault,client)
+        self.assertEqual(again["new_original_agency_receipts"],1)
+        self.assertEqual(again["already_checked_archives"],1)
+        self.assertEqual(again["vault_receipts"],2)
+
+    def test_progress_is_never_ground_truth_and_bad_file_rejected(self):
+        client=self.client()
+        sync(self.vault,client,max_downloads=1)
+        progress=self.vault/".actions-sync-state.json"
+        content=json.loads(progress.read_text())
+        self.assertEqual(content["schema_version"],1)
+        self.assertEqual(progress.stat().st_mode & 0o777,0o600)
+        content["checked"]["2"]["receipt_sha256"]="0"*64
+        progress.write_text(json.dumps(content))
+        with self.assertRaisesRegex(ValueError,"archived original changed"):
+            sync(self.vault,client)
+        progress.write_text("{not-json")
+        with self.assertRaises(ValueError):
+            sync(self.vault,client)
+
+    def test_pixel_only_progress_skips_known_no_agency_artifact(self):
+        client=self.client()
+        client.zip_by_id[2]=zipped(None,None)
+        first=sync(self.vault,client,max_downloads=1)
+        self.assertEqual(first["pixel_only_or_no_agency_receipt"],1)
+        second=sync(self.vault,client,max_downloads=1)
+        self.assertEqual(second["new_original_agency_receipts"],1)
+        self.assertEqual(second["already_checked_archives"],1)
+        self.assertEqual(second["outside_download_limit"],0)
+        third=sync(self.vault,client,max_downloads=1)
+        self.assertEqual(third["downloaded_archives"],0)
+        self.assertEqual(third["already_checked_archives"],2)
 
     def test_reject_foreign_workflow_and_failed_run_before_downloading(self):
         for change in [{"path":".github/workflows/test.yml"},
