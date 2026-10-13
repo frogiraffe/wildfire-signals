@@ -245,7 +245,7 @@ def analyze_historical_signals(
         "provenance_receipts":references,
         "provenance_receipt_count_excluded_from_list":max(0,len(scans)-len(references)),
         "provenance_receipts_sha256":hashlib.sha256(
-            "\\n".join(all_reference_hashes).encode()).hexdigest(),
+            "\n".join(all_reference_hashes).encode()).hexdigest(),
         "bin_quality":{
             "bins_with_no_receipt":missing,
             "bins_with_all_selected_sources_complete_receipts":all_complete,
@@ -382,7 +382,7 @@ def main() -> None:
         parser.error("HTML and JSON must not overwrite each other")
     if args.json:
         with args.json.open("x",encoding="utf-8") as stream:
-            stream.write(json.dumps(report,indent=2,sort_keys=True,ensure_ascii=False)+"\\n")
+            stream.write(json.dumps(report,indent=2,sort_keys=True,ensure_ascii=False)+"\n")
     if args.html:
         with args.html.open("x",encoding="utf-8") as stream:
             stream.write(render_html(report))
