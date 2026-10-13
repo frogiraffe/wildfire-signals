@@ -73,6 +73,36 @@ test('Zero observed records are reported counts, NOT fire absence',()=>{
   assert.ok(result.notes.some(s=>s.includes('never establish wildfire absence')));
 });
 
+test('Successful empty response differs from zero inside a selected circle',()=>{
+  const result=audit(snap({sources:[
+    {key:'VIIRS_NOAA20_NRT',status:'complete',returned_record_count:0,
+      last_success_at:scan},
+    {key:'VIIRS_NOAA21_NRT',status:'complete',returned_record_count:3,
+      last_success_at:scan},
+    {key:'nifc_wfigs',status:'failed',returned_record_count:null},
+    {key:'cwfis',status:'complete',returned_record_count:0}
+  ],events:[candidate('outside',150,'VIIRS_NOAA21_NRT')],incidents:[]}));
+  assert.equal(row(result,'VIIRS_NOAA20_NRT').responseState,'empty');
+  assert.equal(row(result,'VIIRS_NOAA21_NRT').responseState,'nonempty');
+  assert.equal(row(result,'VIIRS_NOAA21_NRT').observedInCircle,0);
+  assert.equal(row(result,'nifc_wfigs').responseState,'unknown');
+  assert.equal(row(result,'VIIRS_NOAA20_NRT').returnedRecordCount,0);
+  assert.equal(row(result,'nws_grid').responseState,'not_monitored');
+});
+
+test('Regional latest observation and global provider age remain separate',()=>{
+  const result=audit(snap({sources:[
+    {key:'VIIRS_NOAA20_NRT',status:'complete',product_age_seconds:60,
+      returned_record_count:20,last_success_at:scan}
+  ]}));
+  const source=row(result,'VIIRS_NOAA20_NRT');
+  assert.equal(source.latestObservedAt,observed);
+  assert.equal(source.regionalObservationAgeSeconds,7200);
+  assert.equal(source.productAgeSeconds,60);
+  assert.equal(source.sourceReportedAt,scan);
+  assert.equal(row(result,'nws_grid').regionalObservationAgeSeconds,null);
+});
+
 test('Unavailable snapshot never presents zero observations or success',()=>{
   const result=audit(snap({manifest:{last_scan_at:null,data_status:'unknown'}}));
   assert.equal(result.snapshotState,'unavailable');

@@ -275,6 +275,10 @@ and NIFC/CWFIS current agency records with the snapshot's per-source health,
 acquisition age and known scope. US NWS and perimeters are explicitly listed as
 on-demand/not monitored sources rather than implied global coverage. The panel
 also exports an auditable JSON snapshot with provenance and missingness warnings.
+Provider response counts now distinguish an accepted empty response from a zero count
+in the selected circle; failed or deferred responses remain unknown even if older
+records are retained. Regional last observation time and global provider product age
+are labeled separately.
 It is a client-side evidence tool: **zero detections never prove absence of fire,
 and a successful world API call does not validate regional observation completeness.**
 

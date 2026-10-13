@@ -7,6 +7,8 @@ on:
       - 'public/region-explorer-view.mjs'
       - 'public/index.html'
       - 'public/style.css'
+      - 'fire_public/collect.py'
+      - 'tests/test_collect.py'
       - 'tests/js/coverage-audit.test.mjs'
       - 'tests/browser/investigation-local.mjs'
       - '.github/workflows/test-coverage-audit.yml'
@@ -18,6 +20,8 @@ on:
       - 'public/region-explorer-view.mjs'
       - 'public/index.html'
       - 'public/style.css'
+      - 'fire_public/collect.py'
+      - 'tests/test_collect.py'
       - 'tests/js/coverage-audit.test.mjs'
       - 'tests/browser/investigation-local.mjs'
       - '.github/workflows/test-coverage-audit.yml'
@@ -32,8 +36,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
       - name: Test public analytical and provider status calculations
         run: npm run test:public
+      - name: Test collector source response contract
+        run: python -m unittest tests.test_collect -v
   browser:
     needs: unit
     runs-on: ubuntu-latest

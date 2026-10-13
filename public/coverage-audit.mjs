@@ -100,6 +100,11 @@ export function regionCoverageAudit(snapshot,region,{hours=72,now=new Date()}={}
     const ageSec=typeof productAge==='number'&&Number.isFinite(productAge)&&
       productAge>=0?productAge:null;
     const failureCount=observation?.consecutive_failures;
+    const returned=observation?.returned_record_count;
+    const returnedRecordCount=collected&&observation?.status==='complete'&&
+      Number.isSafeInteger(returned)&&returned>=0?returned:null;
+    const responseState=!collected?'not_monitored':returnedRecordCount===null?'unknown':
+      returnedRecordCount===0?'empty':'nonempty';
     return {
       ...source,
       status,recordedSourceState:observation?.status||null,
@@ -107,7 +112,10 @@ export function regionCoverageAudit(snapshot,region,{hours=72,now=new Date()}={}
       observedUnit:source.kind==='satellite'?'candidate_cell_hours':
         source.kind==='agency'?'current_agency_layer_ids':'not_measured',
       latestObservedAt:Number.isFinite(latest)?new Date(latest).toISOString():null,
+      regionalObservationAgeSeconds:Number.isFinite(latest)?
+        Math.max(0,Math.floor((asOf-latest)/1000)):null,
       productAgeSeconds:ageSec,
+      returnedRecordCount,responseState,
       consecutiveFailures:Number.isInteger(failureCount)&&failureCount>=0?failureCount:null,
       sourceReportedAt:observation?.last_success_at||null,
       capabilityOnly:!collected,
