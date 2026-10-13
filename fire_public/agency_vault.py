@@ -291,14 +291,15 @@ def restore_bundle(bundle_path: Path, vault: Path) -> dict:
     if vault.exists() or not vault.parent.is_dir():
         raise ValueError("restore needs a new, private output vault directory")
     if (not bundle_path.is_file() or bundle_path.is_symlink() or
-            bundle_path.stat().st_size > MAX_TOTAL_BYTES + 2 * MAX_FILES):
+            bundle_path.stat().st_size > MAX_TOTAL_BYTES + 2 * 1024 * 1024):
         raise ValueError("invalid or oversized portable archive")
     # Strict allowlist prevents Zip Slip, extra files, forged links and zip bombs.
     with zipfile.ZipFile(bundle_path) as archive:
         entries = archive.infolist()
         if len(entries) > MAX_FILES+1 or any(
-                z.is_dir() or z.flag_bits & 0x1 or z.file_size > MAX_FILE_BYTES
-                and z.filename != "manifest.json" or z.compress_type != zipfile.ZIP_STORED
+                z.is_dir() or z.flag_bits & 0x1 or
+                z.file_size > (3 * 1024 * 1024 if z.filename == "manifest.json" else MAX_FILE_BYTES) or
+                z.compress_type != zipfile.ZIP_STORED
                 for z in entries):
             raise ValueError("unsafe or oversized portable archive entry")
         names = [z.filename for z in entries]
