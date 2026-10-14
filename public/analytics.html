@@ -48,16 +48,18 @@
         <p><a id="weather-download" href="./data/batman-weather-context-2026-10-11.json" download>Download selected joined evidence JSON</a> · <a href="https://www.ncei.noaa.gov/products/global-historical-climatology-network-hourly" rel="noopener noreferrer" target="_blank">NOAA GHCNh source</a> · <a href="https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ncdc%3AC01688" rel="noopener noreferrer" target="_blank">Dataset rights and citation</a></p>
       </section>
       <section aria-labelledby="annual-heading" class="analytics-card">
-        <h2 id="annual-heading">Antalya · three years of archival observations</h2>
-        <p>NASA FIRMS standard VIIRS country files, 2023–2025; thermal pixels within 25 km of Antalya airport. Weather is measured at one NOAA GHCNh station. Counts are archived detections, not fire counts or rates. Unlisted acquisition opportunities, clouds and source gaps are unknown. Monthly zero means no archived candidate in these files, not a verified no-fire month.</p>
+        <h2 id="annual-heading">Türkiye · three years of archival observations</h2>
+        <p>NASA FIRMS standard VIIRS country files, 2023–2025; thermal pixels within a 25 km circle around each fixed NOAA GHCNh station. Counts are archived detections, not fire counts or rates. The two selected sites have different local conditions and unknown satellite acquisition exposure, so count differences do not rank fire risk. Monthly zero means no archived candidate in these files, not a verified no-fire month.</p>
         <p id="annual-status" role="status" aria-live="polite">Loading annual source evidence…</p>
         <div class="analytics-controls">
+          <label>Study region <select id="annual-region" aria-label="Historical annual study region"></select></label>
           <label>From month (UTC) <input id="annual-from" type="month" min="2023-01" max="2025-12" value="2023-01"></label>
           <label>To month (UTC) <input id="annual-to" type="month" min="2023-01" max="2025-12" value="2025-12"></label>
           <label>Sensor <select id="annual-provider"><option value="all">Both VIIRS sensors</option><option value="VIIRS_NOAA20_STANDARD">NOAA-20</option><option value="VIIRS_SNPP_STANDARD">Suomi NPP</option></select></label>
           <label>Station variable <select id="annual-variable"><option value="temperature_c">Temperature (°C)</option><option value="wind_speed_m_s">Wind speed (m/s)</option><option value="relative_humidity_pct">Relative humidity (%)</option></select></label>
         </div>
         <p id="annual-summary"></p>
+        <div class="analytics-table-wrap"><table><thead><tr><th scope="col">Study / UTC year</th><th scope="col">Archived pixels (NOAA-20 / S-NPP)</th><th scope="col">Candidate cell-hours</th><th scope="col">Days with candidates</th><th scope="col">Positive sensor-hours</th><th scope="col">With prior temperature</th><th scope="col">Satellite opportunity</th></tr></thead><tbody id="annual-year-comparison"></tbody></table></div>
         <h3>Archived thermal candidate pixels by month</h3>
         <div id="annual-thermal-chart" class="analytics-chart analytics-annual-chart" role="img" aria-label="Monthly archived thermal candidate pixels"></div>
         <h3>Station monthly median</h3>

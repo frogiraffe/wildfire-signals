@@ -170,3 +170,23 @@ export function selectAnnualArchive(report, {from, to, provider, variable}) {
   }
   return {months: [...grouped.values()].sort((a,b) => a.month.localeCompare(b.month))};
 }
+
+export function annualYearSummary(report) {
+  const years = [];
+  for (let year = Number(report.start_date.slice(0,4)); year <= Number(report.end_date.slice(0,4)); year++) {
+    const label = String(year);
+    const monthly = report.monthly_rows.filter(row => row.observed_month.startsWith(label));
+    const positive = report.candidate_provider_hours.filter(row => row.observed_hour.startsWith(label));
+    years.push({year: label,
+      rawPixels: monthly.reduce((sum,row) => sum + row.raw_pixels, 0),
+      candidateCellHours: monthly.reduce((sum,row) => sum + row.candidate_cell_hours, 0),
+      daysWithArchivedCandidates: new Set(report.daily_rows.filter(row =>
+        row.observed_date.startsWith(label)).map(row => row.observed_date)).size,
+      positiveSensorHours: positive.length,
+      temperatureMatchedPositiveSensorHours: positive.filter(row => row.temperature_c !== null).length,
+      byProvider: Object.fromEntries([...new Set(report.source_asset_manifest.map(row => row.provider))].map(
+        provider => [provider, monthly.filter(row => row.provider === provider).reduce(
+          (sum,row) => sum + row.raw_pixels, 0)]))});
+  }
+  return years;
+}
