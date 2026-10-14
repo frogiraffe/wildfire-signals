@@ -49,7 +49,7 @@ class HoldoutAuditTests(unittest.TestCase):
 
     def test_temporal_overlap(self):
         data = valid()
-        data[3]["feature_as_of"] = "2024-01-01T00:00:00Z"
+        data[2]["feature_as_of"] = "2024-01-01T00:00:00Z"
         self.assertIn("temporal_or_embargo_overlap", audit_holdout(data)["failed_gates"])
 
     def test_duplicate_and_missing_label(self):
