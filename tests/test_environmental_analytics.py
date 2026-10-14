@@ -132,6 +132,12 @@ class EnvironmentalAnalyticsTests(unittest.TestCase):
         self.assertEqual(hashlib.sha256(canonical).hexdigest(), digest)
         self.assertEqual(report["region"]["region_id"], "SACRAMENTO_25KM")
         self.assertEqual(report["station"]["id"], "USW00093225")
+        self.assertEqual(report["source_sha256"],
+                         "2e63cb3f7ea2ca89eb52947071bd8c18cc9e4da80df5b73c808d4f25f14f5a92")
+        self.assertEqual(report["region"], json.loads((path.parents[2] /
+                         "examples/sacramento-region.json").read_text())[0])
+        self.assertEqual(report["station"], json.loads((path.parents[2] /
+                         "examples/sacramento-station.json").read_text()))
         self.assertEqual(report["population"]["raw_pixels"], 22)
         self.assertEqual(report["population"]["candidate_cell_hours"], 10)
         self.assertEqual(report["population"]["candidate_hours"], 6)
@@ -150,6 +156,7 @@ class EnvironmentalAnalyticsTests(unittest.TestCase):
                             for row in report["candidate_hours"]))
         self.assertFalse(report["observation_opportunity_verified"])
         self.assertIsNone(report["environment_first_available_at"])
+        self.assertIsNone(report["candidate_hours"][-1]["weather_observed_at"])
 
 
 if __name__ == "__main__":
