@@ -1,5 +1,5 @@
 import {validatePilot, selectPilot, validateEnvironment, selectEnvironment,
-  environmentalVariables, validateCatalog} from './analytics-data.mjs';
+  environmentalVariables, validateCatalog, validatePairedCatalog} from './analytics-data.mjs';
 
 const el = id => document.getElementById(id);
 const cell = (row, value) => {
@@ -133,8 +133,22 @@ async function startCatalog() {
     const response = await fetch('./data/batman-cmr-context-2026-10-11.json', {cache:'no-store'});
     if (!response.ok) throw new Error(`Report unavailable (${response.status})`);
     const report = validateCatalog(await response.json());
+    let paired = null;
+    try {
+      const pairedResponse = await fetch('./data/batman-cmr-paired-products-2026-10-11.json', {cache:'no-store'});
+      if (!pairedResponse.ok) throw new Error(`Report unavailable (${pairedResponse.status})`);
+      paired = validatePairedCatalog(await pairedResponse.json(), report);
+      const pairCounts = paired.population;
+      el('pair-summary').textContent = `${pairCounts.paired_intervals} exact same-platform six-minute intervals have both geolocation and active-fire product catalog entries; ${pairCounts.candidate_minutes_with_both_catalogs}/${pairCounts.candidate_provider_minutes} archived provider-minute groups fall inside such intervals. This remains catalog metadata, not verified cell-level observation or no-detection evidence.`;
+      el('pair-provenance').textContent = `NASA CMR active-fire L2 ${paired.source_queries.map(query => `${query.product} v${query.collection_version}: ${query.cmr_hits} records, response SHA-256 ${query.response_sha256}`).join(' · ')}. Queried ${paired.active_catalog_fetched_at}; original L1 and L2 files were not inspected. Catalog metadata update times do not establish first availability.`;
+      el('pair-status').textContent = 'Active-fire product catalog context loaded.';
+    } catch (error) {
+      el('pair-status').textContent = `Active-fire product catalog context unavailable: ${error.message}`;
+      el('pair-summary').textContent = '';
+      el('pair-provenance').textContent = '';
+    }
     el('catalog-candidates').replaceChildren();
-    for (const item of report.candidate_provider_minutes) {
+    for (const [index, item] of report.candidate_provider_minutes.entries()) {
       const tr = document.createElement('tr');
       cell(tr, item.observed_minute.replace('T',' ') + ' UTC');
       cell(tr, item.provider.replace('VIIRS_','').replace('_NRT',''));
@@ -142,6 +156,9 @@ async function startCatalog() {
       cell(tr, item.catalog_granule_ids.length
         ? `${item.catalog_granule_ids.length} granule interval${item.catalog_granule_ids.length === 1 ? '' : 's'}`
         : 'No exact interval match; acquisition status unknown');
+      cell(tr, paired ? (paired.candidate_provider_minutes[index].active_fire_granule_ids.length
+        ? 'L2 product catalogued in exact interval' : 'No exact L2 interval match; status unknown')
+        : 'Catalog unavailable');
       el('catalog-candidates').append(tr);
     }
     const count = report.population;
@@ -150,6 +167,7 @@ async function startCatalog() {
     el('catalog-status').textContent = 'CMR catalog context loaded.';
   } catch (error) {
     el('catalog-status').textContent = `CMR catalog context unavailable: ${error.message}`;
+    el('pair-status').textContent = 'Active-fire product catalog comparison requires geolocation context.';
     el('catalog-candidates').replaceChildren();
   }
 }

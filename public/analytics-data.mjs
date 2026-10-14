@@ -80,3 +80,34 @@ export function validateCatalog(report) {
     throw new Error('Unsupported or incomplete CMR catalog context');
   return report;
 }
+
+export function validatePairedCatalog(report, geolocation) {
+  if (report?.schema_version !== 1 || report.status !== 'paired_product_catalog_context_only' ||
+      report.geolocation_report_sha256 !== geolocation.evidence_sha256 ||
+      report.region?.region_id !== geolocation.region.region_id ||
+      report.study_id !== geolocation.study_id ||
+      report.start_date !== geolocation.start_date || report.end_date !== geolocation.end_date ||
+      report.query_bbox_wgs84 !== geolocation.query_bbox_wgs84 ||
+      report.geolocation_granule_contents_verified !== false ||
+      report.active_fire_granule_contents_verified !== false ||
+      report.observation_opportunity_verified !== false || report.no_detection_count !== null ||
+      report.active_catalog_first_available_at !== null ||
+      !/^[a-f0-9]{64}$/.test(report.evidence_sha256 ?? '') ||
+      !Array.isArray(report.source_queries) || report.source_queries.length !== 2 ||
+      !Array.isArray(report.product_intervals) ||
+      !Array.isArray(report.candidate_provider_minutes) ||
+      report.population?.geolocation_granules !== geolocation.granules.length ||
+      report.population?.candidate_provider_minutes !== geolocation.candidate_provider_minutes.length ||
+      report.population?.archived_raw_pixels !== geolocation.population.archived_raw_pixels ||
+      report.population?.paired_intervals !== report.product_intervals.filter(
+        item => item.pair_status === 'both_catalogued').length ||
+      report.population?.candidate_minutes_with_both_catalogs !== report.candidate_provider_minutes.filter(
+        item => item.pair_status === 'both_catalogued').length ||
+      report.candidate_provider_minutes.some((row, index) =>
+        row.observed_minute !== geolocation.candidate_provider_minutes[index]?.observed_minute ||
+        row.provider !== geolocation.candidate_provider_minutes[index]?.provider ||
+        row.raw_pixels !== geolocation.candidate_provider_minutes[index]?.raw_pixels ||
+        !['both_catalogued','geolocation_only','active_fire_only','neither_exact_interval'].includes(row.pair_status)))
+    throw new Error('Unsupported or incomplete paired CMR catalog context');
+  return report;
+}

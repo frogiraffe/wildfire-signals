@@ -16,7 +16,9 @@ const files = new Map([
   ['/data/sacramento-weather-context-2026-10-11.json',
     ['data/sacramento-weather-context-2026-10-11.json','application/json']],
   ['/data/batman-cmr-context-2026-10-11.json',
-    ['data/batman-cmr-context-2026-10-11.json','application/json']]
+    ['data/batman-cmr-context-2026-10-11.json','application/json']],
+  ['/data/batman-cmr-paired-products-2026-10-11.json',
+    ['data/batman-cmr-paired-products-2026-10-11.json','application/json']]
 ]);
 const root = new URL('../../public/', import.meta.url);
 const server = createServer(async (request,response) => {
@@ -38,9 +40,13 @@ try {
     assert.equal(await page.locator('#weather-region option').count(),2);
     assert.equal(await page.locator('#weather-comparison tr').count(),2);
     await page.locator('#catalog-status').getByText('CMR catalog context loaded.').waitFor();
+    await page.locator('#pair-status').getByText('Active-fire product catalog context loaded.').waitFor();
     assert.equal(await page.locator('#catalog-candidates tr').count(),7);
     assert.match(await page.locator('#catalog-summary').textContent(),/20 granules/);
     assert.match(await page.locator('#catalog-summary').textContent(),/not cell-level observation opportunity/);
+    assert.match(await page.locator('#pair-summary').textContent(),/20 exact same-platform/);
+    assert.match(await page.locator('#pair-summary').textContent(),/5\/7 archived provider-minute/);
+    assert.match(await page.locator('#catalog-candidates tr:first-child').textContent(),/L2 product catalogued/);
     assert.equal(await page.locator('#weather-candidates tr').count(),6);
     assert.match(await page.locator('#weather-provenance').textContent(),/first availability is unknown/);
     assert.match(await page.locator('#weather-provenance').textContent(),/CC0-1.0/);
@@ -100,4 +106,13 @@ try {
   await missingCatalog.locator('#catalog-status').getByText(/CMR catalog context unavailable/).waitFor();
   assert.equal(await missingCatalog.locator('#catalog-candidates tr').count(),0);
   await missingCatalog.close();
+  const missingPair = await browser.newPage();
+  await missingPair.route('**/data/batman-cmr-paired-products-2026-10-11.json', route =>
+    route.fulfill({status:503,body:'unavailable'}));
+  await missingPair.goto(`http://127.0.0.1:${server.address().port}/analytics.html`);
+  await missingPair.locator('#catalog-status').getByText('CMR catalog context loaded.').waitFor();
+  await missingPair.locator('#pair-status').getByText(/context unavailable/).waitFor();
+  assert.equal(await missingPair.locator('#catalog-candidates tr').count(),7);
+  assert.match(await missingPair.locator('#catalog-candidates tr:first-child').textContent(),/Catalog unavailable/);
+  await missingPair.close();
 } finally {await browser.close(); await new Promise(resolve => server.close(resolve));}

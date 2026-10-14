@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {validatePilot, selectPilot, validateEnvironment, selectEnvironment,
-  validateCatalog} from '../../public/analytics-data.mjs';
+  validateCatalog, validatePairedCatalog} from '../../public/analytics-data.mjs';
 
 const report = validatePilot(JSON.parse(readFileSync(new URL('../../public/data/thermal-capture-pilot-2026-10-13.json', import.meta.url))));
 
@@ -64,4 +64,21 @@ test('real CMR catalog context keeps unverified exposure and source denominators
   assert.equal(catalog.no_detection_count, null);
   assert.throws(() => validateCatalog({...catalog, observation_opportunity_verified:true}));
   assert.throws(() => validateCatalog({...catalog, no_detection_count:0}));
+});
+
+test('real paired L1/L2 catalog remains metadata only', () => {
+  const geo = validateCatalog(JSON.parse(readFileSync(new URL(
+    '../../public/data/batman-cmr-context-2026-10-11.json', import.meta.url))));
+  const paired = validatePairedCatalog(JSON.parse(readFileSync(new URL(
+    '../../public/data/batman-cmr-paired-products-2026-10-11.json', import.meta.url))), geo);
+  assert.equal(paired.population.geolocation_granules,20);
+  assert.equal(paired.population.active_fire_granules,20);
+  assert.equal(paired.population.paired_intervals,20);
+  assert.equal(paired.population.candidate_minutes_with_both_catalogs,5);
+  assert.equal(paired.population.candidate_provider_minutes,7);
+  assert.equal(paired.observation_opportunity_verified,false);
+  assert.equal(paired.no_detection_count,null);
+  assert.throws(() => validatePairedCatalog({...paired, observation_opportunity_verified:true}, geo));
+  assert.throws(() => validatePairedCatalog({...paired, no_detection_count:0}, geo));
+  assert.throws(() => validatePairedCatalog({...paired, geolocation_report_sha256:'0'.repeat(64)}, geo));
 });

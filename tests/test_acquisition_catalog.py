@@ -6,7 +6,8 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from fire_public.acquisition_catalog import build_catalog_report, catalog_url
+from fire_public.acquisition_catalog import (build_catalog_report, build_paired_product_report,
+                                             catalog_url)
 from fire_public.collect import FIRMS_SOURCES
 from fire_public.historical_rollup import build_rollup
 from fire_public.pixel_history import import_release_assets
@@ -105,6 +106,58 @@ class AcquisitionCatalogTests(unittest.TestCase):
             "response_sha256": q["response_sha256"], "cmr_hits": q["cmr_hits"]}
             for q in snapshot["queries"]])
         self.assertFalse(report["observation_opportunity_verified"])
+
+    def test_active_fire_product_pairing_is_catalog_context_only(self):
+        geo_source = bundle({"VJ103IMG_NRT": [granule("VJ103IMG_NRT", "2026-10-10T10:00:00.000Z",
+                                    "2026-10-10T10:06:00.000Z", "G1-LANCEMODIS")]})
+        geo = build_catalog_report(self.db, [REGION], geo_source, start_date="2026-10-10",
+                                   end_date="2026-10-11", bbox="40.8,37.6,41.5,38.3")
+        entries = {"VJ114IMG_NRT": [granule("VJ114IMG_NRT", "2026-10-10T10:00:00.000Z",
+                     "2026-10-10T10:06:00.000Z", "F1-LANCEMODIS")],
+                   "VJ214IMG_NRT": [granule("VJ214IMG_NRT", "2026-10-11T09:18:00.000Z",
+                     "2026-10-11T09:24:00.000Z", "F2-LANCEMODIS")]}
+        snapshot = active_bundle(entries)
+        report = build_paired_product_report(geo, snapshot)
+        self.assertEqual(report["population"]["paired_intervals"], 1)
+        self.assertEqual(report["population"]["geo_only_intervals"], 0)
+        self.assertEqual(report["population"]["active_only_intervals"], 1)
+        self.assertEqual(report["population"]["candidate_minutes_with_both_catalogs"], 1)
+        self.assertEqual(report["candidate_provider_minutes"][0]["pair_status"], "both_catalogued")
+        self.assertEqual(report["candidate_provider_minutes"][1]["pair_status"], "neither_exact_interval")
+        self.assertFalse(report["observation_opportunity_verified"])
+        self.assertFalse(report["active_fire_granule_contents_verified"])
+        self.assertIsNone(report["no_detection_count"])
+        self.assertEqual(report, build_paired_product_report(geo, snapshot))
+        snapshot["queries"][0]["body"] += " "
+        with self.assertRaisesRegex(ValueError, "SHA-256"):
+            build_paired_product_report(geo, snapshot)
+        with self.assertRaisesRegex(ValueError, "SHA-256"):
+            build_paired_product_report({**geo, "population": {}}, active_bundle(entries))
+
+    def test_published_active_catalog_replays_byte_for_byte(self):
+        root = Path(__file__).resolve().parents[1]
+        snapshot = json.loads((root / "docs/research/source-samples/batman-active-cmr-2026-10-09-11.json").read_text())
+        geo = json.loads((root / "public/data/batman-cmr-context-2026-10-11.json").read_text())
+        published = (root / "public/data/batman-cmr-paired-products-2026-10-11.json").read_bytes()
+        replayed = build_paired_product_report(geo, snapshot)
+        from fire_public.historical_rollup import _bytes
+        self.assertEqual(_bytes(replayed), published)
+        self.assertEqual(replayed["population"]["paired_intervals"], 20)
+        self.assertEqual(replayed["population"]["active_fire_granules"], 20)
+        self.assertEqual(replayed["population"]["candidate_minutes_with_both_catalogs"], 5)
+        self.assertEqual(replayed["population"]["candidate_provider_minutes"], 7)
+        self.assertFalse(replayed["observation_opportunity_verified"])
+        self.assertIsNone(replayed["no_detection_count"])
+
+
+def active_bundle(entries_by_product):
+    queries = []
+    for product in ("VJ114IMG_NRT", "VJ214IMG_NRT"):
+        body = json.dumps({"feed": {"entry": entries_by_product.get(product, [])}})
+        queries.append({"product": product, "url": catalog_url(product, "2026-10-10", "2026-10-11",
+                        "40.8,37.6,41.5,38.3"), "cmr_hits": len(entries_by_product.get(product, [])),
+                        "response_sha256": hashlib.sha256(body.encode()).hexdigest(), "body": body})
+    return {"schema_version": 1, "fetched_at": "2026-10-14T12:00:00+00:00", "queries": queries}
 
 
 if __name__ == "__main__": unittest.main()
