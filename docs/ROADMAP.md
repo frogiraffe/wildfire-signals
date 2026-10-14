@@ -1,6 +1,6 @@
 # Wildfire Signals roadmap
 
-Evidence cut: 2026-10-14 UTC. `origin/main` was `b0506ab` when PR #58 safely combined #56 and #57; PR #58 CI passed, but remains unmerged. [PR #60](https://github.com/frogiraffe/wildfire-signals/pull/60) adds the offline historical foundation, [PR #59](https://github.com/frogiraffe/wildfire-signals/pull/59) adds the environmental web pilot, and [PR #61](https://github.com/frogiraffe/wildfire-signals/pull/61) adds bounded satellite granule catalog context, stacked in that order. **Completed** means implemented and covered by tests; it does not mean deployed, scientifically validated, or reliable at every location. Current deployment state requires a fresh live check.
+Evidence cut: 2026-10-14 UTC. `origin/main` was `b0506ab` when PR #58 safely combined #56 and #57; PR #58 CI passed, but remains unmerged. [PR #60](https://github.com/frogiraffe/wildfire-signals/pull/60) adds the offline historical foundation, [PR #59](https://github.com/frogiraffe/wildfire-signals/pull/59) adds the first environmental web pilot, [PR #61](https://github.com/frogiraffe/wildfire-signals/pull/61) adds satellite granule catalog context, and [PR #62](https://github.com/frogiraffe/wildfire-signals/pull/62) adds the second real station pilot and web comparison, stacked in that order. **Completed** means implemented and covered by tests; it does not mean deployed, scientifically validated, or reliable at every location. Current deployment state requires a fresh live check.
 
 ## 1. Product North Star
 
@@ -105,7 +105,7 @@ Keep Pages, Functions, KV and Worker Cron on Free, with fail-closed subscription
 
 ## 12. Next Executable Tasks
 
-1. Review PR #58, then #60 and #59; merge into production-connected main only with explicit authorization and fresh live/Free checks.
+1. Review PR #58, #60, #59, #61 and #62 in stack order; merge into production-connected main only with explicit authorization and fresh live/Free checks.
 2. Extend B2 with a tested restore/migration exercise and a predeclared second archive period. Keep originals and SQLite backups outside Git; publish only bounded reviewed aggregates.
 3. Obtain authorized access to one bounded original VIIRS 375 m geolocation granule and its active-fire product, then inspect cell geolocation and quality. NASA LANCE redirects anonymous downloads to Earthdata login; metadata search hits remain `unknown` cell opportunity and no negative labels.
 4. Extend the two-station E2 pilot into a predeclared later archive period with explicit weather availability evidence. Evaluate explanatory models only with independent acquisition denominators and adequate temporal units.
