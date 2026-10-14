@@ -12,7 +12,9 @@ const files = new Map([
   ['/data/thermal-capture-pilot-2026-10-13.json',
     ['data/thermal-capture-pilot-2026-10-13.json','application/json']],
   ['/data/batman-weather-context-2026-10-11.json',
-    ['data/batman-weather-context-2026-10-11.json','application/json']]
+    ['data/batman-weather-context-2026-10-11.json','application/json']],
+  ['/data/batman-cmr-context-2026-10-11.json',
+    ['data/batman-cmr-context-2026-10-11.json','application/json']]
 ]);
 const root = new URL('../../public/', import.meta.url);
 const server = createServer(async (request,response) => {
@@ -31,6 +33,10 @@ try {
     await page.goto(`http://127.0.0.1:${server.address().port}/analytics.html`);
     await page.locator('#analytics-status').getByText('Archived pilot loaded.').waitFor();
     await page.locator('#weather-status').getByText('Retrospective station pilot loaded.').waitFor();
+    await page.locator('#catalog-status').getByText('CMR catalog context loaded.').waitFor();
+    assert.equal(await page.locator('#catalog-candidates tr').count(),7);
+    assert.match(await page.locator('#catalog-summary').textContent(),/20 granules/);
+    assert.match(await page.locator('#catalog-summary').textContent(),/not cell-level observation opportunity/);
     assert.equal(await page.locator('#weather-candidates tr').count(),6);
     assert.match(await page.locator('#weather-provenance').textContent(),/first availability is unknown/);
     assert.match(await page.locator('#weather-provenance').textContent(),/CC0-1.0/);
@@ -68,4 +74,11 @@ try {
   await unavailable.locator('#weather-status').getByText(/Historical weather context unavailable/).waitFor();
   assert.equal(await unavailable.locator('#weather-chart .analytics-bar').count(),0);
   await unavailable.close();
+  const missingCatalog = await browser.newPage();
+  await missingCatalog.route('**/data/batman-cmr-context-2026-10-11.json', route =>
+    route.fulfill({status:503,body:'unavailable'}));
+  await missingCatalog.goto(`http://127.0.0.1:${server.address().port}/analytics.html`);
+  await missingCatalog.locator('#catalog-status').getByText(/CMR catalog context unavailable/).waitFor();
+  assert.equal(await missingCatalog.locator('#catalog-candidates tr').count(),0);
+  await missingCatalog.close();
 } finally {await browser.close(); await new Promise(resolve => server.close(resolve));}

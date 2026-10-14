@@ -33,7 +33,7 @@ The [web chart](../../public/analytics.html) shows the hourly station series and
 
 ## Validity and missing evidence
 
-- No independent satellite overpass or footprint metadata have been joined. [NASA VNP03MOD NRT geolocation](https://www.earthdata.nasa.gov/data/catalog/lancemodis-vnp03mod-nrt-1) is a candidate source for a later bounded acquisition audit; the current archive cannot establish cloud-free cell-level opportunity from hotspots.
+- A separate [NOAA-20/21 CMR geolocation-granule catalog audit](batman-viirs-granule-catalog-2026-10.md) now provides independent product metadata for this pilot. The actual geolocation and quality arrays have not been joined; this archive still cannot establish cloud-free cell-level opportunity from hotspots or catalog search hits.
 - No independent wildfire outcome labels, negative observations, event spread polygons or local fuel/topography measurements are in this pilot. The candidate target is observed/archive output, not confirmed incidence.
 - The short October window cannot establish seasonality, weather associations, fire risk, or generalization to Antalya, Batman beyond these days, or the world.
 - GHCNh is a retrospectively maintained archive. Although we use an earlier observation time in each join, the individual publication and first-availability times are unknown. Do not use these fields in an as-of forecasting evaluation.

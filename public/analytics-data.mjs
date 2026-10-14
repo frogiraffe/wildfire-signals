@@ -61,3 +61,22 @@ export function selectEnvironment(report, variable) {
   return report.weather_hourly.map(row => ({hour: row.hour, value: row[variable],
     candidateCellHours: row.candidate_cell_hours}));
 }
+
+export function validateCatalog(report) {
+  if (report?.schema_version !== 1 || report.status !== 'granule_catalog_context_only' ||
+      report.observation_opportunity_verified !== false || report.no_detection_count !== null ||
+      report.catalog_first_available_at !== null ||
+      report.granule_files_downloaded !== false ||
+      !/^[a-f0-9]{64}$/.test(report.evidence_sha256 ?? '') ||
+      !Array.isArray(report.source_queries) || report.source_queries.length !== 2 ||
+      !Array.isArray(report.granules) || !Array.isArray(report.candidate_provider_minutes) ||
+      report.population?.catalog_granules !== report.granules.length ||
+      report.population?.candidate_provider_minutes !== report.candidate_provider_minutes.length ||
+      report.population?.archived_raw_pixels !== report.candidate_provider_minutes.reduce(
+        (n, row) => n + row.raw_pixels, 0) ||
+      report.population?.temporally_matched_candidate_provider_minutes !==
+        report.candidate_provider_minutes.filter(row => row.catalog_granule_ids.length).length ||
+      report.source_queries.some(query => !/^[a-f0-9]{64}$/.test(query.response_sha256 ?? '')))
+    throw new Error('Unsupported or incomplete CMR catalog context');
+  return report;
+}
