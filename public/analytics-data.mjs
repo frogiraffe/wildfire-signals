@@ -16,6 +16,27 @@ export function validatePilot(report) {
   return report;
 }
 
+export function validateStandardReadiness(report) {
+  if (report?.schema_version !== 1 || report.status !== 'standard_catalog_and_model_readiness_only' ||
+      report.cell_exposure_verified !== false || report.granule_contents_inspected !== false ||
+      report.no_detection_count !== null || report.independent_fire_outcome_valid !== false ||
+      report.model_readiness?.scientific_comparison_eligible !== false ||
+      report.model_readiness?.operational_prediction_eligible !== false ||
+      report.model_readiness?.models_trained !== 0 ||
+      !/^[a-f0-9]{64}$/.test(report.evidence_sha256 ?? '') ||
+      !Array.isArray(report.daily_rows) || report.daily_rows.length !== 2 ||
+      !Array.isArray(report.product_intervals) ||
+      report.population?.paired_intervals !== report.product_intervals.filter(
+        row => row.catalog_pair_status === 'both_catalogued').length ||
+      report.population?.archived_noaa20_pixels !== report.daily_rows.reduce(
+        (sum,row) => sum + row.archived_noaa20_pixels, 0) ||
+      report.daily_rows.some(row => row.cell_observation_verified !== false ||
+        row.no_reported_detection_count !== null ||
+        !['archived_candidate','no_archived_record_unverified_opportunity'].includes(row.observation_state)))
+    throw new Error('Unsupported or incomplete standard granule readiness report');
+  return report;
+}
+
 export function selectPilot(report, {regionId, from, to}) {
   if (!report.regions.some(region => region.region_id === regionId) ||
       !/^\d{4}-\d\d-\d\d$/.test(from) || !/^\d{4}-\d\d-\d\d$/.test(to) || from > to)
