@@ -2,4 +2,4 @@
 
 .analytics-main{display:block}
 .analytics-weather-chart .analytics-bar{min-width:15px;flex:0 0 15px}.analytics-weather-chart .analytics-bar span{width:12px}.analytics-weather-chart .analytics-bar.has-candidate span{background:#e8ad70}.analytics-weather-chart .analytics-bar small{font-size:9px;white-space:nowrap}.analytics-weather-chart{min-height:150px}.analytics-card strong{color:#f1e3c9}
-#weather-provenance,#catalog-provenance{overflow-wrap:anywhere}
+#weather-provenance,#catalog-provenance,#pair-provenance{overflow-wrap:anywhere}

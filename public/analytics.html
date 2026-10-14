@@ -49,12 +49,15 @@
       </section>
       <section aria-labelledby="catalog-heading" class="analytics-card">
         <h2 id="catalog-heading">Satellite granule catalog · Batman pilot</h2>
-        <p>NASA CMR lists NOAA-20/21 six-minute 375 m geolocation granules intersecting a search box around the pilot. These metadata give pass context. They do not establish a usable observation at every 0.05° cell, cloud conditions, or a complete no-detection result.</p>
+        <p>NASA CMR lists NOAA-20/21 six-minute 375 m geolocation and active-fire products intersecting a search box around the pilot. Exact same-platform time intervals give product catalog context. Neither catalog proves a usable observation at every 0.05° cell, cloud conditions, inspected L2 content, or a complete no-detection result.</p>
         <p id="catalog-status" role="status" aria-live="polite">Loading CMR catalog context…</p>
         <p id="catalog-summary"></p>
-        <div class="analytics-table-wrap"><table><thead><tr><th scope="col">FIRMS acquisition UTC minute</th><th scope="col">Sensor</th><th scope="col">Archived raw pixels</th><th scope="col">Catalog interval match</th></tr></thead><tbody id="catalog-candidates"></tbody></table></div>
+        <p id="pair-status" role="status" aria-live="polite">Loading active-fire product catalog…</p>
+        <p id="pair-summary"></p>
+        <div class="analytics-table-wrap"><table><thead><tr><th scope="col">FIRMS acquisition UTC minute</th><th scope="col">Sensor</th><th scope="col">Archived raw pixels</th><th scope="col">Geolocation catalog</th><th scope="col">Active-fire product catalog</th></tr></thead><tbody id="catalog-candidates"></tbody></table></div>
         <p id="catalog-provenance"></p>
-        <p><a href="./data/batman-cmr-context-2026-10-11.json" download>Download catalog comparison JSON</a> · <a href="https://www.earthdata.nasa.gov/data/catalog/lancemodis-vj103img-nrt-2" rel="noopener noreferrer" target="_blank">NOAA-20 geolocation</a> · <a href="https://www.earthdata.nasa.gov/data/catalog/lancemodis-vj203img-nrt-2" rel="noopener noreferrer" target="_blank">NOAA-21 geolocation</a></p>
+        <p id="pair-provenance"></p>
+        <p><a href="./data/batman-cmr-context-2026-10-11.json" download>Download geolocation catalog JSON</a> · <a href="./data/batman-cmr-paired-products-2026-10-11.json" download>Download paired product catalog JSON</a> · <a href="https://www.earthdata.nasa.gov/data/catalog/lancemodis-vj103img-nrt-2" rel="noopener noreferrer" target="_blank">NOAA-20 geolocation</a> · <a href="https://www.earthdata.nasa.gov/data/catalog/lancemodis-vj114img-nrt-2" rel="noopener noreferrer" target="_blank">NOAA-20 active fire</a> · <a href="https://www.earthdata.nasa.gov/engage/open-data-services-software/data-use-policy" rel="noopener noreferrer" target="_blank">NASA data use policy</a></p>
       </section>
       <section aria-labelledby="methods-heading" class="analytics-card">
         <h2 id="methods-heading">Sources, scope and method</h2>

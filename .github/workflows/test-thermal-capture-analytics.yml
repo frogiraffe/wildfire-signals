@@ -21,7 +21,9 @@ on:
       - 'public/data/batman-weather-context-2026-10-11.json'
       - 'public/data/sacramento-weather-context-2026-10-11.json'
       - 'public/data/batman-cmr-context-2026-10-11.json'
+      - 'public/data/batman-cmr-paired-products-2026-10-11.json'
       - 'docs/research/source-samples/batman-cmr-2026-10-09-11.json'
+      - 'docs/research/source-samples/batman-active-cmr-2026-10-09-11.json'
       - '.github/workflows/test-thermal-capture-analytics.yml'
   push:
     branches: [main]
@@ -45,7 +47,9 @@ on:
       - 'public/data/batman-weather-context-2026-10-11.json'
       - 'public/data/sacramento-weather-context-2026-10-11.json'
       - 'public/data/batman-cmr-context-2026-10-11.json'
+      - 'public/data/batman-cmr-paired-products-2026-10-11.json'
       - 'docs/research/source-samples/batman-cmr-2026-10-09-11.json'
+      - 'docs/research/source-samples/batman-active-cmr-2026-10-09-11.json'
       - '.github/workflows/test-thermal-capture-analytics.yml'
 permissions:
   contents: read
