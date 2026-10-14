@@ -1,6 +1,6 @@
 # Wildfire Signals roadmap
 
-Evidence cut: 2026-10-14 UTC. `origin/main` was `b0506ab` when PR #58 safely combined #56 and #57; PR #58 CI passed, but remains unmerged. The stacked analytics branch adds the work below. **Completed** means implemented and covered by tests; it does not mean deployed, scientifically validated, or reliable at every location. Current deployment state requires a fresh live check.
+Evidence cut: 2026-10-14 UTC. `origin/main` was `b0506ab` when PR #58 safely combined #56 and #57; PR #58 CI passed, but remains unmerged. [PR #60](https://github.com/frogiraffe/wildfire-signals/pull/60) adds the offline historical foundation and [PR #59](https://github.com/frogiraffe/wildfire-signals/pull/59) adds the environmental web pilot, stacked in that order. **Completed** means implemented and covered by tests; it does not mean deployed, scientifically validated, or reliable at every location. Current deployment state requires a fresh live check.
 
 ## 1. Product North Star
 
@@ -103,7 +103,7 @@ Keep Pages, Functions, KV and Worker Cron on Free, with fail-closed subscription
 
 ## 12. Next Executable Tasks
 
-1. Review PR #58 and the stacked research PR together; merge into production-connected main only with explicit authorization and fresh live/Free checks.
+1. Review PR #58, then #60 and #59; merge into production-connected main only with explicit authorization and fresh live/Free checks.
 2. Extend B2 with a tested restore/migration exercise and a predeclared second archive period. Keep originals and SQLite backups outside Git; publish only bounded reviewed aggregates.
 3. Audit a bounded official VIIRS geolocation swath/acquisition file for one region/time, including quality/cloud caveats. Until that evidence exists, retain `unknown` acquisition opportunity and no negative labels.
 4. Extend E2 to a second predeclared station/period with explicit file revision history and weather availability evidence. Evaluate explanatory models only with independent acquisition denominators and adequate temporal units.
@@ -120,3 +120,4 @@ Keep Pages, Functions, KV and Worker Cron on Free, with fail-closed subscription
 | 2026-10-14 | Combined open #56 and #57 into non-production [PR #58](https://github.com/frogiraffe/wildfire-signals/pull/58); integrated Python, JS and browser checks passed; PR checks green | Integration commits `ab24e5b`, `1705d64`, `6ace19c`; PR status |
 | 2026-10-14 | Kept existing SQLite; added per-scan checkpointed aggregate and synthetic 1M/2M scale benchmark | `historical_rollup.py`, test suite and benchmark output; no performance fixture presented as observations |
 | 2026-10-14 | Selected Batman after checking overlapping real FIRMS and GHCNh records; produced source-hashed retrospective station context | [scientific report](research/batman-station-thermal-context-2026-10.md), joined JSON, frontend and tests; only four temperature-matched candidate hours |
+| 2026-10-14 | Split the scientific/operational risks into stacked review branches | [#60](https://github.com/frogiraffe/wildfire-signals/pull/60) targets #58's integration branch; [#59](https://github.com/frogiraffe/wildfire-signals/pull/59) targets #60's foundation branch; main is untouched |
