@@ -22,7 +22,9 @@ const files = new Map([
   ['/data/antalya-annual-context-2023-2025.json',
     ['data/antalya-annual-context-2023-2025.json','application/json']],
   ['/data/dalaman-annual-context-2023-2025.json',
-    ['data/dalaman-annual-context-2023-2025.json','application/json']]
+    ['data/dalaman-annual-context-2023-2025.json','application/json']],
+  ['/data/turkey-spatial-recurrence-2023-2025.json',
+    ['data/turkey-spatial-recurrence-2023-2025.json','application/json']]
 ]);
 const root = new URL('../../public/', import.meta.url);
 const server = createServer(async (request,response) => {
@@ -42,6 +44,17 @@ try {
     await page.locator('#analytics-status').getByText('Archived pilot loaded.').waitFor();
     await page.locator('#weather-status').getByText('Retrospective station pilot loaded.').waitFor();
     await page.locator('#annual-status').getByText('Three-year archive loaded.').waitFor();
+    await page.locator('#spatial-status').getByText('Spatial recurrence evidence loaded.').waitFor();
+    assert.equal(await page.locator('#spatial-region option').count(),2);
+    assert.match(await page.locator('#spatial-summary').textContent(),/1,340 archived pixels/);
+    assert.match(await page.locator('#spatial-bins tr:first-child').textContent(),/748/);
+    assert.match(await page.locator('#spatial-bins tr:first-child').textContent(),/Potential static source/);
+    assert.equal(await page.locator('#spatial-year-quality tr').count(),3);
+    assert.match(await page.locator('#spatial-year-quality tr:first-child').textContent(),/480/);
+    await page.locator('#spatial-region').selectOption('DALAMAN_25KM');
+    assert.match(await page.locator('#spatial-summary').textContent(),/79 archived pixels/);
+    assert.match(await page.locator('#spatial-summary').textContent(),/4 bins recur/);
+    assert.match(await page.locator('#spatial-year-quality tr:last-child').textContent(),/3/);
     assert.equal(await page.locator('#annual-region option').count(),2);
     assert.equal(await page.locator('#annual-region').inputValue(),'ANTALYA_25KM');
     assert.equal(await page.locator('#annual-year-comparison tr').count(),6);
@@ -151,4 +164,12 @@ try {
   assert.equal(await missingAnnual.locator('#annual-region').inputValue(),'DALAMAN_25KM');
   assert.equal(await missingAnnual.locator('#annual-months tr').count(),36);
   await missingAnnual.close();
+  const missingSpatial = await browser.newPage();
+  await missingSpatial.route('**/data/turkey-spatial-recurrence-2023-2025.json', route =>
+    route.fulfill({status:503,body:'unavailable'}));
+  await missingSpatial.goto(`http://127.0.0.1:${server.address().port}/analytics.html`);
+  await missingSpatial.locator('#spatial-status').getByText(/Spatial recurrence unavailable/).waitFor();
+  await missingSpatial.locator('#annual-status').getByText('Three-year archive loaded.').waitFor();
+  assert.equal(await missingSpatial.locator('#spatial-bins tr').count(),0);
+  await missingSpatial.close();
 } finally {await browser.close(); await new Promise(resolve => server.close(resolve));}

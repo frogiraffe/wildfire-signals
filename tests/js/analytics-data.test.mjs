@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {validatePilot, selectPilot, validateEnvironment, selectEnvironment,
   validateCatalog, validatePairedCatalog, validateAnnualArchive,
-  selectAnnualArchive, annualYearSummary} from '../../public/analytics-data.mjs';
+  selectAnnualArchive, annualYearSummary, validateSpatialRecurrence,
+  selectSpatialRecurrence} from '../../public/analytics-data.mjs';
 
 const report = validatePilot(JSON.parse(readFileSync(new URL('../../public/data/thermal-capture-pilot-2026-10-13.json', import.meta.url))));
 
@@ -119,4 +120,21 @@ test('independently chosen Dalaman study retains sparse yearly denominators', ()
   assert.equal(annualYearSummary(dalaman)[2].positiveSensorHours,15);
   assert.equal(dalaman.observation_opportunity_verified,false);
   assert.equal(dalaman.no_detection_count,null);
+});
+
+test('real spatial recurrence keeps source heuristic below independent classification', () => {
+  const spatial = validateSpatialRecurrence(JSON.parse(readFileSync(new URL(
+    '../../public/data/turkey-spatial-recurrence-2023-2025.json', import.meta.url))));
+  assert.equal(spatial.population.selected_raw_pixels,1419);
+  assert.equal(spatial.observation_opportunity_verified,false);
+  const antalya = selectSpatialRecurrence(spatial,'ANTALYA_25KM');
+  const dalaman = selectSpatialRecurrence(spatial,'DALAMAN_25KM');
+  assert.equal(antalya.selected_raw_pixels,1340);
+  assert.equal(dalaman.selected_raw_pixels,79);
+  assert.equal(antalya.published_bins[0].raw_pixels,748);
+  assert.equal(antalya.published_bins[0].classification,'potential_static_thermal_source');
+  assert.equal(antalya.published_bins[0].source_type_counts['2'],741);
+  assert.equal(antalya.published_bins[0].independently_classified,false);
+  assert.throws(() => validateSpatialRecurrence({...spatial, independent_fire_outcome_valid:true}));
+  assert.throws(() => selectSpatialRecurrence(spatial,'not-a-region'));
 });

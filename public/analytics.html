@@ -68,6 +68,19 @@
         <p id="annual-provenance"></p>
         <p><a id="annual-download" href="./data/antalya-annual-context-2023-2025.json" download>Download joined analytical evidence JSON</a> · <a href="https://firms2.modaps.eosdis.nasa.gov/download/" rel="noopener noreferrer" target="_blank">NASA FIRMS archive</a> · <a href="https://www.ncei.noaa.gov/products/global-historical-climatology-network-hourly" rel="noopener noreferrer" target="_blank">NOAA GHCNh</a></p>
       </section>
+      <section aria-labelledby="spatial-heading" class="analytics-card">
+        <h2 id="spatial-heading">Where archived thermal candidates recur</h2>
+        <p>Original 2023–2025 FIRMS pixel centers are grouped offline into 0.01° WGS84 research bins. This grid is neither a sensor footprint nor an event boundary. A bin seen on multiple dates is a repeated <em>candidate</em>; the potential-static label is an unvalidated review cue based on long recurrence and FIRMS's own source type. It does not confirm an industrial site, non-vegetation source or wildfire. Empty bins have unknown satellite opportunity.</p>
+        <p id="spatial-status" role="status" aria-live="polite">Loading spatial research evidence…</p>
+        <div class="analytics-controls"><label>Study region <select id="spatial-region" aria-label="Spatial research region"></select></label></div>
+        <p id="spatial-summary"></p>
+        <p id="spatial-quality"></p>
+        <div class="analytics-table-wrap"><table><thead><tr><th scope="col">UTC year</th><th scope="col">Archived pixels</th><th scope="col">FIRMS type 0</th><th scope="col">FIRMS type 2</th><th scope="col">FIRMS type 3</th><th scope="col">Low / nominal / high confidence</th><th scope="col">Day / night</th></tr></thead><tbody id="spatial-year-quality"></tbody></table></div>
+        <div id="spatial-chart" class="analytics-chart analytics-spatial-chart" role="img" aria-label="Top aggregated thermal candidate bins"></div>
+        <div class="analytics-table-wrap"><table><thead><tr><th scope="col">0.01° bin</th><th scope="col">Pixels</th><th scope="col">Distinct dates / years</th><th scope="col">Both sensors on same day</th><th scope="col">Source type 2</th><th scope="col">Research status</th></tr></thead><tbody id="spatial-bins"></tbody></table></div>
+        <p id="spatial-provenance"></p>
+        <p><a id="spatial-download" href="./data/turkey-spatial-recurrence-2023-2025.json" download>Download aggregate recurrence evidence JSON</a> · <a href="https://firms.modaps.eosdis.nasa.gov/descriptions/Static_Thermal_Anomalies_Mask.html" rel="noopener noreferrer" target="_blank">NASA Static Thermal Anomalies Mask reference</a></p>
+      </section>
       <section aria-labelledby="catalog-heading" class="analytics-card">
         <h2 id="catalog-heading">Satellite granule catalog · Batman pilot</h2>
         <p>NASA CMR lists NOAA-20/21 six-minute 375 m geolocation and active-fire products intersecting a search box around the pilot. Exact same-platform time intervals give product catalog context. Neither catalog proves a usable observation at every 0.05° cell, cloud conditions, inspected L2 content, or a complete no-detection result.</p>
