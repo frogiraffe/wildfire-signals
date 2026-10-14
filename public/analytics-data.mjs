@@ -190,3 +190,42 @@ export function annualYearSummary(report) {
   }
   return years;
 }
+
+export function validateSpatialRecurrence(report) {
+  const allowed = new Set(['observed_thermal_candidate','recurrently_observed_candidate',
+    'potential_static_thermal_source']);
+  if (report?.schema_version !== 1 || report.status !== 'descriptive_spatial_recurrence_only' ||
+      report.grid_degrees_wgs84 !== 0.01 || report.static_mask_redistributed !== false ||
+      report.observation_opportunity_verified !== false || report.no_detection_count !== null ||
+      report.independent_static_source_evidence !== false ||
+      report.independent_fire_outcome_valid !== false ||
+      !/^[a-f0-9]{64}$/.test(report.evidence_sha256 ?? '') ||
+      !Array.isArray(report.regions) || !Array.isArray(report.source_asset_manifest) ||
+      report.population?.source_files !== report.source_asset_manifest.length ||
+      report.population?.selected_raw_pixels !== report.regions.reduce(
+        (sum, region) => sum + region.selected_raw_pixels, 0) ||
+      report.source_asset_manifest.some(asset => !/^[a-f0-9]{64}$/.test(asset.sha256 ?? '')) ||
+      report.regions.some(region => !Array.isArray(region.yearly_quality_rows) ||
+        region.yearly_quality_rows.reduce((sum,year) => sum + year.raw_pixels,0) !== region.selected_raw_pixels ||
+        region.yearly_quality_rows.some(year =>
+          Object.values(year.source_type_counts).reduce((sum,n) => sum+n,0) !== year.raw_pixels ||
+          Object.values(year.confidence_counts).reduce((sum,n) => sum+n,0) !== year.raw_pixels ||
+          Object.values(year.daynight_counts).reduce((sum,n) => sum+n,0) !== year.raw_pixels) ||
+        !Array.isArray(region.published_bins) ||
+        region.published_bins.length > 20 || region.published_bins.some(bin =>
+          !allowed.has(bin.classification) || bin.independently_classified !== false ||
+          bin.source_identity_status !== 'unresolved' ||
+          !Number.isSafeInteger(bin.raw_pixels) || bin.raw_pixels < 2 ||
+          !Number.isSafeInteger(bin.distinct_dates) || bin.distinct_dates < 1 ||
+          bin.classification === 'potential_static_thermal_source' &&
+            (bin.distinct_dates < 12 || bin.distinct_years < 2 ||
+              (bin.source_type_counts?.['2'] ?? 0) * 2 < bin.raw_pixels))))
+    throw new Error('Unsupported or overstated spatial recurrence evidence');
+  return report;
+}
+
+export function selectSpatialRecurrence(report, regionId) {
+  const selected = report.regions.find(item => item.region.region_id === regionId);
+  if (!selected) throw new Error('Unknown spatial research region');
+  return selected;
+}

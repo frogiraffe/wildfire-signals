@@ -619,6 +619,8 @@ The [Antalya three-year retrospective study](docs/research/antalya-annual-therma
 
 The second [Dalaman three-year study](docs/research/dalaman-annual-thermal-weather-2023-2025.md) reuses those exact six NASA source files and adds three source-hashed NOAA Dalaman station files. Its 25 km circle has 79 archived candidate pixels across 38 positive sensor-hours; all 38 have prior station temperature. The analytics page selects Antalya or Dalaman and shows each site's UTC-year denominators, monthly series, weather, provenance and downloadable aggregate. Their count differences are not fire-rate differences: acquisition opportunities and independent outcomes are still unknown.
 
+The [spatial recurrence and source-quality audit](docs/research/turkey-spatial-recurrence-2023-2025.md) reuses the same six verified NASA CSVs and publishes bounded 0.01° grid aggregates for both regions. In Antalya, two bins contain 887 of 1,340 archived pixels and show long recurrence; NASA source type-2 records account for much of the aggregate 2023–2025 change. The existing analytics page shows recurrence, confidence, day/night, source type and unresolved source identity, with a downloadable aggregate. A potential-static label is an unvalidated review cue, not an independently confirmed source or wildfire. NASA's Static Thermal Anomalies Mask was not redistributed. Reproduce with `python -m fire_public.spatial_recurrence --manifest examples/antalya-annual-manifest-2023-2025.json --regions-json examples/annual-spatial-regions-2023-2025.json --raw-dir /private/turkey-annual-raw --output /private/spatial-replay.json`.
+
 
 ```sh
 python -m unittest discover -s tests -v

@@ -1,7 +1,7 @@
 import {validatePilot, selectPilot, validateEnvironment, selectEnvironment,
   environmentalVariables, validateCatalog, validatePairedCatalog,
   validateAnnualArchive, selectAnnualArchive, annualYearSummary,
-  annualVariables} from './analytics-data.mjs';
+  annualVariables, validateSpatialRecurrence, selectSpatialRecurrence} from './analytics-data.mjs';
 
 const el = id => document.getElementById(id);
 const cell = (row, value) => {
@@ -164,6 +164,65 @@ async function startAnnual() {
   renderSelected();
 }
 
+async function startSpatial() {
+  try {
+    const response = await fetch('./data/turkey-spatial-recurrence-2023-2025.json', {cache:'no-store'});
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const report = validateSpatialRecurrence(await response.json());
+    el('spatial-region').replaceChildren();
+    for (const item of report.regions) {
+      const option = document.createElement('option');
+      option.value = item.region.region_id;
+      option.textContent = item.region.region_id.replace('_25KM','');
+      el('spatial-region').append(option);
+    }
+    const label = {
+      observed_thermal_candidate: 'Observed candidate',
+      recurrently_observed_candidate: 'Recurring candidate',
+      potential_static_thermal_source: 'Potential static source (unverified)'
+    };
+    const render = () => {
+      const item = selectSpatialRecurrence(report, el('spatial-region').value);
+      el('spatial-summary').textContent = `${number(item.selected_raw_pixels)} archived pixels in ${number(item.occupied_bins)} occupied 0.01° bins; ${number(item.recurrently_observed_bins)} bins recur on multiple UTC dates, ${number(item.bins_seen_in_multiple_years)} span multiple years, ${number(item.potential_static_source_bins)} meet a source-based potential-static review rule. ${number(item.unpublished_bins)} other bins are summarized only. These are neither fire counts nor fire rates.`;
+      el('spatial-quality').textContent = `FIRMS confidence: low ${number(item.confidence_counts.l ?? 0)}, nominal ${number(item.confidence_counts.n ?? 0)}, high ${number(item.confidence_counts.h ?? 0)}; day ${number(item.daynight_counts.D ?? 0)}, night ${number(item.daynight_counts.N ?? 0)}; source type 2 ${number(item.source_type_counts['2'] ?? 0)}. Historical source type can be wrong; independent source identity and acquisition opportunity are unknown.`;
+      el('spatial-year-quality').replaceChildren();
+      for (const year of item.yearly_quality_rows) {
+        const tr = document.createElement('tr');
+        for (const value of [year.year, number(year.raw_pixels),
+          number(year.source_type_counts['0'] ?? 0), number(year.source_type_counts['2'] ?? 0),
+          number(year.source_type_counts['3'] ?? 0),
+          `${number(year.confidence_counts.l ?? 0)} / ${number(year.confidence_counts.n ?? 0)} / ${number(year.confidence_counts.h ?? 0)}`,
+          `${number(year.daynight_counts.D ?? 0)} / ${number(year.daynight_counts.N ?? 0)}`]) cell(tr,value);
+        el('spatial-year-quality').append(tr);
+      }
+      el('spatial-bins').replaceChildren();
+      el('spatial-chart').replaceChildren();
+      const maximum = Math.max(1, ...item.published_bins.map(bin => bin.raw_pixels));
+      for (const bin of item.published_bins) {
+        const tr = document.createElement('tr');
+        for (const value of [bin.bin_id, number(bin.raw_pixels),
+          `${number(bin.distinct_dates)} / ${number(bin.distinct_years)}`,
+          number(bin.sensor_agreement_dates), number(bin.source_type_counts['2'] ?? 0),
+          label[bin.classification]]) cell(tr,value);
+        el('spatial-bins').append(tr);
+        const bar = document.createElement('div'); bar.className = 'analytics-bar';
+        const column = document.createElement('span');
+        column.style.height = `${Math.max(2, Math.round(110 * bin.raw_pixels / maximum))}px`;
+        const tick = document.createElement('small'); tick.textContent = bin.bin_id;
+        bar.title = `${bin.bin_id}: ${bin.raw_pixels} archived pixels, ${bin.distinct_dates} dates; ${label[bin.classification]}; source identity unresolved`;
+        bar.append(column,tick); el('spatial-chart').append(bar);
+      }
+      el('spatial-chart').setAttribute('aria-label', `${item.region.region_id}: top ${item.published_bins.length} coarsened bins by recurring dates and pixel count; these are thermal candidates, not fires`);
+    };
+    el('spatial-region').addEventListener('change', render);
+    el('spatial-provenance').textContent = `${number(report.population.country_source_rows)} rows in ${report.population.source_files} original NASA files, SHA-256 pinned in the download. 0.01° bins are research grouping, not sensor footprints. NASA's Static Thermal Anomalies Mask is reference only and was not redistributed or joined. The historical FIRMS type field has known defects. No independent non-vegetation or wildfire classification, valid no-detection population, cloud/quality mask or operational model is present. Evidence SHA-256: ${report.evidence_sha256}.`;
+    render();
+    el('spatial-status').textContent = 'Spatial recurrence evidence loaded.';
+  } catch (error) {
+    el('spatial-status').textContent = `Spatial recurrence unavailable: ${error.message}`;
+  }
+}
+
 const weatherPilots = [
   {id:'BATMAN_25KM', label:'Batman, Türkiye', url:'./data/batman-weather-context-2026-10-11.json'},
   {id:'SACRAMENTO_25KM', label:'Sacramento, California', url:'./data/sacramento-weather-context-2026-10-11.json'}
@@ -320,4 +379,5 @@ async function start() {
 start();
 startEnvironment();
 startAnnual();
+startSpatial();
 startCatalog();

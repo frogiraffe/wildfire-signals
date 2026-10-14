@@ -1,0 +1,4 @@
+[
+  {"region_id": "ANTALYA_25KM", "latitude": 36.8987, "longitude": 30.8005, "radius_km": 25},
+  {"region_id": "DALAMAN_25KM", "latitude": 36.7131, "longitude": 28.7925, "radius_km": 25}
+]

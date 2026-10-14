@@ -7,6 +7,7 @@ on:
       - 'fire_public/historical_rollup.py'
       - 'fire_public/environmental_analytics.py'
       - 'fire_public/annual_country_analytics.py'
+      - 'fire_public/spatial_recurrence.py'
       - 'fire_public/observation_opportunity.py'
       - 'fire_public/acquisition_catalog.py'
       - 'tests/test_release_sync.py'
@@ -14,6 +15,7 @@ on:
       - 'tests/test_historical_rollup.py'
       - 'tests/test_environmental_analytics.py'
       - 'tests/test_annual_country_analytics.py'
+      - 'tests/test_spatial_recurrence.py'
       - 'tests/test_observation_opportunity.py'
       - 'tests/test_acquisition_catalog.py'
       - 'examples/thermal-capture-regions.json'
@@ -21,11 +23,13 @@ on:
       - 'examples/sacramento-*.json'
       - 'examples/antalya-annual-manifest-2023-2025.json'
       - 'examples/dalaman-annual-manifest-2023-2025.json'
+      - 'examples/annual-spatial-regions-2023-2025.json'
       - 'public/data/thermal-capture-pilot-2026-10-13.json'
       - 'public/data/batman-weather-context-2026-10-11.json'
       - 'public/data/sacramento-weather-context-2026-10-11.json'
       - 'public/data/antalya-annual-context-2023-2025.json'
       - 'public/data/dalaman-annual-context-2023-2025.json'
+      - 'public/data/turkey-spatial-recurrence-2023-2025.json'
       - 'public/data/batman-cmr-context-2026-10-11.json'
       - 'public/data/batman-cmr-paired-products-2026-10-11.json'
       - 'docs/research/source-samples/batman-cmr-2026-10-09-11.json'
@@ -39,6 +43,7 @@ on:
       - 'fire_public/historical_rollup.py'
       - 'fire_public/environmental_analytics.py'
       - 'fire_public/annual_country_analytics.py'
+      - 'fire_public/spatial_recurrence.py'
       - 'fire_public/observation_opportunity.py'
       - 'fire_public/acquisition_catalog.py'
       - 'tests/test_release_sync.py'
@@ -46,6 +51,7 @@ on:
       - 'tests/test_historical_rollup.py'
       - 'tests/test_environmental_analytics.py'
       - 'tests/test_annual_country_analytics.py'
+      - 'tests/test_spatial_recurrence.py'
       - 'tests/test_observation_opportunity.py'
       - 'tests/test_acquisition_catalog.py'
       - 'examples/thermal-capture-regions.json'
@@ -53,11 +59,13 @@ on:
       - 'examples/sacramento-*.json'
       - 'examples/antalya-annual-manifest-2023-2025.json'
       - 'examples/dalaman-annual-manifest-2023-2025.json'
+      - 'examples/annual-spatial-regions-2023-2025.json'
       - 'public/data/thermal-capture-pilot-2026-10-13.json'
       - 'public/data/batman-weather-context-2026-10-11.json'
       - 'public/data/sacramento-weather-context-2026-10-11.json'
       - 'public/data/antalya-annual-context-2023-2025.json'
       - 'public/data/dalaman-annual-context-2023-2025.json'
+      - 'public/data/turkey-spatial-recurrence-2023-2025.json'
       - 'public/data/batman-cmr-context-2026-10-11.json'
       - 'public/data/batman-cmr-paired-products-2026-10-11.json'
       - 'docs/research/source-samples/batman-cmr-2026-10-09-11.json'
@@ -82,5 +90,6 @@ jobs:
           python -m unittest discover -s tests -p 'test_historical_rollup.py' -v
           python -m unittest discover -s tests -p 'test_environmental_analytics.py' -v
           python -m unittest discover -s tests -p 'test_annual_country_analytics.py' -v
+          python -m unittest discover -s tests -p 'test_spatial_recurrence.py' -v
           python -m unittest discover -s tests -p 'test_observation_opportunity.py' -v
           python -m unittest discover -s tests -p 'test_acquisition_catalog.py' -v
