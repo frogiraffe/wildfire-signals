@@ -4,20 +4,36 @@ on:
     paths:
       - 'fire_public/release_sync.py'
       - 'fire_public/thermal_capture_analytics.py'
+      - 'fire_public/historical_rollup.py'
+      - 'fire_public/environmental_analytics.py'
+      - 'fire_public/observation_opportunity.py'
       - 'tests/test_release_sync.py'
       - 'tests/test_thermal_capture_analytics.py'
+      - 'tests/test_historical_rollup.py'
+      - 'tests/test_environmental_analytics.py'
+      - 'tests/test_observation_opportunity.py'
       - 'examples/thermal-capture-regions.json'
+      - 'examples/batman-*.json'
       - 'public/data/thermal-capture-pilot-2026-10-13.json'
+      - 'public/data/batman-weather-context-2026-10-11.json'
       - '.github/workflows/test-thermal-capture-analytics.yml'
   push:
     branches: [main]
     paths:
       - 'fire_public/release_sync.py'
       - 'fire_public/thermal_capture_analytics.py'
+      - 'fire_public/historical_rollup.py'
+      - 'fire_public/environmental_analytics.py'
+      - 'fire_public/observation_opportunity.py'
       - 'tests/test_release_sync.py'
       - 'tests/test_thermal_capture_analytics.py'
+      - 'tests/test_historical_rollup.py'
+      - 'tests/test_environmental_analytics.py'
+      - 'tests/test_observation_opportunity.py'
       - 'examples/thermal-capture-regions.json'
+      - 'examples/batman-*.json'
       - 'public/data/thermal-capture-pilot-2026-10-13.json'
+      - 'public/data/batman-weather-context-2026-10-11.json'
       - '.github/workflows/test-thermal-capture-analytics.yml'
 permissions:
   contents: read
@@ -35,3 +51,6 @@ jobs:
           python -m compileall -q fire_public
           python -m unittest discover -s tests -p 'test_release_sync.py' -v
           python -m unittest discover -s tests -p 'test_thermal_capture_analytics.py' -v
+          python -m unittest discover -s tests -p 'test_historical_rollup.py' -v
+          python -m unittest discover -s tests -p 'test_environmental_analytics.py' -v
+          python -m unittest discover -s tests -p 'test_observation_opportunity.py' -v

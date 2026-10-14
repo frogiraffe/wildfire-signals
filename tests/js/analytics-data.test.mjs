@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {validatePilot, selectPilot} from '../../public/analytics-data.mjs';
+import {validatePilot, selectPilot, validateEnvironment, selectEnvironment} from '../../public/analytics-data.mjs';
 
 const report = validatePilot(JSON.parse(readFileSync(new URL('../../public/data/thermal-capture-pilot-2026-10-13.json', import.meta.url))));
 
@@ -24,4 +24,18 @@ test('absence of archived rows stays unknown, never zero fire activity', () => {
   if (!selection.daily.length) assert.equal(alaska.candidateCellHours, null);
   assert.throws(() => selectPilot(report, {regionId:'ANTALYA', from:'2026-10-13', to:'2026-10-09'}));
   assert.throws(() => validatePilot({...report, satellite_opportunity_verified:true}));
+});
+
+const weather = validateEnvironment(JSON.parse(readFileSync(new URL('../../public/data/batman-weather-context-2026-10-11.json', import.meta.url))));
+
+test('real station pilot preserves join denominators and unknown exposure', () => {
+  assert.equal(weather.population.raw_pixels,125);
+  assert.equal(weather.population.candidate_cell_hours,56);
+  assert.equal(weather.population.candidate_hours,6);
+  assert.equal(weather.population.matched_candidate_hours_temperature_c,4);
+  assert.equal(selectEnvironment(weather,'temperature_c').length,weather.weather_hourly.length);
+  assert.ok(weather.candidate_hours.every(row => row.weather_observed_at === null ||
+    row.weather_observed_at <= row.observed_hour));
+  assert.throws(() => validateEnvironment({...weather, observation_opportunity_verified:true}));
+  assert.throws(() => selectEnvironment(weather,'precipitation'));
 });

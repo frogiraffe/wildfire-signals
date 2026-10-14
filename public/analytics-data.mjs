@@ -31,3 +31,33 @@ export function selectPilot(report, {regionId, from, to}) {
   });
   return {daily, comparison};
 }
+
+export const environmentalVariables = {
+  temperature_c: 'Air temperature (°C)',
+  wind_speed_m_s: 'Wind speed (m/s)',
+  relative_humidity_pct: 'Relative humidity (%)'
+};
+
+export function validateEnvironment(report) {
+  if (report?.schema_version !== 1 || report.status !== 'retrospective_descriptive_exploration' ||
+      report.observation_opportunity_verified !== false ||
+      report.independent_fire_outcome_valid !== false ||
+      report.environment_first_available_at !== null ||
+      !/^[a-f0-9]{64}$/.test(report.source_sha256 ?? '') ||
+      !/^[a-f0-9]{64}$/.test(report.evidence_sha256 ?? '') ||
+      !Array.isArray(report.weather_hourly) || !Array.isArray(report.candidate_hours) ||
+      !report.station?.id || !report.region?.region_id)
+    throw new Error('Unsupported environmental evidence report');
+  if (report.candidate_hours.some(row =>
+      row.satellite_observation_opportunity !== 'unknown' ||
+      (row.weather_observed_at !== null && row.weather_observed_at > row.observed_hour) ||
+      !Number.isSafeInteger(row.candidate_cell_hours) || row.candidate_cell_hours < 0))
+    throw new Error('Invalid retrospective observation join');
+  return report;
+}
+
+export function selectEnvironment(report, variable) {
+  if (!(variable in environmentalVariables)) throw new Error('Invalid environmental variable');
+  return report.weather_hourly.map(row => ({hour: row.hour, value: row[variable],
+    candidateCellHours: row.candidate_cell_hours}));
+}
