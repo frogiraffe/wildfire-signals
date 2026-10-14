@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {validatePilot, selectPilot, validateEnvironment, selectEnvironment} from '../../public/analytics-data.mjs';
+import {validatePilot, selectPilot, validateEnvironment, selectEnvironment,
+  validateCatalog} from '../../public/analytics-data.mjs';
 
 const report = validatePilot(JSON.parse(readFileSync(new URL('../../public/data/thermal-capture-pilot-2026-10-13.json', import.meta.url))));
 
@@ -38,4 +39,17 @@ test('real station pilot preserves join denominators and unknown exposure', () =
     row.weather_observed_at <= row.observed_hour));
   assert.throws(() => validateEnvironment({...weather, observation_opportunity_verified:true}));
   assert.throws(() => selectEnvironment(weather,'precipitation'));
+});
+
+test('real CMR catalog context keeps unverified exposure and source denominators', () => {
+  const catalog = validateCatalog(JSON.parse(readFileSync(new URL(
+    '../../public/data/batman-cmr-context-2026-10-11.json', import.meta.url))));
+  assert.equal(catalog.population.catalog_granules, catalog.granules.length);
+  assert.equal(catalog.population.candidate_provider_minutes, catalog.candidate_provider_minutes.length);
+  assert.equal(catalog.population.archived_raw_pixels,
+    catalog.candidate_provider_minutes.reduce((n, row) => n + row.raw_pixels, 0));
+  assert.equal(catalog.observation_opportunity_verified, false);
+  assert.equal(catalog.no_detection_count, null);
+  assert.throws(() => validateCatalog({...catalog, observation_opportunity_verified:true}));
+  assert.throws(() => validateCatalog({...catalog, no_detection_count:0}));
 });

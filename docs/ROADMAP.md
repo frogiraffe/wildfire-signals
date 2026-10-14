@@ -1,6 +1,6 @@
 # Wildfire Signals roadmap
 
-Evidence cut: 2026-10-14 UTC. `origin/main` was `b0506ab` when PR #58 safely combined #56 and #57; PR #58 CI passed, but remains unmerged. [PR #60](https://github.com/frogiraffe/wildfire-signals/pull/60) adds the offline historical foundation and [PR #59](https://github.com/frogiraffe/wildfire-signals/pull/59) adds the environmental web pilot, stacked in that order. **Completed** means implemented and covered by tests; it does not mean deployed, scientifically validated, or reliable at every location. Current deployment state requires a fresh live check.
+Evidence cut: 2026-10-14 UTC. `origin/main` was `b0506ab` when PR #58 safely combined #56 and #57; PR #58 CI passed, but remains unmerged. [PR #60](https://github.com/frogiraffe/wildfire-signals/pull/60) adds the offline historical foundation, [PR #59](https://github.com/frogiraffe/wildfire-signals/pull/59) adds the environmental web pilot, and [PR #61](https://github.com/frogiraffe/wildfire-signals/pull/61) adds bounded satellite granule catalog context, stacked in that order. **Completed** means implemented and covered by tests; it does not mean deployed, scientifically validated, or reliable at every location. Current deployment state requires a fresh live check.
 
 ## 1. Product North Star
 
@@ -30,6 +30,7 @@ The largest immediate product gap in Priority A was that the regional panel conf
 | Descriptive regional analysis | Experimental | Browser statistics and offline research reports operate on real evidence, without validated fire outcome interpretations. |
 | Incremental original-pixel analytical rollup | Experimental | Same SQLite DB, per-scan atomic checkpoints, bounded fetches and indexed date/region queries; 2,000,001-row synthetic scale test measured. Research branch only. |
 | Historical station context in analytics page | Experimental | A real NOAA GHCNh Batman station file joined to FIRMS candidate hours, with missingness, SHA-256, units and provenance. Only four candidate hours have matched temperature; no weather association is supported. |
+| NOAA-20/21 CMR granule catalog context | Experimental | Offline bounded query snapshot, SHA-256 response checks, same-platform acquisition-minute comparison and a browser evidence table. Twenty box-intersecting granules and five of seven exact temporal matches in Batman; no cell-level opportunity or negatives. |
 | Occurrence, spread, termination forecasting | Missing | Baseline research utilities exist, but independent labels, holdouts and calibration gates are unmet. No public probabilities. |
 | Internationalized UI | Partial | English/Turkish map strings; source adapters and official event coverage vary by region. |
 
@@ -68,6 +69,7 @@ Coverage and source-time integrity support both historical exploration and event
 | C1 | P1 | Experimental | Show uncertain event identity and source revisions | Agency receipt time machine, NIFC–MTBS–CAL FIRE research | One evidence-linked timeline with hypothesis and dispute states | Mixed/split identity and correction cases; independent source check | Historical receipts |
 | E1 | P1 | Partial | Complete one real environmental pilot | NWS and perimeter pilot, decision-time audit | One event report with weather, terrain and time provenance | Units, issue/valid/receipt time and missing-data tests | Source rights and chosen event |
 | E2 | P1 | Experimental | Show genuine station context alongside archived thermal candidates | FIRMS pixel receipts, GHCNh station file, B2 rollup | Batman joined aggregate, scientific report and variable-selectable browser view | SHA check, as-of observed-time join, missingness, desktop/mobile, source provenance | B2; publication time remains unknown |
+| S1 | P1 | Experimental | Place FIRMS candidate minutes beside official satellite granule metadata | NASA CMR, FIRMS pixel rollup, Batman station pilot | Version-pinned NOAA-20/21 CMR snapshot, audit report and browser table | Real two-product queries, source hashes, provider/time join, unknown exposure, desktop/mobile | B2; actual granule arrays and product quality still missing |
 | D1 | P1 | Experimental | Produce source-auditable descriptive historical report | Analysis engine and offline workbench | Region/event report with sampling and missingness | Real receipt replay, denominator and export review | B1, E1 where relevant |
 | V1 | P1 | Blocked | Establish independently evaluable target cohort | Label review, receipt store, negative gate | Two-reviewer protocol, independent positive/negative evidence, holdouts | Source independence, coverage, leakage and disagreement gates | Suitable external observations and rights |
 | F1 | P2 | Blocked | Compare occurrence/spread/termination baselines separately | Offline baseline/evaluation utilities | Target-specific baseline, calibration and limitations | Geographic/event/year holdouts and independent evaluation | V1 for each target |
@@ -105,7 +107,7 @@ Keep Pages, Functions, KV and Worker Cron on Free, with fail-closed subscription
 
 1. Review PR #58, then #60 and #59; merge into production-connected main only with explicit authorization and fresh live/Free checks.
 2. Extend B2 with a tested restore/migration exercise and a predeclared second archive period. Keep originals and SQLite backups outside Git; publish only bounded reviewed aggregates.
-3. Audit a bounded official VIIRS geolocation swath/acquisition file for one region/time, including quality/cloud caveats. Until that evidence exists, retain `unknown` acquisition opportunity and no negative labels.
+3. Extend the completed **CMR metadata** audit with one bounded original VIIRS 375 m geolocation granule and associated active-fire product/quality evidence. Metadata search hits alone remain `unknown` cell opportunity; no negative labels.
 4. Extend E2 to a second predeclared station/period with explicit file revision history and weather availability evidence. Evaluate explanatory models only with independent acquisition denominators and adequate temporal units.
 5. Continue A2 provider reliability ledger from real collector receipts, separate from satellite exposure.
 

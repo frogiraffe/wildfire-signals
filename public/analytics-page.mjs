@@ -1,5 +1,5 @@
 import {validatePilot, selectPilot, validateEnvironment, selectEnvironment,
-  environmentalVariables} from './analytics-data.mjs';
+  environmentalVariables, validateCatalog} from './analytics-data.mjs';
 
 const el = id => document.getElementById(id);
 const cell = (row, value) => {
@@ -93,6 +93,32 @@ async function startEnvironment() {
   }
 }
 
+async function startCatalog() {
+  try {
+    const response = await fetch('./data/batman-cmr-context-2026-10-11.json', {cache:'no-store'});
+    if (!response.ok) throw new Error(`Report unavailable (${response.status})`);
+    const report = validateCatalog(await response.json());
+    el('catalog-candidates').replaceChildren();
+    for (const item of report.candidate_provider_minutes) {
+      const tr = document.createElement('tr');
+      cell(tr, item.observed_minute.replace('T',' ') + ' UTC');
+      cell(tr, item.provider.replace('VIIRS_','').replace('_NRT',''));
+      cell(tr, number(item.raw_pixels));
+      cell(tr, item.catalog_granule_ids.length
+        ? `${item.catalog_granule_ids.length} granule interval${item.catalog_granule_ids.length === 1 ? '' : 's'}`
+        : 'No exact interval match; acquisition status unknown');
+      el('catalog-candidates').append(tr);
+    }
+    const count = report.population;
+    el('catalog-summary').textContent = `${count.catalog_granules} granules intersect the ${report.query_bbox_wgs84} WGS84 search box; ${count.temporally_matched_candidate_provider_minutes}/${count.candidate_provider_minutes} archived provider-minute groups have an exact catalog interval match. This is not cell-level observation opportunity, and unmatched minutes are not failed observations.`;
+    el('catalog-provenance').textContent = `NASA CMR ${report.source_queries.map(query => `${query.product} v${query.collection_version}: ${query.cmr_hits} records, response SHA-256 ${query.response_sha256}`).join(' · ')}. Queried ${report.catalog_fetched_at}; granule files were not downloaded. Source revisions and acquisition-minute conventions can change this comparison. No negative detection count is calculated.`;
+    el('catalog-status').textContent = 'CMR catalog context loaded.';
+  } catch (error) {
+    el('catalog-status').textContent = `CMR catalog context unavailable: ${error.message}`;
+    el('catalog-candidates').replaceChildren();
+  }
+}
+
 async function start() {
   try {
     const response = await fetch('./data/thermal-capture-pilot-2026-10-13.json', {cache:'no-store'});
@@ -145,3 +171,4 @@ async function start() {
 
 start();
 startEnvironment();
+startCatalog();
