@@ -28,6 +28,7 @@ test('absence of archived rows stays unknown, never zero fire activity', () => {
 });
 
 const weather = validateEnvironment(JSON.parse(readFileSync(new URL('../../public/data/batman-weather-context-2026-10-11.json', import.meta.url))));
+const sacramento = validateEnvironment(JSON.parse(readFileSync(new URL('../../public/data/sacramento-weather-context-2026-10-11.json', import.meta.url))));
 
 test('real station pilot preserves join denominators and unknown exposure', () => {
   assert.equal(weather.population.raw_pixels,125);
@@ -39,6 +40,17 @@ test('real station pilot preserves join denominators and unknown exposure', () =
     row.weather_observed_at <= row.observed_hour));
   assert.throws(() => validateEnvironment({...weather, observation_opportunity_verified:true}));
   assert.throws(() => selectEnvironment(weather,'precipitation'));
+});
+
+test('second real station keeps regions and missing hours distinct', () => {
+  assert.equal(sacramento.region.region_id, 'SACRAMENTO_25KM');
+  assert.equal(sacramento.population.raw_pixels, 22);
+  assert.equal(sacramento.population.candidate_hours, 6);
+  assert.equal(sacramento.population.matched_candidate_hours_temperature_c, 5);
+  assert.equal(sacramento.population.weather_rows_in_range, 51);
+  assert.equal(sacramento.candidate_hours.filter(row => row.temperature_c === null).length, 1);
+  assert.notEqual(sacramento.pixel_study_id, weather.pixel_study_id);
+  assert.ok(sacramento.candidate_hours.every(row => row.satellite_observation_opportunity === 'unknown'));
 });
 
 test('real CMR catalog context keeps unverified exposure and source denominators', () => {

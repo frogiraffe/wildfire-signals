@@ -69,11 +69,12 @@ function drawEnvironment(report) {
   el('weather-summary').textContent = `${stats.station_observation_n} source station values; mean ${stats.station_mean ?? 'unavailable'}; ${stats.matched_candidate_hour_n}/${report.population.candidate_hours} candidate hours matched for this variable. Values at matched candidate hours are exploratory context, not independent pixel samples or evidence of a weather effect.`;
 }
 
-async function startEnvironment() {
-  try {
-    const response = await fetch('./data/batman-weather-context-2026-10-11.json', {cache:'no-store'});
-    if (!response.ok) throw new Error(`Report unavailable (${response.status})`);
-    const report = validateEnvironment(await response.json());
+const weatherPilots = [
+  {id:'BATMAN_25KM', label:'Batman, Türkiye', url:'./data/batman-weather-context-2026-10-11.json'},
+  {id:'SACRAMENTO_25KM', label:'Sacramento, California', url:'./data/sacramento-weather-context-2026-10-11.json'}
+];
+
+function renderEnvironment(report, url) {
     el('weather-candidates').replaceChildren();
     for (const item of report.candidate_hours) {
       const tr = document.createElement('tr');
@@ -84,13 +85,47 @@ async function startEnvironment() {
       el('weather-candidates').append(tr);
     }
     el('weather-provenance').textContent = `NOAA GHCNh ${report.station.id}, ${report.weather_documentation_version}, ${report.weather_license}; ${report.population.weather_rows_in_range} station rows from ${number(report.population.source_rows)} annual file rows; ${report.population.raw_pixels} FIRMS raw pixels in ${report.population.candidate_cell_hours} distinct candidate cell-hours. Source SHA-256: ${report.source_sha256}. Source file last modified ${report.weather_source_last_modified}; each observation's first availability is unknown. The station file can be revised. No satellite acquisition mask or independent fire outcome is present.`;
-    el('weather-variable').addEventListener('change', () => drawEnvironment(report));
+    el('weather-download').href = url;
     drawEnvironment(report);
-    el('weather-status').textContent = 'Retrospective station pilot loaded.';
-  } catch (error) {
-    el('weather-status').textContent = `Historical weather context unavailable: ${error.message}`;
-    el('weather-chart').replaceChildren();
+}
+
+async function startEnvironment() {
+  const loaded = await Promise.allSettled(weatherPilots.map(async pilot => {
+    const response = await fetch(pilot.url, {cache:'no-store'});
+    if (!response.ok) throw new Error(`Report unavailable (${response.status})`);
+    const report = validateEnvironment(await response.json());
+    if (report.region.region_id !== pilot.id) throw new Error('Station report region differs');
+    return {pilot, report};
+  }));
+  const available = loaded.filter(result => result.status === 'fulfilled').map(result => result.value);
+  const failures = loaded.length - available.length;
+  el('weather-region').replaceChildren();
+  el('weather-comparison').replaceChildren();
+  for (const {pilot, report} of available) {
+    const option = document.createElement('option'); option.value = pilot.id;
+    option.textContent = pilot.label; el('weather-region').append(option);
+    const tr = document.createElement('tr');
+    for (const value of [pilot.label, number(report.population.weather_rows_in_range),
+      number(report.population.raw_pixels), number(report.population.candidate_hours),
+      `${report.population.matched_candidate_hours_temperature_c}/${report.population.candidate_hours}`,
+      'Unknown']) cell(tr, value);
+    el('weather-comparison').append(tr);
   }
+  if (!available.length) {
+    el('weather-status').textContent = 'Historical weather context unavailable: neither source report loaded.';
+    el('weather-chart').replaceChildren();
+    return;
+  }
+  const renderSelected = () => {
+    const chosen = available.find(item => item.pilot.id === el('weather-region').value);
+    renderEnvironment(chosen.report, chosen.pilot.url);
+  };
+  el('weather-region').addEventListener('change', renderSelected);
+  el('weather-variable').addEventListener('change', renderSelected);
+  renderSelected();
+  el('weather-status').textContent = failures
+    ? `Retrospective station pilot loaded; Historical weather context unavailable for ${failures} pilot.`
+    : 'Retrospective station pilot loaded.';
 }
 
 async function startCatalog() {

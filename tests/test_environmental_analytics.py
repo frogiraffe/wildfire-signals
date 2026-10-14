@@ -6,6 +6,7 @@ import hashlib
 import json
 import tempfile
 import unittest
+from statistics import mean, median
 
 from fire_public.collect import FIRMS_SOURCES
 from fire_public.environmental_analytics import build_station_context
@@ -121,6 +122,41 @@ class EnvironmentalAnalyticsTests(unittest.TestCase):
         self.assertTrue(report["thermal_source_provenance"])
         self.assertTrue(all(row["satellite_observation_opportunity"] == "unknown"
                             for row in report["candidate_hours"]))
+
+    def test_second_real_station_report_preserves_missingness_and_numerical_summary(self):
+        path = Path(__file__).resolve().parents[1] / "public/data/sacramento-weather-context-2026-10-11.json"
+        report = json.loads(path.read_text())
+        digest = report.pop("evidence_sha256")
+        canonical = (json.dumps(report, sort_keys=True, separators=(",", ":"),
+                    ensure_ascii=False, allow_nan=False) + "\n").encode()
+        self.assertEqual(hashlib.sha256(canonical).hexdigest(), digest)
+        self.assertEqual(report["region"]["region_id"], "SACRAMENTO_25KM")
+        self.assertEqual(report["station"]["id"], "USW00093225")
+        self.assertEqual(report["source_sha256"],
+                         "2e63cb3f7ea2ca89eb52947071bd8c18cc9e4da80df5b73c808d4f25f14f5a92")
+        self.assertEqual(report["region"], json.loads((path.parents[2] /
+                         "examples/sacramento-region.json").read_text())[0])
+        self.assertEqual(report["station"], json.loads((path.parents[2] /
+                         "examples/sacramento-station.json").read_text()))
+        self.assertEqual(report["population"]["raw_pixels"], 22)
+        self.assertEqual(report["population"]["candidate_cell_hours"], 10)
+        self.assertEqual(report["population"]["candidate_hours"], 6)
+        self.assertEqual(report["population"]["matched_candidate_hours_temperature_c"], 5)
+        self.assertEqual(report["population"]["weather_rows_in_range"], 51)
+        values = [row["temperature_c"] for row in report["weather_hourly"]
+                  if row["temperature_c"] is not None]
+        matched = [row["temperature_c"] for row in report["candidate_hours"]
+                   if row["temperature_c"] is not None]
+        self.assertEqual(round(mean(values), 3),
+                         report["descriptive_statistics"]["temperature_c"]["station_mean"])
+        self.assertEqual(median(matched),
+                         report["descriptive_statistics"]["temperature_c"]["matched_candidate_hour_median"])
+        self.assertTrue(all(row["weather_observed_at"] is None or
+                            row["weather_observed_at"] <= row["observed_hour"]
+                            for row in report["candidate_hours"]))
+        self.assertFalse(report["observation_opportunity_verified"])
+        self.assertIsNone(report["environment_first_available_at"])
+        self.assertIsNone(report["candidate_hours"][-1]["weather_observed_at"])
 
 
 if __name__ == "__main__":
