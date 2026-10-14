@@ -106,6 +106,15 @@ class ThermalCaptureAnalyticsTests(unittest.TestCase):
                "new_candidate_cell_hours":i+j} for i in range(5)
               for j,r in enumerate(REGIONS)]
         original=evaluate_capture_model(rows,scans,["R4","R5"])
+        self.assertEqual(original["eligibility"]["target_variability"]["status"],"variable")
+        self.assertEqual(original["eligibility"]["sample_adequacy"]["status"],"not_established")
+        self.assertEqual(original["eligibility"]["temporal_validation"]["status"],"available_limited")
+        self.assertEqual(original["eligibility"]["geographic_validation"]["status"],"available_limited")
+        self.assertEqual(original["eligibility"]["verified_observation_opportunity"]["status"],"unverified")
+        self.assertEqual(original["eligibility"]["independent_outcome_validity"]["status"],"not_applicable")
+        self.assertEqual(original["eligibility"]["scientific_model_comparison"]["status"],"ineligible")
+        self.assertEqual(original["eligibility"]["operational_prediction"]["status"],"ineligible")
+        self.assertFalse(original["model_comparison_supported"])
         changed=[dict(row,new_candidate_cell_hours=10000)
                  if row["scan_index"]==4 else row for row in rows]
         later=evaluate_capture_model(changed,scans,["R4","R5"])
@@ -142,6 +151,13 @@ class ThermalCaptureAnalyticsTests(unittest.TestCase):
         self.assertEqual(sum(row["new_candidate_cell_hours"] for row in doc["scan_rows"]),
                          sum(row["new_candidate_cell_hours"] for row in doc["daily_rows"]))
         self.assertFalse(doc["model_research"]["model_comparison_supported"])
+
+    def test_constant_real_target_is_separate_from_execution(self):
+        self.populate()
+        model=build_capture_pilot(self.db,REGIONS,heldout_region_ids=["R4","R5"])["model_research"]
+        self.assertEqual(model["status"],"experimental")
+        self.assertEqual(model["eligibility"]["target_variability"]["status"],"constant")
+        self.assertFalse(model["model_comparison_supported"])
 
     def test_original_receipts_reproduce_report_and_tampering_fails(self):
         self.populate()

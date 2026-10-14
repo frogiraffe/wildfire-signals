@@ -71,18 +71,42 @@ def _metrics(pairs: list[tuple[int, int, float]]) -> dict:
 def evaluate_capture_model(scan_rows: list[dict], scans: list[dict],
                            heldout_region_ids: list[str]) -> dict:
     """Fit only on past scan transitions and disjoint regions; no fire labels."""
+    eligibility = {
+        "data_availability": {"status": "not_assessed", "scan_receipts": len(scans)},
+        "target_variability": {"status": "not_assessed"},
+        "sample_adequacy": {"status": "not_established",
+            "reason": "No preregistered effective-sample-size or power analysis; regional rows share scan times."},
+        "temporal_validation": {"status": "not_assessed"},
+        "geographic_validation": {"status": "not_assessed"},
+        "verified_observation_opportunity": {"status": "unverified",
+            "reason": "FIRMS retrieval receipts do not prove satellite overpass or usable acquisition."},
+        "independent_outcome_validity": {"status": "not_applicable",
+            "reason": "Target is collector output, not a physical wildfire outcome."},
+        "scientific_model_comparison": {"status": "ineligible",
+            "reason": "Numerical errors may be computed; exposure, effective sample size and generalizability are unestablished."},
+        "operational_prediction": {"status": "ineligible",
+            "reason": "No validated wildfire target, independent outcome assessment or operational gate."},
+    }
     base = {"target": "next_scan_new_candidate_cell_hours",
             "observation_unit": "region_by_next_archival_scan",
-            "wildfire_prediction_skill": None}
+            "target_interpretation": "first archived candidate cell-hours in the next collector scan; affected by scheduling, latency and deduplication",
+            "wildfire_prediction_skill": None, "eligibility": eligibility,
+            "model_comparison_supported": False}
     if len(scans) < 5:
         return dict(base, status="withheld", reason="at least 5 scans required")
     if any(any(scan["source_states"].get(source) != "complete"
                    for source in FIRMS_SOURCES) for scan in scans):
+        eligibility["data_availability"] = {"status": "incomplete_source_receipts",
+                                             "scan_receipts": len(scans)}
         return dict(base, status="withheld", reason="all sources must have complete scan receipts")
     gaps = [(_utc(scans[i + 1]["scan_at"]) - _utc(scans[i]["scan_at"])).total_seconds() / 3600
             for i in range(len(scans) - 1)]
     if any(not 5 <= gap <= 7 for gap in gaps):
+        eligibility["data_availability"] = {"status": "irregular_collection_cadence",
+                                             "scan_receipts": len(scans), "gap_hours": gaps}
         return dict(base, status="withheld", reason="regular six-hour receipt cadence required")
+    eligibility["data_availability"] = {"status": "available_for_execution",
+                                         "scan_receipts": len(scans), "gap_hours": gaps}
     lookup = {(row["scan_index"], row["region_id"]): row["new_candidate_cell_hours"]
               for row in scan_rows}
     regions = sorted({row["region_id"] for row in scan_rows})
@@ -102,6 +126,7 @@ def evaluate_capture_model(scan_rows: list[dict], scans: list[dict],
     last_feature_index = len(scans) - 2
     train = [s for s in samples if s[0] < last_feature_index and s[1] not in heldout]
     if len(train) < 8:
+        eligibility["sample_adequacy"]["mechanical_training_rows"] = len(train)
         return dict(base, status="withheld", reason="at least eight earlier regional transitions required")
     xs = [math.log1p(s[2]) for s in train]
     ys = [math.log1p(s[3]) for s in train]
@@ -125,11 +150,23 @@ def evaluate_capture_model(scan_rows: list[dict], scans: list[dict],
         "joint_holdout": [s for s in samples if s[0] == last_feature_index and s[1] in heldout],
     }
     degenerate = len({s[3] for s in train}) < 2 or variance <= 1e-12
+    eligibility["target_variability"] = {
+        "status": "constant" if degenerate else "variable",
+        "distinct_training_targets": len({s[3] for s in train}),
+        "distinct_training_features": len({s[2] for s in train})}
+    eligibility["sample_adequacy"]["mechanical_training_rows"] = len(train)
+    eligibility["sample_adequacy"]["independent_training_scan_transitions"] = len({s[0] for s in train})
+    eligibility["temporal_validation"] = {"status": "available_limited",
+        "heldout_scan_transitions": 1,
+        "reason": "Only the latest transition is held out; it cannot establish temporal generalization."}
+    eligibility["geographic_validation"] = {"status": "available_limited",
+        "heldout_regions": sorted(heldout),
+        "reason": "Selected circles are exploratory and do not establish geographic representativeness."}
     return dict(base, status="experimental", feature="current_scan_new_candidate_cell_hours",
                 model="ordinary_least_squares_log1p_single_lag",
                 baseline="persistence_of_current_scan_count",
                 degenerate_training_target=degenerate,
-                model_comparison_supported=not degenerate,
+                model_comparison_supported=False,
                 coefficients={"intercept": round(intercept, 9), "slope": round(slope, 9)},
                 training_last_target_scan_at=scans[-2]["scan_at"],
                 first_temporal_holdout_target_scan_at=scans[-1]["scan_at"],
