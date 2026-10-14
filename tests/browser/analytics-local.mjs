@@ -33,6 +33,7 @@ try {
     await page.locator('#weather-status').getByText('Retrospective station pilot loaded.').waitFor();
     assert.equal(await page.locator('#weather-candidates tr').count(),6);
     assert.match(await page.locator('#weather-provenance').textContent(),/first availability is unknown/);
+    assert.match(await page.locator('#weather-provenance').textContent(),/CC0-1.0/);
     await page.locator('#weather-variable').selectOption('wind_speed_m_s');
     assert.match(await page.locator('#weather-chart').getAttribute('aria-label'),/Wind speed/);
     assert.equal(await page.locator('#analytics-region option').count(),12);

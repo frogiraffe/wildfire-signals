@@ -23,7 +23,7 @@ from .historical_signal_analysis import _read_only
 from .observation_opportunity import STATES, classify_interval
 
 SOURCE_DOC = "https://www.ncei.noaa.gov/products/global-historical-climatology-network-hourly"
-DATA_USE = "https://www.noaa.gov/office-education/outreach-communication/faq"
+DATA_USE = "https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ncdc%3AC01688"
 VARIABLES = {"temperature": ("temperature_c", -100, 65),
              "wind_speed": ("wind_speed_m_s", 0, 150),
              "wind_direction": ("wind_direction_deg", 0, 360),
@@ -214,7 +214,9 @@ def build_station_context(pixel_db: str | Path, regions: list[dict], weather_fil
               "thermal_source": "NASA FIRMS VIIRS NOAA-20/21 NRT original pixel archive",
               "weather_source": "NOAA NCEI GHCNh fixed station, annual PSV",
               "weather_source_documentation": SOURCE_DOC,
-              "weather_data_use": DATA_USE, "weather_source_url": source_url,
+              "weather_documentation_version": "GHCNh documentation 1.1.0, 2026-03-10",
+              "weather_data_use": DATA_USE, "weather_license": "CC0-1.0",
+              "weather_source_url": source_url,
               "weather_source_last_modified": revision.astimezone(timezone.utc).isoformat(),
               "source_sha256": weather_hash,
               "environment_first_available_at": None,

@@ -113,6 +113,9 @@ class EnvironmentalAnalyticsTests(unittest.TestCase):
         self.assertEqual(report["population"]["candidate_cell_hours"], 56)
         self.assertEqual(sum(row["candidate_cell_hours"] for row in report["candidate_hours"]), 56)
         self.assertEqual(report["population"]["matched_candidate_hours_temperature_c"], 4)
+        self.assertEqual(report["weather_license"], "CC0-1.0")
+        self.assertEqual(report["weather_documentation_version"],
+                         "GHCNh documentation 1.1.0, 2026-03-10")
         self.assertEqual(len(report["source_asset_manifest"]), 10)
         self.assertEqual(len(report["source_receipts"]), 5)
         self.assertTrue(report["thermal_source_provenance"])

@@ -83,7 +83,7 @@ async function startEnvironment() {
         item.relative_humidity_pct === null ? '—' : `${item.relative_humidity_pct} %`]) cell(tr, value);
       el('weather-candidates').append(tr);
     }
-    el('weather-provenance').textContent = `NOAA GHCNh ${report.station.id}, ${report.population.weather_rows_in_range} station rows from ${number(report.population.source_rows)} annual file rows; ${report.population.raw_pixels} FIRMS raw pixels in ${report.population.candidate_cell_hours} distinct candidate cell-hours. Source SHA-256: ${report.source_sha256}. Source file last modified ${report.weather_source_last_modified}; each observation's first availability is unknown. The station file can be revised. No satellite acquisition mask or independent fire outcome is present.`;
+    el('weather-provenance').textContent = `NOAA GHCNh ${report.station.id}, ${report.weather_documentation_version}, ${report.weather_license}; ${report.population.weather_rows_in_range} station rows from ${number(report.population.source_rows)} annual file rows; ${report.population.raw_pixels} FIRMS raw pixels in ${report.population.candidate_cell_hours} distinct candidate cell-hours. Source SHA-256: ${report.source_sha256}. Source file last modified ${report.weather_source_last_modified}; each observation's first availability is unknown. The station file can be revised. No satellite acquisition mask or independent fire outcome is present.`;
     el('weather-variable').addEventListener('change', () => drawEnvironment(report));
     drawEnvironment(report);
     el('weather-status').textContent = 'Retrospective station pilot loaded.';
