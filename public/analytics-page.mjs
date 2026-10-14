@@ -1,7 +1,8 @@
 import {validatePilot, selectPilot, validateEnvironment, selectEnvironment,
   environmentalVariables, validateCatalog, validatePairedCatalog,
   validateAnnualArchive, selectAnnualArchive, annualYearSummary,
-  annualVariables, validateSpatialRecurrence, selectSpatialRecurrence} from './analytics-data.mjs';
+  annualVariables, validateSpatialRecurrence, selectSpatialRecurrence,
+  validateStandardReadiness} from './analytics-data.mjs';
 
 const el = id => document.getElementById(id);
 const cell = (row, value) => {
@@ -326,6 +327,31 @@ async function startCatalog() {
   }
 }
 
+async function startStandardReadiness() {
+  try {
+    const response = await fetch('./data/antalya-standard-granule-readiness-2025-01-06-07.json',
+      {cache:'no-store'});
+    if (!response.ok) throw new Error(`Report unavailable (${response.status})`);
+    const report = validateStandardReadiness(await response.json());
+    el('standard-readiness-summary').textContent = `${report.population.geolocation_granules} standard L1 and ${report.population.active_fire_granules} standard L2 catalog entries form ${report.population.paired_intervals} exact NOAA-20 intervals. The two-day 25 km Antalya archive has ${report.population.archived_noaa20_pixels} NOAA-20 raw pixel. Catalog entries are not verified cell exposure.`;
+    el('standard-readiness-days').replaceChildren();
+    for (const day of report.daily_rows) {
+      const row = document.createElement('tr');
+      for (const value of [day.date_utc, number(day.catalogued_paired_intervals),
+        number(day.archived_noaa20_pixels), day.observation_state === 'archived_candidate'
+          ? 'Archived thermal candidate; physical event unresolved'
+          : 'No archived record; observation opportunity unknown']) cell(row,value);
+      el('standard-readiness-days').append(row);
+    }
+    el('standard-readiness-gates').textContent = 'Occurrence model readiness: blocked. Cell-level exposure, independent positive and negative fire outcomes, decision-time weather availability and a separated evaluation cohort are absent. No model was trained.';
+    el('standard-readiness-provenance').textContent = `NASA CMR ${report.source_queries.map(query => `${query.product} v${query.version}: ${query.cmr_hits} entries, response SHA-256 ${query.response_sha256}`).join(' · ')}. Snapshot ${report.cmr_fetched_at}; annual source report SHA-256 ${report.annual_report_sha256}; reproducible report SHA-256 ${report.evidence_sha256}. Original granule contents were not inspected.`;
+    el('standard-readiness-status').textContent = 'Standard product research evidence loaded.';
+  } catch (error) {
+    el('standard-readiness-status').textContent = `Standard product evidence unavailable: ${error.message}`;
+    el('standard-readiness-days').replaceChildren();
+  }
+}
+
 async function start() {
   try {
     const response = await fetch('./data/thermal-capture-pilot-2026-10-13.json', {cache:'no-store'});
@@ -381,3 +407,4 @@ startEnvironment();
 startAnnual();
 startSpatial();
 startCatalog();
+startStandardReadiness();

@@ -24,7 +24,9 @@ const files = new Map([
   ['/data/dalaman-annual-context-2023-2025.json',
     ['data/dalaman-annual-context-2023-2025.json','application/json']],
   ['/data/turkey-spatial-recurrence-2023-2025.json',
-    ['data/turkey-spatial-recurrence-2023-2025.json','application/json']]
+    ['data/turkey-spatial-recurrence-2023-2025.json','application/json']],
+  ['/data/antalya-standard-granule-readiness-2025-01-06-07.json',
+    ['data/antalya-standard-granule-readiness-2025-01-06-07.json','application/json']]
 ]);
 const root = new URL('../../public/', import.meta.url);
 const server = createServer(async (request,response) => {
@@ -45,6 +47,10 @@ try {
     await page.locator('#weather-status').getByText('Retrospective station pilot loaded.').waitFor();
     await page.locator('#annual-status').getByText('Three-year archive loaded.').waitFor();
     await page.locator('#spatial-status').getByText('Spatial recurrence evidence loaded.').waitFor();
+    await page.locator('#standard-readiness-status').getByText('Standard product research evidence loaded.').waitFor();
+    assert.equal(await page.locator('#standard-readiness-days tr').count(),2);
+    assert.match(await page.locator('#standard-readiness-days tr:last-child').textContent(),/opportunity unknown/);
+    assert.match(await page.locator('#standard-readiness-gates').textContent(),/No model was trained/);
     assert.equal(await page.locator('#spatial-region option').count(),2);
     assert.match(await page.locator('#spatial-summary').textContent(),/1,340 archived pixels/);
     assert.match(await page.locator('#spatial-bins tr:first-child').textContent(),/748/);
@@ -172,4 +178,11 @@ try {
   await missingSpatial.locator('#annual-status').getByText('Three-year archive loaded.').waitFor();
   assert.equal(await missingSpatial.locator('#spatial-bins tr').count(),0);
   await missingSpatial.close();
+  const missingStandard = await browser.newPage();
+  await missingStandard.route('**/data/antalya-standard-granule-readiness-2025-01-06-07.json',
+    route => route.fulfill({status:503,body:'unavailable'}));
+  await missingStandard.goto(`http://127.0.0.1:${server.address().port}/analytics.html`);
+  await missingStandard.locator('#standard-readiness-status').getByText(/evidence unavailable/).waitFor();
+  assert.equal(await missingStandard.locator('#standard-readiness-days tr').count(),0);
+  await missingStandard.close();
 } finally {await browser.close(); await new Promise(resolve => server.close(resolve));}

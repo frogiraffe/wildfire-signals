@@ -4,7 +4,18 @@ import {readFileSync} from 'node:fs';
 import {validatePilot, selectPilot, validateEnvironment, selectEnvironment,
   validateCatalog, validatePairedCatalog, validateAnnualArchive,
   selectAnnualArchive, annualYearSummary, validateSpatialRecurrence,
-  selectSpatialRecurrence} from '../../public/analytics-data.mjs';
+  selectSpatialRecurrence, validateStandardReadiness} from '../../public/analytics-data.mjs';
+
+test('standard VIIRS catalog pairs remain neither exposure nor fire outcomes', () => {
+  const evidence = validateStandardReadiness(JSON.parse(readFileSync(new URL(
+    '../../public/data/antalya-standard-granule-readiness-2025-01-06-07.json', import.meta.url))));
+  assert.equal(evidence.population.paired_intervals,6);
+  assert.equal(evidence.daily_rows[0].archived_noaa20_pixels,1);
+  assert.equal(evidence.daily_rows[1].observation_state,'no_archived_record_unverified_opportunity');
+  assert.equal(evidence.no_detection_count,null);
+  assert.throws(() => validateStandardReadiness({...evidence, cell_exposure_verified:true}));
+  assert.throws(() => validateStandardReadiness({...evidence, no_detection_count:0}));
+});
 
 const report = validatePilot(JSON.parse(readFileSync(new URL('../../public/data/thermal-capture-pilot-2026-10-13.json', import.meta.url))));
 

@@ -10,6 +10,7 @@ on:
       - 'fire_public/spatial_recurrence.py'
       - 'fire_public/observation_opportunity.py'
       - 'fire_public/acquisition_catalog.py'
+      - 'fire_public/standard_granule_readiness.py'
       - 'tests/test_release_sync.py'
       - 'tests/test_thermal_capture_analytics.py'
       - 'tests/test_historical_rollup.py'
@@ -18,6 +19,7 @@ on:
       - 'tests/test_spatial_recurrence.py'
       - 'tests/test_observation_opportunity.py'
       - 'tests/test_acquisition_catalog.py'
+      - 'tests/test_standard_granule_readiness.py'
       - 'examples/thermal-capture-regions.json'
       - 'examples/batman-*.json'
       - 'examples/sacramento-*.json'
@@ -32,6 +34,8 @@ on:
       - 'public/data/turkey-spatial-recurrence-2023-2025.json'
       - 'public/data/batman-cmr-context-2026-10-11.json'
       - 'public/data/batman-cmr-paired-products-2026-10-11.json'
+      - 'public/data/antalya-standard-granule-readiness-2025-01-06-07.json'
+      - 'docs/research/source-samples/antalya-standard-cmr-2025-01-06-07.json'
       - 'docs/research/source-samples/batman-cmr-2026-10-09-11.json'
       - 'docs/research/source-samples/batman-active-cmr-2026-10-09-11.json'
       - '.github/workflows/test-thermal-capture-analytics.yml'
@@ -46,6 +50,7 @@ on:
       - 'fire_public/spatial_recurrence.py'
       - 'fire_public/observation_opportunity.py'
       - 'fire_public/acquisition_catalog.py'
+      - 'fire_public/standard_granule_readiness.py'
       - 'tests/test_release_sync.py'
       - 'tests/test_thermal_capture_analytics.py'
       - 'tests/test_historical_rollup.py'
@@ -54,6 +59,7 @@ on:
       - 'tests/test_spatial_recurrence.py'
       - 'tests/test_observation_opportunity.py'
       - 'tests/test_acquisition_catalog.py'
+      - 'tests/test_standard_granule_readiness.py'
       - 'examples/thermal-capture-regions.json'
       - 'examples/batman-*.json'
       - 'examples/sacramento-*.json'
@@ -68,6 +74,8 @@ on:
       - 'public/data/turkey-spatial-recurrence-2023-2025.json'
       - 'public/data/batman-cmr-context-2026-10-11.json'
       - 'public/data/batman-cmr-paired-products-2026-10-11.json'
+      - 'public/data/antalya-standard-granule-readiness-2025-01-06-07.json'
+      - 'docs/research/source-samples/antalya-standard-cmr-2025-01-06-07.json'
       - 'docs/research/source-samples/batman-cmr-2026-10-09-11.json'
       - 'docs/research/source-samples/batman-active-cmr-2026-10-09-11.json'
       - '.github/workflows/test-thermal-capture-analytics.yml'
@@ -93,3 +101,4 @@ jobs:
           python -m unittest discover -s tests -p 'test_spatial_recurrence.py' -v
           python -m unittest discover -s tests -p 'test_observation_opportunity.py' -v
           python -m unittest discover -s tests -p 'test_acquisition_catalog.py' -v
+          python -m unittest discover -s tests -p 'test_standard_granule_readiness.py' -v
