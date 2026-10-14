@@ -1,6 +1,6 @@
 # Analytics and scientific modeling roadmap
 
-Status: 2026-10-14 research preview. [PR #58](https://github.com/frogiraffe/wildfire-signals/pull/58) integrates the coverage and original FIRMS analytics pilots; [PR #60](https://github.com/frogiraffe/wildfire-signals/pull/60) adds durable SQLite history; [PR #59](https://github.com/frogiraffe/wildfire-signals/pull/59) adds the real GHCNh station pilot and web view. They are stacked in that merge order and none is merged into production main. No wildfire model is validated. The broader product direction remains in [the product vision](wildfire-analysis-product-vision-2026-10-12.md) and [engineering policy](ENGINEERING_POLICY.md).
+Status: 2026-10-14 research preview. [PR #58](https://github.com/frogiraffe/wildfire-signals/pull/58) integrates the coverage and original FIRMS analytics pilots; [PR #60](https://github.com/frogiraffe/wildfire-signals/pull/60) adds durable SQLite history; [PR #59](https://github.com/frogiraffe/wildfire-signals/pull/59) adds the real GHCNh station pilot and web view; [PR #61](https://github.com/frogiraffe/wildfire-signals/pull/61) adds bounded NOAA-20/21 granule catalog context. They are stacked in that merge order and none is merged into production main. No wildfire model is validated. The broader product direction remains in [the product vision](wildfire-analysis-product-vision-2026-10-12.md) and [engineering policy](ENGINEERING_POLICY.md).
 
 ## Current capability and gap analysis
 

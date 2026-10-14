@@ -1,6 +1,6 @@
 # Wildfire Signals roadmap
 
-Evidence cut: 2026-10-14 UTC. `origin/main` was `b0506ab` when PR #58 safely combined #56 and #57; PR #58 CI passed, but remains unmerged. [PR #60](https://github.com/frogiraffe/wildfire-signals/pull/60) adds the offline historical foundation and [PR #59](https://github.com/frogiraffe/wildfire-signals/pull/59) adds the environmental web pilot, stacked in that order. **Completed** means implemented and covered by tests; it does not mean deployed, scientifically validated, or reliable at every location. Current deployment state requires a fresh live check.
+Evidence cut: 2026-10-14 UTC. `origin/main` was `b0506ab` when PR #58 safely combined #56 and #57; PR #58 CI passed, but remains unmerged. [PR #60](https://github.com/frogiraffe/wildfire-signals/pull/60) adds the offline historical foundation, [PR #59](https://github.com/frogiraffe/wildfire-signals/pull/59) adds the environmental web pilot, and [PR #61](https://github.com/frogiraffe/wildfire-signals/pull/61) adds bounded satellite granule catalog context, stacked in that order. **Completed** means implemented and covered by tests; it does not mean deployed, scientifically validated, or reliable at every location. Current deployment state requires a fresh live check.
 
 ## 1. Product North Star
 
