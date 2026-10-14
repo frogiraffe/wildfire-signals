@@ -111,3 +111,62 @@ export function validatePairedCatalog(report, geolocation) {
     throw new Error('Unsupported or incomplete paired CMR catalog context');
   return report;
 }
+
+export const annualVariables = {
+  temperature_c: 'Temperature (°C)',
+  wind_speed_m_s: 'Wind speed (m/s)',
+  relative_humidity_pct: 'Relative humidity (%)'
+};
+
+export function validateAnnualArchive(report) {
+  const count = (key) => report.population?.[key];
+  const pixels = rows => rows.reduce((sum, row) => sum + row.raw_pixels, 0);
+  if (report?.schema_version !== 1 || report.status !== 'retrospective_standard_archive_exploration' ||
+      report.observation_opportunity_verified !== false || report.no_detection_count !== null ||
+      report.independent_fire_outcome_valid !== false || report.statistical_relationship_supported !== false ||
+      report.thermal_first_available_at !== null || report.environment_first_available_at !== null ||
+      !/^[a-f0-9]{64}$/.test(report.evidence_sha256 ?? '') ||
+      !Array.isArray(report.source_asset_manifest) || !Array.isArray(report.weather_asset_manifest) ||
+      !Array.isArray(report.daily_rows) || !Array.isArray(report.monthly_rows) ||
+      !Array.isArray(report.weather_monthly_rows) || !Array.isArray(report.candidate_provider_hours) ||
+      count('source_files') !== report.source_asset_manifest.length ||
+      count('weather_files') !== report.weather_asset_manifest.length ||
+      count('selected_raw_pixels') !== pixels(report.monthly_rows) ||
+      count('selected_raw_pixels') !== pixels(report.daily_rows) ||
+      count('candidate_provider_hours') !== report.candidate_provider_hours.length ||
+      report.source_asset_manifest.some(item => !/^[a-f0-9]{64}$/.test(item.sha256 ?? '')) ||
+      report.weather_asset_manifest.some(item => !/^[a-f0-9]{64}$/.test(item.sha256 ?? '')) ||
+      report.monthly_rows.some(item => !/^\d{4}-(0[1-9]|1[0-2])$/.test(item.observed_month) ||
+        !Number.isSafeInteger(item.raw_pixels) || item.raw_pixels < 0 ||
+        item.satellite_observation_opportunity !== 'unknown') ||
+      report.candidate_provider_hours.some(item => item.satellite_observation_opportunity !== 'unknown' ||
+        (item.weather_observed_at !== null && item.weather_observed_at > item.first_candidate_minute)))
+    throw new Error('Unsupported or inconsistent annual archive');
+  return report;
+}
+
+export function selectAnnualArchive(report, {from, to, provider, variable}) {
+  const month = /^\d{4}-(0[1-9]|1[0-2])$/;
+  const providers = new Set(report.source_asset_manifest.map(item => item.provider));
+  if (!month.test(from) || !month.test(to) || from > to ||
+      from < report.start_date.slice(0,7) || to > report.end_date.slice(0,7) ||
+      (provider !== 'all' && !providers.has(provider)) || !(variable in annualVariables))
+    throw new Error('Invalid annual selection');
+  const weather = new Map(report.weather_monthly_rows.map(row => [row.observed_month, row]));
+  const grouped = new Map();
+  for (const row of report.monthly_rows) {
+    if (row.observed_month < from || row.observed_month > to ||
+        (provider !== 'all' && row.provider !== provider)) continue;
+    const item = grouped.get(row.observed_month) ?? {month: row.observed_month, rawPixels: 0,
+      candidateCellHours: 0, daysWithArchivedCandidates: 0, observationOpportunity: 'unknown'};
+    item.rawPixels += row.raw_pixels;
+    item.candidateCellHours += row.candidate_cell_hours;
+    // These per-sensor counts can overlap on the same day; do not add them.
+    item.daysWithArchivedCandidates = null;
+    const station = weather.get(row.observed_month);
+    item.stationMedian = station?.[`${variable}_median`] ?? null;
+    item.stationN = station?.[`${variable}_n`] ?? 0;
+    grouped.set(row.observed_month, item);
+  }
+  return {months: [...grouped.values()].sort((a,b) => a.month.localeCompare(b.month))};
+}

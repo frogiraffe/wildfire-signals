@@ -1,5 +1,6 @@
 import {validatePilot, selectPilot, validateEnvironment, selectEnvironment,
-  environmentalVariables, validateCatalog, validatePairedCatalog} from './analytics-data.mjs';
+  environmentalVariables, validateCatalog, validatePairedCatalog,
+  validateAnnualArchive, selectAnnualArchive, annualVariables} from './analytics-data.mjs';
 
 const el = id => document.getElementById(id);
 const cell = (row, value) => {
@@ -67,6 +68,63 @@ function drawEnvironment(report) {
   el('weather-chart').setAttribute('aria-label', `${environmentalVariables[variable]} at ${report.station.name}, ${report.start_date} to ${report.end_date}; amber marks archived candidate hours; other hours have unknown satellite coverage`);
   const stats = report.descriptive_statistics[variable];
   el('weather-summary').textContent = `${stats.station_observation_n} source station values; mean ${stats.station_mean ?? 'unavailable'}; ${stats.matched_candidate_hour_n}/${report.population.candidate_hours} candidate hours matched for this variable. Values at matched candidate hours are exploratory context, not independent pixel samples or evidence of a weather effect.`;
+}
+
+function drawAnnual(report) {
+  const variable = el('annual-variable').value;
+  const {months} = selectAnnualArchive(report, {from:el('annual-from').value,
+    to:el('annual-to').value, provider:el('annual-provider').value, variable});
+  const pixelTotal = months.reduce((sum, row) => sum + row.rawPixels, 0);
+  el('annual-summary').textContent = `${months.length} selected UTC months; ${number(pixelTotal)} archived candidate pixels. Weather medians use station records from the full month. Neither series has verified satellite exposure; counts are not fire rates. The station was selected around a known thermal archive, so apparent alignment is exploratory.`;
+  el('annual-months').replaceChildren();
+  for (const [chartId, field, title] of [
+    ['annual-thermal-chart','rawPixels','pixels'],
+    ['annual-weather-chart','stationMedian',annualVariables[variable]]]) {
+    const chart = el(chartId);
+    chart.replaceChildren();
+    const values = months.map(row => row[field]).filter(value => value !== null);
+    const maximum = Math.max(...values, 1);
+    const minimum = Math.min(...values, 0);
+    const span = Math.max(1, maximum - minimum);
+    for (const row of months) {
+      const bar = document.createElement('div');
+      bar.className = 'analytics-bar';
+      const column = document.createElement('span');
+      column.style.height = `${row[field] === null ? 2 : Math.max(2, Math.round(110 * (row[field] - minimum) / span))}px`;
+      const label = document.createElement('small');
+      label.textContent = row.month.slice(2);
+      bar.title = `${row.month}: ${row[field] ?? 'unavailable'} ${title}; satellite opportunity unknown`;
+      bar.append(column,label); chart.append(bar);
+    }
+    chart.setAttribute('aria-label', `${title} by UTC month, ${months[0]?.month ?? 'none'} to ${months.at(-1)?.month ?? 'none'}; satellite opportunity unknown`);
+  }
+  for (const row of months) {
+    const tr = document.createElement('tr');
+    for (const value of [row.month, number(row.rawPixels), number(row.candidateCellHours),
+      row.stationMedian === null ? '—' : `${row.stationMedian} ${annualVariables[variable]}`,
+      number(row.stationN), 'Unknown']) cell(tr,value);
+    el('annual-months').append(tr);
+  }
+}
+
+async function startAnnual() {
+  try {
+    const response = await fetch('./data/antalya-annual-context-2023-2025.json');
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const report = validateAnnualArchive(await response.json());
+    el('annual-provenance').textContent = `${report.population.country_source_rows.toLocaleString()} rows in ${report.population.source_files} NASA annual country files; ${report.population.selected_raw_pixels.toLocaleString()} selected pixels in a ${report.region.radius_km} km circle. ${report.population.station_source_rows.toLocaleString()} rows in ${report.population.weather_files} NOAA station files; ${report.population.weather_matched_provider_hours_temperature_c}/${report.population.candidate_provider_hours} positive sensor-hours have prior station temperature. NASA and NOAA files are revised; original first availability is unknown. Evidence SHA-256: ${report.evidence_sha256}. Source file hashes and revisions are in the download. Weather license: ${report.weather_license}. No independently confirmed wildfire outcome.`;
+    for (const id of ['annual-from','annual-to','annual-provider','annual-variable'])
+      el(id).addEventListener('change', () => {
+        try {drawAnnual(report); el('annual-status').textContent = 'Three-year archive loaded.';}
+        catch (error) {el('annual-summary').textContent = '';
+          el('annual-months').replaceChildren(); el('annual-thermal-chart').replaceChildren();
+          el('annual-weather-chart').replaceChildren(); el('annual-status').textContent = error.message;}
+      });
+    drawAnnual(report);
+    el('annual-status').textContent = 'Three-year archive loaded.';
+  } catch (error) {
+    el('annual-status').textContent = `Annual archive unavailable: ${error.message}`;
+  }
 }
 
 const weatherPilots = [
@@ -224,4 +282,5 @@ async function start() {
 
 start();
 startEnvironment();
+startAnnual();
 startCatalog();

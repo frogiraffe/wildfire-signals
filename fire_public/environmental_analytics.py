@@ -28,6 +28,18 @@ VARIABLES = {"temperature": ("temperature_c", -100, 65),
              "wind_speed": ("wind_speed_m_s", 0, 150),
              "wind_direction": ("wind_direction_deg", 0, 360),
              "relative_humidity": ("relative_humidity_pct", 0, 100)}
+QC_PASSED_ONE_SOURCES = {"220", "221", "222", "223", "313", "314", "315",
+                         "322", "335", "343", "344", "346", "347", "348"}
+QC_PASSED_FIVE_SOURCES = {"313", "314", "315", "322", "335", "343", "344", "346"}
+
+
+def _quality_accepted(row: dict, source_name: str) -> bool:
+    """GHCNh QC meanings depend on the source; a nonblank code can mean passed."""
+    code = row[f"{source_name}_Quality_Code"].strip()
+    source = row.get(f"{source_name}_Source_Code", "").strip()
+    return (not code or (code == "1" and source in QC_PASSED_ONE_SOURCES)
+            or (code == "5" and source in QC_PASSED_FIVE_SOURCES)
+            or (code == "0" and source == "345"))
 
 
 def _utc(value: str) -> datetime:
@@ -54,6 +66,7 @@ def read_station_file(path: str | Path, station: dict, *, start: date,
     digest = _source_hash(path)
     selected = []
     exclusions = Counter()
+    undefined_wind_direction = 0
     source_rows = 0
     last = None
     with path.open(newline="", encoding="utf-8") as handle:
@@ -80,11 +93,14 @@ def read_station_file(path: str | Path, station: dict, *, start: date,
             result = {"observed_at": observed.isoformat(), "time": observed}
             for source_name, (name, minimum, maximum) in VARIABLES.items():
                 raw = row[source_name].strip()
-                quality = row[f"{source_name}_Quality_Code"].strip()
                 if not raw:
                     result[name] = None
-                elif quality:
+                elif not _quality_accepted(row, source_name):
                     exclusions[source_name] += 1
+                    result[name] = None
+                elif (source_name == "wind_direction" and raw == "999" and
+                      row.get("wind_direction_Measurement_Code", "").strip() in {"V", "C"}):
+                    undefined_wind_direction += 1
                     result[name] = None
                 else:
                     value = float(raw)
@@ -92,8 +108,11 @@ def read_station_file(path: str | Path, station: dict, *, start: date,
                         raise ValueError(f"invalid GHCNh {source_name} value")
                     result[name] = value
             selected.append(result)
-    return selected, {"source_rows": source_rows, "weather_rows_in_range": len(selected),
-                      "quality_exclusions": dict(exclusions)}, digest
+    counts = {"source_rows": source_rows, "weather_rows_in_range": len(selected),
+              "quality_exclusions": dict(exclusions)}
+    if undefined_wind_direction:
+        counts["undefined_wind_direction_rows"] = undefined_wind_direction
+    return selected, counts, digest
 
 
 def build_station_context(pixel_db: str | Path, regions: list[dict], weather_file: str | Path,
