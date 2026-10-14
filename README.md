@@ -608,12 +608,8 @@ unresolved pending independent scientific review.
 
 The [historical analytics research preview](public/analytics.html) displays a fixed,
 real NASA FIRMS original-pixel pilot with daily activity, selected-region
-comparison, source receipts and explicit coverage limits. The reproducible
-[analytics and modeling roadmap](docs/ANALYTICS_MODELING_ROADMAP.md) documents
-the short archive, numerical baseline experiment, missing environmental and
-independent fire evidence, and the next validation gates. It does not provide
-a wildfire forecast. The 35 KiB static aggregate is committed; original
-pixel archives and SQLite remain outside the public repository.
+comparison, source receipts and explicit coverage limits. The stacked research
+branch also adds a real [Batman GHCNh fixed-station context pilot](docs/research/batman-station-thermal-context-2026-10.md), with temperature, wind and humidity charts, source hashes and unmatched weather hours. Its [incremental SQLite rollup](fire_public/historical_rollup.py) processes original pixels by atomic scan checkpoints for bounded region/date queries; it does not load the whole archive into Python. The [analytics and modeling roadmap](docs/ANALYTICS_MODELING_ROADMAP.md) documents the short archive, scale benchmark, numerical collection-output baseline, weather limits and independent fire evidence gaps. Neither station context nor the experimental model is a wildfire forecast. Compact static aggregates are committed; original pixel and station files and SQLite remain outside the public repository.
 
 
 ```sh

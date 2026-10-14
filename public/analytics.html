@@ -35,6 +35,17 @@
         <p>Counts reflect selected circles and sensor acquisition patterns; they are not comparable fire rates. Regions were chosen for this exploratory pilot, so this is not a representative global sample.</p>
         <div class="analytics-table-wrap"><table><thead><tr><th scope="col">Region</th><th scope="col">Candidate cell-hours</th><th scope="col">Raw pixels</th></tr></thead><tbody id="analytics-comparison"></tbody></table></div>
       </section>
+      <section aria-labelledby="weather-heading" class="analytics-card">
+        <h2 id="weather-heading">Historical station context · Batman, Türkiye</h2>
+        <p>This separate 25 km pilot joins archived FIRMS candidate hours with NOAA GHCNh observations at one fixed station. Station conditions may differ at each pixel. Blue bars are station records; amber bars mark hours with archived candidates. Other hours have <strong>unknown satellite opportunity</strong>, not zero fire activity.</p>
+        <p id="weather-status" role="status" aria-live="polite">Loading historical station evidence…</p>
+        <div class="analytics-controls"><label>Station variable <select id="weather-variable"><option value="temperature_c">Air temperature (°C)</option><option value="wind_speed_m_s">Wind speed (m/s)</option><option value="relative_humidity_pct">Relative humidity (%)</option></select></label></div>
+        <div id="weather-chart" class="analytics-chart analytics-weather-chart" role="img" aria-label="Historical station observations"></div>
+        <p id="weather-summary"></p>
+        <div class="analytics-table-wrap"><table><thead><tr><th scope="col">Candidate UTC hour</th><th scope="col">Cell-hours</th><th scope="col">Raw pixels</th><th scope="col">Station observation</th><th scope="col">Temperature</th><th scope="col">Wind speed</th><th scope="col">Relative humidity</th></tr></thead><tbody id="weather-candidates"></tbody></table></div>
+        <p id="weather-provenance"></p>
+        <p><a href="./data/batman-weather-context-2026-10-11.json" download>Download joined evidence JSON</a> · <a href="https://www.ncei.noaa.gov/products/global-historical-climatology-network-hourly" rel="noopener noreferrer" target="_blank">NOAA GHCNh source</a> · <a href="https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ncdc%3AC01688" rel="noopener noreferrer" target="_blank">Dataset rights and citation</a></p>
+      </section>
       <section aria-labelledby="methods-heading" class="analytics-card">
         <h2 id="methods-heading">Sources, scope and method</h2>
         <dl id="analytics-methods"></dl>

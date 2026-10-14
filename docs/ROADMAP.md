@@ -1,6 +1,6 @@
 # Wildfire Signals roadmap
 
-Evidence cut: 2026-10-13 UTC, `origin/main` at `b0506ab` plus the branch carrying this document. **Completed** means implemented and covered by tests; it does not mean deployed, scientifically validated, or reliable at every location. Current deployment state requires a fresh live check.
+Evidence cut: 2026-10-14 UTC. `origin/main` was `b0506ab` when PR #58 safely combined #56 and #57; PR #58 CI passed, but remains unmerged. [PR #60](https://github.com/frogiraffe/wildfire-signals/pull/60) adds the offline historical foundation and [PR #59](https://github.com/frogiraffe/wildfire-signals/pull/59) adds the environmental web pilot, stacked in that order. **Completed** means implemented and covered by tests; it does not mean deployed, scientifically validated, or reliable at every location. Current deployment state requires a fresh live check.
 
 ## 1. Product North Star
 
@@ -10,7 +10,7 @@ Help a person locate thermal signals and official incident reports, understand t
 
 The public service uses a static MapLibre map on Cloudflare Pages, a Pages Function reading an immutable gzip snapshot from Workers KV Free, and a GitHub Actions collector for two NASA FIRMS VIIRS feeds plus NIFC WFIGS and CWFIS. On 2026-10-13 at 20:05 UTC, [the collector run](https://github.com/frogiraffe/wildfire-signals/actions/runs/38460001197) completed with 105,726 **candidate cell-hour records in the rolling snapshot**, 441 **current agency records**, and no reported provider errors. Those are two different record kinds, not 106,167 confirmed fires. The run's denominator is one published snapshot and four configured provider feeds; it says nothing about independent detection accuracy. The latest checked [coverage CI run](https://github.com/frogiraffe/wildfire-signals/actions/runs/38334852620) succeeded on 2026-10-13 at 02:00 UTC. Recent source collection success does not prove interval continuity or current Pages/KV health. Direct Pages API access from this work environment timed out; Cloudflare Free status is not freshly independently observed here. The last checked [Free verification workflow](https://github.com/frogiraffe/wildfire-signals/actions/runs/38289991416) succeeded on 2026-10-12, but is historical evidence only.
 
-The current local checkout opened by the user was 27 commits behind `origin/main` and had extensive uncommitted work. This roadmap and slice use an isolated worktree from latest `origin/main`. Open PR list was empty at the evidence cut. Source and test contracts, not older README completion claims, drive the inventory below.
+The original local checkout has extensive unrelated uncommitted work and remains untouched. PR #56 and #57 were fetched and combined without conflicts on an isolated branch; [PR #58](https://github.com/frogiraffe/wildfire-signals/pull/58) targets main and remains open. This analytics slice uses a second isolated worktree based on #58. Source and test contracts, not older README completion claims, drive the inventory below.
 
 The largest immediate product gap in Priority A was that the regional panel conflated a zero **within a circle** with an empty **provider response** and presented global product age beside regional counts. The branch adds response count/state and separates regional last observation from global age. It does not prove acquisition completeness.
 
@@ -28,6 +28,8 @@ The largest immediate product gap in Priority A was that the regional panel conf
 | Time-of-availability checks | Partial | Decision-time and prospective receipt modules reject late inputs in tests; not applied to every environmental or historical feed. |
 | Environmental context | Partial | US on-demand NWS grid/perimeter context and local pilots; no complete timestamped terrain/fuel/weather pilot for one event. |
 | Descriptive regional analysis | Experimental | Browser statistics and offline research reports operate on real evidence, without validated fire outcome interpretations. |
+| Incremental original-pixel analytical rollup | Experimental | Same SQLite DB, per-scan atomic checkpoints, bounded fetches and indexed date/region queries; 2,000,001-row synthetic scale test measured. Research branch only. |
+| Historical station context in analytics page | Experimental | A real NOAA GHCNh Batman station file joined to FIRMS candidate hours, with missingness, SHA-256, units and provenance. Only four candidate hours have matched temperature; no weather association is supported. |
 | Occurrence, spread, termination forecasting | Missing | Baseline research utilities exist, but independent labels, holdouts and calibration gates are unmet. No public probabilities. |
 | Internationalized UI | Partial | English/Turkish map strings; source adapters and official event coverage vary by region. |
 
@@ -44,6 +46,9 @@ flowchart LR
   C --> R[Optional dated receipts and GitHub research releases]
   R --> S[Local SQLite archives and offline workbenches]
   S --> E[Independent review and evaluation gates]
+  S --> H[Checkpointed SQLite region/date rollup]
+  H --> P[Compact reviewed analytics JSON on Pages]
+  P --> M
 ```
 
 The research modules are offline consumers of original receipts, not live map dependencies. Keep that boundary; avoid introducing a second hosted database until storage, rights, restore, and Free-budget evidence justify it. Current CLI modules are numerous; simplify entry points only when a concrete user workflow needs it. Source capability metadata appears in the browser registry, while collector statuses come from Python; reconcile these contracts before adding providers to prevent drift.
@@ -59,15 +64,17 @@ Coverage and source-time integrity support both historical exploration and event
 | A1 | P0 | Partial | Distinguish provider empty responses, regional observation time and global feed age in selected-circle map | Collector source rows; coverage audit; map panel | Response evidence in snapshot, panel and export | Empty vs failed vs zero-in-circle; region time; browser desktop/mobile; full tests | None |
 | A2 | P0 | Missing | Measure source reliability and declared/actual scope over a bounded UTC interval | Collector receipts, region diagnostics, release archive | Per-provider attempt ledger and denominator, outage gaps, source/version/rights manifest | Replay real receipts with missing intervals and antimeridian/polar cases | A1, receipt availability |
 | B1 | P0 | Partial | Explore one real historical region/date range in the web product | SQLite pixel history, research release sync, workbench | Bounded published historical query or static manifest plus date UI | Same query replay gives same hashes/counts; late receipts excluded; Free size gate | Rights and storage measurement |
+| B2 | P0 | Experimental | Incrementally aggregate an archive beyond the bounded pilot | SQLite pixel history and release sync | Same-DB scan checkpoints and bounded region/date queries | Atomic interruption/recovery; duplicate and changed-history checks; measured >1M and 2M fixture | Verified source archives outside Git |
 | C1 | P1 | Experimental | Show uncertain event identity and source revisions | Agency receipt time machine, NIFC–MTBS–CAL FIRE research | One evidence-linked timeline with hypothesis and dispute states | Mixed/split identity and correction cases; independent source check | Historical receipts |
 | E1 | P1 | Partial | Complete one real environmental pilot | NWS and perimeter pilot, decision-time audit | One event report with weather, terrain and time provenance | Units, issue/valid/receipt time and missing-data tests | Source rights and chosen event |
+| E2 | P1 | Experimental | Show genuine station context alongside archived thermal candidates | FIRMS pixel receipts, GHCNh station file, B2 rollup | Batman joined aggregate, scientific report and variable-selectable browser view | SHA check, as-of observed-time join, missingness, desktop/mobile, source provenance | B2; publication time remains unknown |
 | D1 | P1 | Experimental | Produce source-auditable descriptive historical report | Analysis engine and offline workbench | Region/event report with sampling and missingness | Real receipt replay, denominator and export review | B1, E1 where relevant |
 | V1 | P1 | Blocked | Establish independently evaluable target cohort | Label review, receipt store, negative gate | Two-reviewer protocol, independent positive/negative evidence, holdouts | Source independence, coverage, leakage and disagreement gates | Suitable external observations and rights |
 | F1 | P2 | Blocked | Compare occurrence/spread/termination baselines separately | Offline baseline/evaluation utilities | Target-specific baseline, calibration and limitations | Geographic/event/year holdouts and independent evaluation | V1 for each target |
 | I1 | P2 | Partial | Expand countries, language and accessibility | EN/TR map, WGS84/antimeridian tests | Provider adapter contract and verified first new source | Polar/UTC/license/mobile keyboard tests | A2, source rights |
 | O1 | P2 | Partial | Release safely on Free infrastructure | Actions, Pages/KV, Free gate, scheduler | Fresh health/cost dashboard, restore and security checks | Live CI/API/Cron, load, budget and rollback evidence | A1/B1 operational footprint |
 
-**Milestone acceptance:** A milestone moves to Completed only when its listed behavior is implemented, tests pass in the relevant current branch, and any real-source or human-review gate is evidenced. A1 remains Partial until its PR CI and integration are checked. Phases 0–10 map respectively to architecture/operations, A, B, C, E, D, V, F, cross-cutting UI, I, and O.
+**Milestone acceptance:** A milestone moves to Completed only when its listed behavior is implemented, tests pass in the relevant current branch, and any real-source or human-review gate is evidenced. A1 remains Partial because PR #58 has passed CI but has not been integrated into production-connected main. B2/E2 remain Experimental because the archive and station pilot do not establish complete observation opportunity, long-term retention or scientific associations. Phases 0–10 map respectively to architecture/operations, A, B, C, E, D, V, F, cross-cutting UI, I, and O.
 
 ## 7. Definition of Done per milestone
 
@@ -96,10 +103,11 @@ Keep Pages, Functions, KV and Worker Cron on Free, with fail-closed subscription
 
 ## 12. Next Executable Tasks
 
-1. Finish A1 PR checks, review browser evidence and gzip delta; merge only under the protected production policy.
-2. Build A2 from real collector/research receipts: count expected UTC slots, successful/empty/partial/failed/deferred attempts and absent slots, then expose a bounded reliability window in the existing regional panel.
-3. Prototype B1 using a small dated release manifest and browser query, with a measured Free budget and source-rights gate.
-4. Select one real E1 event and capture weather/terrain provenance for a descriptive report; keep model work gated.
+1. Review PR #58, then #60 and #59; merge into production-connected main only with explicit authorization and fresh live/Free checks.
+2. Extend B2 with a tested restore/migration exercise and a predeclared second archive period. Keep originals and SQLite backups outside Git; publish only bounded reviewed aggregates.
+3. Audit a bounded official VIIRS geolocation swath/acquisition file for one region/time, including quality/cloud caveats. Until that evidence exists, retain `unknown` acquisition opportunity and no negative labels.
+4. Extend E2 to a second predeclared station/period with explicit file revision history and weather availability evidence. Evaluate explanatory models only with independent acquisition denominators and adequate temporal units.
+5. Continue A2 provider reliability ledger from real collector receipts, separate from satellite exposure.
 
 ## 13. Decision Log and Progress Tracking
 
@@ -108,4 +116,8 @@ Keep Pages, Functions, KV and Worker Cron on Free, with fail-closed subscription
 | 2026-10-13 | Build from latest `origin/main` in an isolated worktree; preserve the dirty older checkout | Git status and `b0506ab` head at cut |
 | 2026-10-13 | Prioritize provider response emptiness plus regional/global time separation; retain existing map and snapshot contract | A1 tests, `collect.py`, `coverage-audit.mjs`, `region-explorer-view.mjs` |
 | 2026-10-13 | Keep regional completeness unverified; do not turn zero or a successful request into a negative fire label | Coverage audit flags and acceptance tests |
-| Pending | A1 PR CI, live Pages/KV verification and merge decision | Add run and PR links after execution |
+| Pending | Production main merge and live Pages/KV/Free verification remain separate from open PR CI | Explicit authorization and fresh checks required |
+| 2026-10-14 | Combined open #56 and #57 into non-production [PR #58](https://github.com/frogiraffe/wildfire-signals/pull/58); integrated Python, JS and browser checks passed; PR checks green | Integration commits `ab24e5b`, `1705d64`, `6ace19c`; PR status |
+| 2026-10-14 | Kept existing SQLite; added per-scan checkpointed aggregate and synthetic 1M/2M scale benchmark | `historical_rollup.py`, test suite and benchmark output; no performance fixture presented as observations |
+| 2026-10-14 | Selected Batman after checking overlapping real FIRMS and GHCNh records; produced source-hashed retrospective station context | [scientific report](research/batman-station-thermal-context-2026-10.md), joined JSON, frontend and tests; only four temperature-matched candidate hours |
+| 2026-10-14 | Split the scientific/operational risks into stacked review branches | [#60](https://github.com/frogiraffe/wildfire-signals/pull/60) targets #58's integration branch; [#59](https://github.com/frogiraffe/wildfire-signals/pull/59) targets #60's foundation branch; main is untouched |

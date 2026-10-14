@@ -1,4 +1,5 @@
-import {validatePilot, selectPilot} from './analytics-data.mjs';
+import {validatePilot, selectPilot, validateEnvironment, selectEnvironment,
+  environmentalVariables} from './analytics-data.mjs';
 
 const el = id => document.getElementById(id);
 const cell = (row, value) => {
@@ -48,6 +49,50 @@ function draw(report) {
   }
 }
 
+function drawEnvironment(report) {
+  const variable = el('weather-variable').value;
+  const points = selectEnvironment(report, variable);
+  const maximum = Math.max(1, ...points.map(point => point.value ?? 0));
+  el('weather-chart').replaceChildren();
+  for (const [index, point] of points.entries()) {
+    const bar = document.createElement('div');
+    bar.className = `analytics-bar${point.candidateCellHours === null ? '' : ' has-candidate'}`;
+    bar.title = `${point.hour}: ${point.value ?? 'missing'} ${environmentalVariables[variable]}; ${point.candidateCellHours === null ? 'satellite opportunity unknown' : `${point.candidateCellHours} archived candidate cell-hours`}`;
+    const column = document.createElement('span');
+    column.style.height = `${point.value === null ? 2 : Math.max(2, Math.round(100 * point.value / maximum))}px`;
+    const tick = document.createElement('small');
+    tick.textContent = index % 6 === 0 ? point.hour.slice(5, 13) : '';
+    bar.append(column, tick); el('weather-chart').append(bar);
+  }
+  el('weather-chart').setAttribute('aria-label', `${environmentalVariables[variable]} at ${report.station.name}, ${report.start_date} to ${report.end_date}; amber marks archived candidate hours; other hours have unknown satellite coverage`);
+  const stats = report.descriptive_statistics[variable];
+  el('weather-summary').textContent = `${stats.station_observation_n} source station values; mean ${stats.station_mean ?? 'unavailable'}; ${stats.matched_candidate_hour_n}/${report.population.candidate_hours} candidate hours matched for this variable. Values at matched candidate hours are exploratory context, not independent pixel samples or evidence of a weather effect.`;
+}
+
+async function startEnvironment() {
+  try {
+    const response = await fetch('./data/batman-weather-context-2026-10-11.json', {cache:'no-store'});
+    if (!response.ok) throw new Error(`Report unavailable (${response.status})`);
+    const report = validateEnvironment(await response.json());
+    el('weather-candidates').replaceChildren();
+    for (const item of report.candidate_hours) {
+      const tr = document.createElement('tr');
+      for (const value of [item.observed_hour, item.candidate_cell_hours, item.raw_pixels,
+        item.weather_observed_at ?? 'Unavailable', item.temperature_c === null ? '—' : `${item.temperature_c} °C`,
+        item.wind_speed_m_s === null ? '—' : `${item.wind_speed_m_s} m/s`,
+        item.relative_humidity_pct === null ? '—' : `${item.relative_humidity_pct} %`]) cell(tr, value);
+      el('weather-candidates').append(tr);
+    }
+    el('weather-provenance').textContent = `NOAA GHCNh ${report.station.id}, ${report.weather_documentation_version}, ${report.weather_license}; ${report.population.weather_rows_in_range} station rows from ${number(report.population.source_rows)} annual file rows; ${report.population.raw_pixels} FIRMS raw pixels in ${report.population.candidate_cell_hours} distinct candidate cell-hours. Source SHA-256: ${report.source_sha256}. Source file last modified ${report.weather_source_last_modified}; each observation's first availability is unknown. The station file can be revised. No satellite acquisition mask or independent fire outcome is present.`;
+    el('weather-variable').addEventListener('change', () => drawEnvironment(report));
+    drawEnvironment(report);
+    el('weather-status').textContent = 'Retrospective station pilot loaded.';
+  } catch (error) {
+    el('weather-status').textContent = `Historical weather context unavailable: ${error.message}`;
+    el('weather-chart').replaceChildren();
+  }
+}
+
 async function start() {
   try {
     const response = await fetch('./data/thermal-capture-pilot-2026-10-13.json', {cache:'no-store'});
@@ -87,7 +132,7 @@ async function start() {
     method('Archive scan span', `${report.source_receipts[0].scan_at} to ${report.source_receipts.at(-1).scan_at}`);
     method('Evidence SHA-256', report.evidence_sha256);
     method('Model research', report.model_research.status === 'experimental'
-      ? `Experimental next-scan collection count only; ${report.model_research.degenerate_training_target ? 'training target has no variation, so comparison is unsupported' : 'comparison is research-only'}; no validated wildfire prediction.`
+      ? `Experimental next-scan collection count only; scientific model comparison ${report.model_research.eligibility?.scientific_model_comparison?.status ?? 'unassessed'}${report.model_research.degenerate_training_target ? '; training target has no variation' : ''}. No validated wildfire prediction.`
       : 'Withheld: ' + report.model_research.reason);
     el('analytics-limits').textContent = report.coverage_warning +
       ' Seasonal/year comparisons, environmental associations and fire validation are unavailable from this short archive.';
@@ -99,3 +144,4 @@ async function start() {
 }
 
 start();
+startEnvironment();
