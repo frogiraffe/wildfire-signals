@@ -18,7 +18,9 @@ const files = new Map([
   ['/data/batman-cmr-context-2026-10-11.json',
     ['data/batman-cmr-context-2026-10-11.json','application/json']],
   ['/data/batman-cmr-paired-products-2026-10-11.json',
-    ['data/batman-cmr-paired-products-2026-10-11.json','application/json']]
+    ['data/batman-cmr-paired-products-2026-10-11.json','application/json']],
+  ['/data/antalya-annual-context-2023-2025.json',
+    ['data/antalya-annual-context-2023-2025.json','application/json']]
 ]);
 const root = new URL('../../public/', import.meta.url);
 const server = createServer(async (request,response) => {
@@ -37,6 +39,19 @@ try {
     await page.goto(`http://127.0.0.1:${server.address().port}/analytics.html`);
     await page.locator('#analytics-status').getByText('Archived pilot loaded.').waitFor();
     await page.locator('#weather-status').getByText('Retrospective station pilot loaded.').waitFor();
+    await page.locator('#annual-status').getByText('Three-year archive loaded.').waitFor();
+    assert.equal(await page.locator('#annual-months tr').count(),36);
+    assert.match(await page.locator('#annual-provenance').textContent(),/257,907 rows/);
+    assert.match(await page.locator('#annual-summary').textContent(),/1,340 archived candidate pixels/);
+    await page.locator('#annual-from').fill('2025-01');
+    assert.equal(await page.locator('#annual-months tr').count(),12);
+    assert.match(await page.locator('#annual-summary').textContent(),/212 archived candidate pixels/);
+    await page.locator('#annual-provider').selectOption('VIIRS_NOAA20_STANDARD');
+    assert.match(await page.locator('#annual-summary').textContent(),/107 archived candidate pixels/);
+    await page.locator('#annual-variable').selectOption('wind_speed_m_s');
+    assert.match(await page.locator('#annual-weather-chart').getAttribute('aria-label'),/Wind speed/);
+    await page.locator('#annual-to').fill('2024-12');
+    assert.match(await page.locator('#annual-status').textContent(),/Invalid annual selection/);
     assert.equal(await page.locator('#weather-region option').count(),2);
     assert.equal(await page.locator('#weather-comparison tr').count(),2);
     await page.locator('#catalog-status').getByText('CMR catalog context loaded.').waitFor();
@@ -115,4 +130,12 @@ try {
   assert.equal(await missingPair.locator('#catalog-candidates tr').count(),7);
   assert.match(await missingPair.locator('#catalog-candidates tr:first-child').textContent(),/Catalog unavailable/);
   await missingPair.close();
+  const missingAnnual = await browser.newPage();
+  await missingAnnual.route('**/data/antalya-annual-context-2023-2025.json', route =>
+    route.fulfill({status:503,body:'unavailable'}));
+  await missingAnnual.goto(`http://127.0.0.1:${server.address().port}/analytics.html`);
+  await missingAnnual.locator('#annual-status').getByText(/Annual archive unavailable/).waitFor();
+  await missingAnnual.locator('#weather-status').getByText('Retrospective station pilot loaded.').waitFor();
+  assert.equal(await missingAnnual.locator('#annual-months tr').count(),0);
+  await missingAnnual.close();
 } finally {await browser.close(); await new Promise(resolve => server.close(resolve));}

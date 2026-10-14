@@ -9,7 +9,7 @@ import unittest
 from statistics import mean, median
 
 from fire_public.collect import FIRMS_SOURCES
-from fire_public.environmental_analytics import build_station_context
+from fire_public.environmental_analytics import build_station_context, read_station_file
 from fire_public.historical_rollup import build_rollup
 from fire_public.pixel_history import import_release_assets
 from test_pixel_history import make_release, pixel
@@ -102,6 +102,35 @@ class EnvironmentalAnalyticsTests(unittest.TestCase):
         self.assertEqual(report["descriptive_statistics"]["temperature_c"]["station_mean"],
                          19.667)
         self.assertIsNone(report["descriptive_statistics"]["wind_direction_deg"]["station_mean"])
+
+    def test_source_specific_passed_quality_and_variable_wind_are_distinct(self):
+        fields = FIELDS + ["temperature_Source_Code", "wind_speed_Source_Code",
+                           "wind_direction_Source_Code", "wind_direction_Measurement_Code"]
+        with self.weather.open("w", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=fields, delimiter="|")
+            writer.writeheader()
+            for minute, source, code, direction, measure in [
+                ("00", "223", "1", "130", "N"),
+                ("10", "223", "1", "999", "V"),
+                ("20", "345", "1", "140", "N")]:
+                writer.writerow({"STATION": STATION["id"], "Station_name": STATION["name"],
+                                 "LATITUDE": STATION["latitude"], "LONGITUDE": STATION["longitude"],
+                                 "ELEVATION": STATION["elevation_m"],
+                                 "DATE": f"2026-10-10T10:{minute}:00",
+                                 "temperature": "20", "temperature_Source_Code": source,
+                                 "temperature_Quality_Code": code,
+                                 "wind_speed": "3", "wind_speed_Source_Code": source,
+                                 "wind_speed_Quality_Code": code,
+                                 "wind_direction": direction, "wind_direction_Source_Code": source,
+                                 "wind_direction_Quality_Code": "" if direction == "999" else code,
+                                 "wind_direction_Measurement_Code": measure})
+        rows, counts, _ = read_station_file(self.weather, STATION,
+                                            start=datetime(2026,10,10).date(),
+                                            end=datetime(2026,10,10).date())
+        self.assertEqual([row["temperature_c"] for row in rows], [20.0,20.0,None])
+        self.assertEqual([row["wind_direction_deg"] for row in rows], [130.0,None,None])
+        self.assertEqual(counts["quality_exclusions"]["temperature"], 1)
+        self.assertEqual(counts["undefined_wind_direction_rows"], 1)
 
     def test_published_real_aggregate_is_self_consistent_and_content_addressed(self):
         path = Path(__file__).resolve().parents[1] / "public/data/batman-weather-context-2026-10-11.json"

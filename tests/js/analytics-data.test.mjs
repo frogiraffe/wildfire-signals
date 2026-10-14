@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {validatePilot, selectPilot, validateEnvironment, selectEnvironment,
-  validateCatalog, validatePairedCatalog} from '../../public/analytics-data.mjs';
+  validateCatalog, validatePairedCatalog, validateAnnualArchive,
+  selectAnnualArchive} from '../../public/analytics-data.mjs';
 
 const report = validatePilot(JSON.parse(readFileSync(new URL('../../public/data/thermal-capture-pilot-2026-10-13.json', import.meta.url))));
 
@@ -81,4 +82,26 @@ test('real paired L1/L2 catalog remains metadata only', () => {
   assert.throws(() => validatePairedCatalog({...paired, observation_opportunity_verified:true}, geo));
   assert.throws(() => validatePairedCatalog({...paired, no_detection_count:0}, geo));
   assert.throws(() => validatePairedCatalog({...paired, geolocation_report_sha256:'0'.repeat(64)}, geo));
+});
+
+test('three-year real country archive keeps sensor, weather and exposure grain separate', () => {
+  const annual = validateAnnualArchive(JSON.parse(readFileSync(new URL(
+    '../../public/data/antalya-annual-context-2023-2025.json', import.meta.url))));
+  assert.equal(annual.population.source_files,6);
+  assert.equal(annual.population.weather_files,3);
+  assert.equal(annual.population.country_source_rows,257907);
+  assert.equal(annual.population.selected_raw_pixels,1340);
+  assert.equal(annual.population.candidate_provider_hours,994);
+  assert.equal(annual.population.weather_matched_provider_hours_temperature_c,988);
+  assert.equal(annual.observation_opportunity_verified,false);
+  assert.equal(annual.no_detection_count,null);
+  const {months} = selectAnnualArchive(annual, {from:'2025-01',to:'2025-12',
+    provider:'all',variable:'temperature_c'});
+  assert.equal(months.length,12);
+  assert.equal(months.reduce((n,row) => n+row.rawPixels,0),212);
+  assert.ok(months.every(row => row.observationOpportunity === 'unknown'));
+  assert.throws(() => selectAnnualArchive(annual,{from:'2025-12',to:'2025-01',
+    provider:'all',variable:'temperature_c'}));
+  assert.throws(() => validateAnnualArchive({...annual, observation_opportunity_verified:true}));
+  assert.throws(() => validateAnnualArchive({...annual, no_detection_count:0}));
 });

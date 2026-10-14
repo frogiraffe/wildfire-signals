@@ -1,0 +1,104 @@
+{
+  "country_file_label": "Turkey",
+  "region": {
+    "latitude": 36.8987,
+    "longitude": 30.8005,
+    "radius_km": 25,
+    "region_id": "ANTALYA_25KM"
+  },
+  "schema_version": 1,
+  "station": {
+    "elevation_m": 53.9,
+    "id": "TUI0000LTAI",
+    "latitude": 36.8987,
+    "longitude": 30.8005,
+    "name": "ANTALYA",
+    "region_id": "ANTALYA_25KM"
+  },
+  "thermal_assets": [
+    {
+      "filename": "viirs-jpss1_2023_Turkey.csv",
+      "provider": "VIIRS_NOAA20_STANDARD",
+      "sha256": "ea389a3fb95b810952ac06e548f1c3b7d18080991b6f697a43997cecf1f8b017",
+      "size_bytes": 3196719,
+      "source_last_modified": "2025-06-24T20:20:55+00:00",
+      "source_url": "https://firms.modaps.eosdis.nasa.gov/data/country/viirs-jpss1/2023/viirs-jpss1_2023_Turkey.csv",
+      "year": 2023
+    },
+    {
+      "filename": "viirs-snpp_2023_Turkey.csv",
+      "provider": "VIIRS_SNPP_STANDARD",
+      "sha256": "5e12983478d04761d267aa0d1444c1fc67be4c4f5ea3952b1c2635a96330a9fa",
+      "size_bytes": 3063361,
+      "source_last_modified": "2025-06-24T17:11:19+00:00",
+      "source_url": "https://firms.modaps.eosdis.nasa.gov/data/country/viirs-snpp/2023/viirs-snpp_2023_Turkey.csv",
+      "year": 2023
+    },
+    {
+      "filename": "viirs-jpss1_2024_Turkey.csv",
+      "provider": "VIIRS_NOAA20_STANDARD",
+      "sha256": "5c107be1ea3114c908e88d024c351b541acbde1ab55d88411c6bd4310493854c",
+      "size_bytes": 4177902,
+      "source_last_modified": "2025-06-24T20:27:13+00:00",
+      "source_url": "https://firms.modaps.eosdis.nasa.gov/data/country/viirs-jpss1/2024/viirs-jpss1_2024_Turkey.csv",
+      "year": 2024
+    },
+    {
+      "filename": "viirs-snpp_2024_Turkey.csv",
+      "provider": "VIIRS_SNPP_STANDARD",
+      "sha256": "f0dac110385f53d0c9e299ff95f9a8291a3167a255858541aa61b9da21ada812",
+      "size_bytes": 3677694,
+      "source_last_modified": "2025-06-24T17:01:46+00:00",
+      "source_url": "https://firms.modaps.eosdis.nasa.gov/data/country/viirs-snpp/2024/viirs-snpp_2024_Turkey.csv",
+      "year": 2024
+    },
+    {
+      "filename": "viirs-jpss1_2025_Turkey.csv",
+      "provider": "VIIRS_NOAA20_STANDARD",
+      "sha256": "91b06d4f80f78ead1272a3193ecd313fcd087d0eafe80002c41a43aa10a89705",
+      "size_bytes": 3242543,
+      "source_last_modified": "2026-10-10T13:52:47+00:00",
+      "source_url": "https://firms2.modaps.eosdis.nasa.gov/data/country/viirs-jpss1/2025/viirs-jpss1_2025_Turkey.csv",
+      "year": 2025
+    },
+    {
+      "filename": "viirs-snpp_2025_Turkey.csv",
+      "provider": "VIIRS_SNPP_STANDARD",
+      "sha256": "3c1dbc2a709e541c119364feef837bde46d0192b75a8557693f23d0beac6f139",
+      "size_bytes": 3083240,
+      "source_last_modified": "2026-10-10T13:55:46+00:00",
+      "source_url": "https://firms2.modaps.eosdis.nasa.gov/data/country/viirs-snpp/2025/viirs-snpp_2025_Turkey.csv",
+      "year": 2025
+    }
+  ],
+  "verified_at": "2026-10-14T15:05:05+00:00",
+  "weather_assets": [
+    {
+      "filename": "GHCNh_TUI0000LTAI_2023.psv",
+      "provider": "GHCNh",
+      "sha256": "51ef74deda582bd8bd49e8726249c4e63f70a836f3cd0d487ea6c21d29a7c6d0",
+      "size_bytes": 15867833,
+      "source_last_modified": "2026-07-11T11:31:07+00:00",
+      "source_url": "https://www.ncei.noaa.gov/oa/global-historical-climatology-network/hourly/access/by-year/2023/psv/GHCNh_TUI0000LTAI_2023.psv",
+      "year": 2023
+    },
+    {
+      "filename": "GHCNh_TUI0000LTAI_2024.psv",
+      "provider": "GHCNh",
+      "sha256": "1206fd0bc2b53f80e73e9a63bad4b66951ade878c052bc2fac8e3e5764d94806",
+      "size_bytes": 15866792,
+      "source_last_modified": "2026-07-11T15:20:25+00:00",
+      "source_url": "https://www.ncei.noaa.gov/oa/global-historical-climatology-network/hourly/access/by-year/2024/psv/GHCNh_TUI0000LTAI_2024.psv",
+      "year": 2024
+    },
+    {
+      "filename": "GHCNh_TUI0000LTAI_2025.psv",
+      "provider": "GHCNh",
+      "sha256": "1b8fe358962f07c5c29024944f7bc4e61a62d94cdbc5101d3035ee37bff06381",
+      "size_bytes": 15680573,
+      "source_last_modified": "2026-07-11T13:16:36+00:00",
+      "source_url": "https://www.ncei.noaa.gov/oa/global-historical-climatology-network/hourly/access/by-year/2025/psv/GHCNh_TUI0000LTAI_2025.psv",
+      "year": 2025
+    }
+  ]
+}
