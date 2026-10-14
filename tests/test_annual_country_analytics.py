@@ -146,5 +146,21 @@ class AnnualCountryAnalyticsTests(unittest.TestCase):
         self.assertFalse(report["observation_opportunity_verified"])
         self.assertIsNone(report["no_detection_count"])
 
+    def test_dalaman_real_report_preserves_antalya_sources_and_sparse_coverage(self):
+        root = Path(__file__).resolve().parents[1]
+        path = root / "public/data/dalaman-annual-context-2023-2025.json"
+        report = json.loads(path.read_text())
+        evidence = report.pop("evidence_sha256")
+        self.assertEqual(hashlib.sha256(_bytes(report)).hexdigest(), evidence)
+        antalya = json.loads((root / "public/data/antalya-annual-context-2023-2025.json").read_text())
+        self.assertEqual([item["sha256"] for item in report["source_asset_manifest"]],
+                         [item["sha256"] for item in antalya["source_asset_manifest"]])
+        self.assertEqual(report["region"]["region_id"], "DALAMAN_25KM")
+        self.assertEqual(report["population"]["selected_raw_pixels"], 79)
+        self.assertEqual(report["population"]["candidate_provider_hours"], 38)
+        self.assertEqual(report["population"]["weather_matched_provider_hours_temperature_c"], 38)
+        self.assertFalse(report["observation_opportunity_verified"])
+        self.assertIsNone(report["no_detection_count"])
+
 
 if __name__ == "__main__": unittest.main()

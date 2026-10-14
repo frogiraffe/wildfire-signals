@@ -20,7 +20,9 @@ const files = new Map([
   ['/data/batman-cmr-paired-products-2026-10-11.json',
     ['data/batman-cmr-paired-products-2026-10-11.json','application/json']],
   ['/data/antalya-annual-context-2023-2025.json',
-    ['data/antalya-annual-context-2023-2025.json','application/json']]
+    ['data/antalya-annual-context-2023-2025.json','application/json']],
+  ['/data/dalaman-annual-context-2023-2025.json',
+    ['data/dalaman-annual-context-2023-2025.json','application/json']]
 ]);
 const root = new URL('../../public/', import.meta.url);
 const server = createServer(async (request,response) => {
@@ -40,6 +42,9 @@ try {
     await page.locator('#analytics-status').getByText('Archived pilot loaded.').waitFor();
     await page.locator('#weather-status').getByText('Retrospective station pilot loaded.').waitFor();
     await page.locator('#annual-status').getByText('Three-year archive loaded.').waitFor();
+    assert.equal(await page.locator('#annual-region option').count(),2);
+    assert.equal(await page.locator('#annual-region').inputValue(),'ANTALYA_25KM');
+    assert.equal(await page.locator('#annual-year-comparison tr').count(),6);
     assert.equal(await page.locator('#annual-months tr').count(),36);
     assert.match(await page.locator('#annual-provenance').textContent(),/257,907 rows/);
     assert.match(await page.locator('#annual-summary').textContent(),/1,340 archived candidate pixels/);
@@ -52,6 +57,12 @@ try {
     assert.match(await page.locator('#annual-weather-chart').getAttribute('aria-label'),/Wind speed/);
     await page.locator('#annual-to').fill('2024-12');
     assert.match(await page.locator('#annual-status').textContent(),/Invalid annual selection/);
+    await page.locator('#annual-to').fill('2025-12');
+    await page.locator('#annual-region').selectOption('DALAMAN_25KM');
+    assert.match(await page.locator('#annual-provenance').textContent(),/79 selected pixels/);
+    assert.match(await page.locator('#annual-summary').textContent(),/23 archived candidate pixels/);
+    assert.match(await page.locator('#annual-download').getAttribute('href'),/dalaman-annual/);
+    assert.match(await page.locator('#annual-year-comparison tr:last-child').textContent(),/53/);
     assert.equal(await page.locator('#weather-region option').count(),2);
     assert.equal(await page.locator('#weather-comparison tr').count(),2);
     await page.locator('#catalog-status').getByText('CMR catalog context loaded.').waitFor();
@@ -134,8 +145,10 @@ try {
   await missingAnnual.route('**/data/antalya-annual-context-2023-2025.json', route =>
     route.fulfill({status:503,body:'unavailable'}));
   await missingAnnual.goto(`http://127.0.0.1:${server.address().port}/analytics.html`);
-  await missingAnnual.locator('#annual-status').getByText(/Annual archive unavailable/).waitFor();
+  await missingAnnual.locator('#annual-status').getByText(/one study unavailable/).waitFor();
   await missingAnnual.locator('#weather-status').getByText('Retrospective station pilot loaded.').waitFor();
-  assert.equal(await missingAnnual.locator('#annual-months tr').count(),0);
+  assert.equal(await missingAnnual.locator('#annual-region option').count(),1);
+  assert.equal(await missingAnnual.locator('#annual-region').inputValue(),'DALAMAN_25KM');
+  assert.equal(await missingAnnual.locator('#annual-months tr').count(),36);
   await missingAnnual.close();
 } finally {await browser.close(); await new Promise(resolve => server.close(resolve));}

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {validatePilot, selectPilot, validateEnvironment, selectEnvironment,
   validateCatalog, validatePairedCatalog, validateAnnualArchive,
-  selectAnnualArchive} from '../../public/analytics-data.mjs';
+  selectAnnualArchive, annualYearSummary} from '../../public/analytics-data.mjs';
 
 const report = validatePilot(JSON.parse(readFileSync(new URL('../../public/data/thermal-capture-pilot-2026-10-13.json', import.meta.url))));
 
@@ -104,4 +104,19 @@ test('three-year real country archive keeps sensor, weather and exposure grain s
     provider:'all',variable:'temperature_c'}));
   assert.throws(() => validateAnnualArchive({...annual, observation_opportunity_verified:true}));
   assert.throws(() => validateAnnualArchive({...annual, no_detection_count:0}));
+});
+
+test('independently chosen Dalaman study retains sparse yearly denominators', () => {
+  const dalaman = validateAnnualArchive(JSON.parse(readFileSync(new URL(
+    '../../public/data/dalaman-annual-context-2023-2025.json', import.meta.url))));
+  assert.equal(dalaman.population.country_source_rows,257907);
+  assert.equal(dalaman.population.selected_raw_pixels,79);
+  assert.equal(dalaman.population.candidate_provider_hours,38);
+  assert.equal(dalaman.population.weather_matched_provider_hours_temperature_c,38);
+  assert.deepEqual(annualYearSummary(dalaman).map(row => [row.year,row.rawPixels,row.daysWithArchivedCandidates]),
+    [['2023',8,8],['2024',18,10],['2025',53,9]]);
+  assert.equal(annualYearSummary(dalaman)[2].candidateCellHours,18);
+  assert.equal(annualYearSummary(dalaman)[2].positiveSensorHours,15);
+  assert.equal(dalaman.observation_opportunity_verified,false);
+  assert.equal(dalaman.no_detection_count,null);
 });

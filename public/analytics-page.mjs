@@ -1,6 +1,7 @@
 import {validatePilot, selectPilot, validateEnvironment, selectEnvironment,
   environmentalVariables, validateCatalog, validatePairedCatalog,
-  validateAnnualArchive, selectAnnualArchive, annualVariables} from './analytics-data.mjs';
+  validateAnnualArchive, selectAnnualArchive, annualYearSummary,
+  annualVariables} from './analytics-data.mjs';
 
 const el = id => document.getElementById(id);
 const cell = (row, value) => {
@@ -107,24 +108,60 @@ function drawAnnual(report) {
   }
 }
 
+const annualPilots = [
+  {id:'ANTALYA_25KM', label:'Antalya', url:'./data/antalya-annual-context-2023-2025.json'},
+  {id:'DALAMAN_25KM', label:'Dalaman', url:'./data/dalaman-annual-context-2023-2025.json'}
+];
+
 async function startAnnual() {
-  try {
-    const response = await fetch('./data/antalya-annual-context-2023-2025.json');
+  const loaded = await Promise.allSettled(annualPilots.map(async pilot => {
+    const response = await fetch(pilot.url, {cache:'no-store'});
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const report = validateAnnualArchive(await response.json());
-    el('annual-provenance').textContent = `${report.population.country_source_rows.toLocaleString()} rows in ${report.population.source_files} NASA annual country files; ${report.population.selected_raw_pixels.toLocaleString()} selected pixels in a ${report.region.radius_km} km circle. ${report.population.station_source_rows.toLocaleString()} rows in ${report.population.weather_files} NOAA station files; ${report.population.weather_matched_provider_hours_temperature_c}/${report.population.candidate_provider_hours} positive sensor-hours have prior station temperature. NASA and NOAA files are revised; original first availability is unknown. Evidence SHA-256: ${report.evidence_sha256}. Source file hashes and revisions are in the download. Weather license: ${report.weather_license}. No independently confirmed wildfire outcome.`;
-    for (const id of ['annual-from','annual-to','annual-provider','annual-variable'])
-      el(id).addEventListener('change', () => {
-        try {drawAnnual(report); el('annual-status').textContent = 'Three-year archive loaded.';}
-        catch (error) {el('annual-summary').textContent = '';
-          el('annual-months').replaceChildren(); el('annual-thermal-chart').replaceChildren();
-          el('annual-weather-chart').replaceChildren(); el('annual-status').textContent = error.message;}
-      });
-    drawAnnual(report);
-    el('annual-status').textContent = 'Three-year archive loaded.';
-  } catch (error) {
-    el('annual-status').textContent = `Annual archive unavailable: ${error.message}`;
+    if (report.region.region_id !== pilot.id) throw new Error('Annual region differs');
+    return {pilot,report};
+  }));
+  const available = loaded.filter(item => item.status === 'fulfilled').map(item => item.value);
+  const failures = loaded.length - available.length;
+  el('annual-region').replaceChildren();
+  el('annual-year-comparison').replaceChildren();
+  for (const {pilot, report} of available) {
+    const option = document.createElement('option');
+    option.value = pilot.id; option.textContent = pilot.label;
+    el('annual-region').append(option);
+    for (const year of annualYearSummary(report)) {
+      const tr = document.createElement('tr');
+      for (const value of [`${pilot.label} / ${year.year}`,
+        `${number(year.rawPixels)} (${number(year.byProvider.VIIRS_NOAA20_STANDARD)} / ${number(year.byProvider.VIIRS_SNPP_STANDARD)})`,
+        number(year.candidateCellHours), number(year.daysWithArchivedCandidates),
+        number(year.positiveSensorHours),
+        `${number(year.temperatureMatchedPositiveSensorHours)}/${number(year.positiveSensorHours)}`,
+        'Unknown']) cell(tr, value);
+      el('annual-year-comparison').append(tr);
+    }
   }
+  if (!available.length) {
+    el('annual-status').textContent = 'Annual archive unavailable: neither source report loaded.';
+    el('annual-summary').textContent = '';
+    return;
+  }
+  const renderSelected = () => {
+    const chosen = available.find(item => item.pilot.id === el('annual-region').value);
+    const {report,pilot} = chosen;
+    el('annual-provenance').textContent = `${pilot.label}: ${report.population.country_source_rows.toLocaleString()} rows in ${report.population.source_files} NASA annual country files; ${report.population.selected_raw_pixels.toLocaleString()} selected pixels in a ${report.region.radius_km} km circle. ${report.population.station_source_rows.toLocaleString()} rows in ${report.population.weather_files} NOAA station files; ${report.population.weather_matched_provider_hours_temperature_c}/${report.population.candidate_provider_hours} positive sensor-hours have prior station temperature. NASA and NOAA files are revised; original first availability is unknown. Evidence SHA-256: ${report.evidence_sha256}. Source file hashes and revisions are in the download. Weather license: ${report.weather_license}. No independently confirmed wildfire outcome.`;
+    el('annual-download').href = pilot.url;
+    try {
+      drawAnnual(report);
+      el('annual-status').textContent = failures ? 'Three-year archive loaded; one study unavailable.' : 'Three-year archive loaded.';
+    } catch (error) {
+      el('annual-summary').textContent = '';
+      el('annual-months').replaceChildren(); el('annual-thermal-chart').replaceChildren();
+      el('annual-weather-chart').replaceChildren(); el('annual-status').textContent = error.message;
+    }
+  };
+  for (const id of ['annual-region','annual-from','annual-to','annual-provider','annual-variable'])
+    el(id).addEventListener('change', renderSelected);
+  renderSelected();
 }
 
 const weatherPilots = [
