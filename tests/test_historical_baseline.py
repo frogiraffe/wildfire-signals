@@ -58,5 +58,29 @@ class HistoricalBaselineTests(unittest.TestCase):
                                        smoothing=float("nan"))
 
 
+    def test_feature_evidence_enforced_when_provided(self):
+        rows = [dict(r, features={"temp": {
+            "value": 20, "observed_at": "2026-07-31T00:00:00Z",
+            "available_at": "2026-07-31T01:00:00Z",
+            "source_id": "fixture-weather"}}) for r in self.rows]
+        result = historical_rate_experiment(
+            rows, test_start="2026-10-01T00:00:00Z")
+        self.assertEqual(result["feature_availability_audit"]["eligible"], 4)
+        rows[0]["features"]["temp"]["available_at"] = "2026-10-12T00:00:00Z"
+        with self.assertRaisesRegex(ValueError, "as-of"):
+            historical_rate_experiment(
+                rows, test_start="2026-10-01T00:00:00Z")
+
+    def test_partial_feature_evidence_rejected(self):
+        rows = [dict(r) for r in self.rows]
+        rows[0]["features"] = {"temp": {
+            "value": 20, "observed_at": "2026-07-31T00:00:00Z",
+            "available_at": "2026-07-31T00:00:00Z",
+            "source_id": "fixture-weather"}}
+        with self.assertRaisesRegex(ValueError, "Partial feature evidence"):
+            historical_rate_experiment(
+                rows, test_start="2026-10-01T00:00:00Z")
+
+
 if __name__ == "__main__":
     unittest.main()

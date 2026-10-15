@@ -151,7 +151,7 @@ def run_evaluation(cohort: Path, manifest_path: Path, *,
     manifest_sha = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
     return {
         "schema_version":1,"cohort_sha256":sha,"manifest_sha256":manifest_sha,
-        "label_audit":audit,"target":{"name":manifest["target_name"],
+        "label_audit":audit,"feature_availability_audit":result["feature_availability_audit"],"target":{"name":manifest["target_name"],
             "definition":manifest["target_definition"],
             "horizon_hours":manifest["horizon_hours"],
             "unit_of_analysis":manifest["unit_of_analysis"],
@@ -166,7 +166,7 @@ def run_evaluation(cohort: Path, manifest_path: Path, *,
         "caveats":[
             "Manifest declarations and label URLs are checked, not independently verified by this script.",
             "No satellite thermal detections or active-layer disappearances are converted into wildfire labels.",
-            "Feature time cutoffs are checked but original weather/remote sensing data issue times still need source audit.",
+            "Feature-level as-of evidence is checked when supplied; absent feature evidence remains unaudited. Source issue times still need independent verification.",
             "A constant global base rate is an experimental comparator, not a calibrated regional fire forecast.",
             "Do not present held-out fixture scores as real-world model skill."
         ],
