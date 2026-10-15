@@ -1,0 +1,22 @@
+name: Historical agency evidence map
+on:
+  pull_request:
+    paths:
+      - 'public/agency-bounds-overlay.mjs'
+      - 'public/main.mjs'
+      - 'public/index.html'
+      - 'tests/browser/investigation-local.mjs'
+      - '.github/workflows/test-agency-bounds-map.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check public/main.mjs
+      - run: node --test tests/js/agency-bounds-overlay.test.mjs
+      - run: npm run test:public
