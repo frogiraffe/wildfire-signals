@@ -54,6 +54,7 @@ def audit_asof_features(rows: Iterable[dict[str, Any]]) -> dict[str, Any]:
                 violations.append(f"{name}:nonfinite_value")
             elif isinstance(value, bool):
                 violations.append(f"{name}:boolean_value")
+            issued = None
             if "issued_at" in evidence:
                 try:
                     issued = _instant(evidence["issued_at"], f"{name}.issued_at")
@@ -72,6 +73,9 @@ def audit_asof_features(rows: Iterable[dict[str, Any]]) -> dict[str, Any]:
                 instants[field] = at
                 if at > decision:
                     violations.append(f"{name}:{field}_after_decision")
+            if (issued is not None and "available_at" in instants
+                    and instants["available_at"] < issued):
+                violations.append(f"{name}:available_before_issued")
             if (len(instants) == 2
                     and instants["available_at"] < instants["observed_at"]):
                 violations.append(f"{name}:available_before_observed")
