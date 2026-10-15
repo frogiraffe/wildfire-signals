@@ -161,3 +161,12 @@
 .map-playback label{display:block;font-size:12px;font-weight:600;margin-bottom:7px}
 .map-playback select{width:100%;min-height:36px}
 .map-playback p{font-size:11px;line-height:1.45;color:#c0d3d8;margin:9px 0 0}
+
+.historical-overlay-controls{padding:12px;margin:0 0 14px;border:1px solid #577185;border-radius:10px;background:#1c303b}
+.historical-overlay-controls h2{font-size:14px;margin:0 0 8px}
+.historical-overlay-controls p{font-size:12px;line-height:1.5;overflow-wrap:anywhere;color:#c6d7dc}
+.historical-overlay-controls label{display:grid;gap:5px;font-size:12px;margin:10px 0}
+.historical-overlay-controls select{width:100%;min-height:38px}
+.historical-overlay-controls .archive-toggle{display:flex;align-items:center;gap:9px}
+.historical-overlay-controls input[type=checkbox]{width:18px;height:18px;flex:none}
+.historical-overlay-controls a{display:block;line-height:1.5;overflow-wrap:anywhere}
