@@ -170,3 +170,5 @@
 .historical-overlay-controls .archive-toggle{display:flex;align-items:center;gap:9px}
 .historical-overlay-controls input[type=checkbox]{width:18px;height:18px;flex:none}
 .historical-overlay-controls a{display:block;line-height:1.5;overflow-wrap:anywhere}
+
+.agency-archive-controls{padding:12px;margin:0 0 14px;border:1px solid #735b3e;background:#24303a;border-radius:10px}.agency-archive-controls h2{font-size:14px;margin:0 0 8px}.agency-archive-controls p,.agency-archive-controls label{font-size:12px;line-height:1.5;color:#d7d9db}.agency-archive-controls label{display:flex;gap:9px;align-items:center}.agency-archive-controls input{width:18px;height:18px;flex:none}.agency-archive-controls a{display:block;overflow-wrap:anywhere}
