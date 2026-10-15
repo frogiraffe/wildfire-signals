@@ -130,3 +130,9 @@
 .regional-statistics #stats-download{width:100%;font-size:11px;padding:7px}
 @media(max-width:700px){.regional-stats-metrics{padding:6px;gap:4px}
   #stats-timeline{font-size:9px;min-width:255px}}
+
+/* Distinguish thermal marker and density views without implying fire severity. */
+.map-visualization{padding:10px 12px;margin:0 0 12px;border:1px solid #36515c;border-radius:8px;background:#1c303b}
+.map-visualization label{display:block;font-size:12px;font-weight:600;margin-bottom:7px}
+.map-visualization select{width:100%;max-width:100%;min-height:36px}
+.map-visualization p{font-size:11px;line-height:1.5;color:#c0d3d8;margin:9px 0 0}
