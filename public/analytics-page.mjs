@@ -246,6 +246,11 @@ async function startAnnual() {
   };
   for (const id of ['annual-region','annual-from','annual-to','annual-provider','annual-variable'])
     el(id).addEventListener('change', renderSelected);
+  const deepStudy=new URLSearchParams(location.hash.replace(/^#/,'')).get('study');
+  if(available.some(item=>item.pilot.id===deepStudy)){
+    el('annual-region').value=deepStudy;
+    el('unified-study').value=deepStudy;
+  }
   renderSelected();
 }
 
@@ -348,6 +353,8 @@ async function startSpatial() {
       }
       el('spatial-chart').setAttribute('aria-label', `${item.region.region_id}: top ${item.published_bins.length} coarsened bins by recurring dates and pixel count; these are thermal candidates, not fires`);
     };
+    const deepStudy=new URLSearchParams(location.hash.replace(/^#/,'')).get('study');
+    if(report.regions.some(item=>item.region.region_id===deepStudy))el('spatial-region').value=deepStudy;
     el('spatial-region').addEventListener('change', render);
     el('spatial-grid-filter').addEventListener('change', render);
     el('spatial-grid-sensor').addEventListener('change', render);
