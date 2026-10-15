@@ -1,3 +1,4 @@
+import {investigationManifest} from './investigation-manifest.mjs';
 import {historicalAudit} from './historical-audit.mjs';
 import {renderSpatialGrid} from './historical-grid.mjs';
 import {historicalTimeline,renderHistoricalTimeline} from './historical-timeline.mjs';
@@ -642,6 +643,21 @@ function applyUnifiedInvestigation() {
     ' to annual, temporal and spatial evidence. Grid bins still represent the full 2023–2025 archive; weather studies use their own stations and periods.';
 }
 el('unified-apply').addEventListener('click',applyUnifiedInvestigation);
+el('unified-export').addEventListener('click',()=>{
+  try {
+    const manifest=investigationManifest({
+      study:el('annual-region').value,sensor:el('annual-provider').value,
+      from:el('annual-from').value,to:el('annual-to').value,
+      metric:el('timeline-metric').value,gridFilter:el('spatial-grid-filter').value
+    });
+    const blob=new Blob([JSON.stringify(manifest,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement('a');
+    link.href=url;link.download='wildfire-investigation-selection.json';link.click();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    el('unified-status').textContent='Investigation selection manifest prepared. It records source paths and filters, not the source datasets.';
+  } catch(error) {el('unified-status').textContent='Export unavailable: '+error.message;}
+});
 
 start();
 startEnvironment();
