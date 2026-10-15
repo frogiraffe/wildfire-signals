@@ -17,5 +17,5 @@ jobs:
         with:
           node-version: '22'
       - run: node --check public/main.mjs
-      - run: node --test tests/js/map-display-contract.test.mjs
+      - run: node --test tests/js/map-display-contract.test.mjs tests/js/observation-slice.test.mjs
       - run: npm run test:public
