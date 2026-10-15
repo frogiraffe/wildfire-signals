@@ -11,6 +11,7 @@ const state = parseState(location.hash);
 let snapshot = {manifest:{data_status:'unknown'},events:[],incidents:[],matches:[],sources:[],details:{}};
 let weatherController = null;
 let perimeterController = null;
+let candidateDisplay = 'points';
 const el = id => document.getElementById(id);
 const map = new maplibregl.Map({container:'map',
   style:'https://tiles.openfreemap.org/styles/liberty', center:[state.lon,state.lat], zoom:state.zoom,
@@ -367,6 +368,7 @@ function draw() {
   }
   if (map.getSource('candidates')) {
     map.getSource('candidates').setData(featureCollection(events,'candidate'));
+    map.getSource('candidate-density').setData(featureCollection(events,'candidate'));
     map.getSource('incidents').setData(featureCollection(incidents,'incident'));
   }
 }
@@ -387,6 +389,15 @@ map.on('load', () => {
     paint:{'line-color':'#75d8e8','line-width':3,'line-dasharray':[1,2]}});
   map.addSource('candidates',{type:'geojson',data:featureCollection([],'candidate'),cluster:true,clusterRadius:42});
   map.addSource('incidents',{type:'geojson',data:featureCollection([],'incident'),cluster:true,clusterRadius:42});
+  // Separate non-clustered source: heatmap intensity reflects observation
+  // locations only, never physical extent, severity, or fire probability.
+  map.addSource('candidate-density',{type:'geojson',data:featureCollection([],'candidate')});
+  map.addLayer({id:'candidate-density',type:'heatmap',source:'candidate-density',
+    layout:{visibility:'none'},
+    paint:{'heatmap-weight':1,'heatmap-intensity':['interpolate',['linear'],['zoom'],0,0.3,8,1.2],
+      'heatmap-radius':['interpolate',['linear'],['zoom'],0,9,8,27,12,42],
+      'heatmap-opacity':0.68}});
+
   for (const [source,color] of [['candidates','#f19b53'],['incidents','#5dc2c7']]) {
     map.addLayer({id:source,type:'circle',source,
       paint:{'circle-color':color,'circle-radius':['case',['has','point_count'],17,8],
@@ -402,11 +413,25 @@ map.on('load', () => {
     map.on('mouseenter',source,() => {map.getCanvas().style.cursor='pointer';});
     map.on('mouseleave',source,() => {map.getCanvas().style.cursor='';});
   }
+  updateCandidateDisplay();
   map.on('click',e=>regionExplorer.handleMapClick(e));
   draw();
 });
 map.on('moveend',() => {saveState();draw();});
 
+function updateCandidateDisplay() {
+  const density = candidateDisplay === 'density';
+  if (!map.getLayer('candidate-density')) return;
+  map.setLayoutProperty('candidate-density','visibility',density ? 'visible':'none');
+  map.setLayoutProperty('candidates','visibility',density ? 'none':'visible');
+  el('display-explanation').textContent = density
+    ? 'Density indicates relative concentration of satellite detections, not burned area, spread, severity or probability. Select markers to inspect records.'
+    : 'Markers represent thermal candidates, not confirmed fire boundaries.';
+}
+el('candidate-display').addEventListener('change',event => {
+  candidateDisplay = event.target.value === 'density' ? 'density' : 'points';
+  updateCandidateDisplay();
+});
 for (const key of ['language','hours','source','kind']) el(key).addEventListener('change',event => {
   state[key === 'language' ? 'lang' : key] = key === 'hours' ? Number(event.target.value) : event.target.value;
   saveState(); draw();
