@@ -26,7 +26,11 @@ const files = new Map([
   ['/data/turkey-spatial-recurrence-2023-2025.json',
     ['data/turkey-spatial-recurrence-2023-2025.json','application/json']],
   ['/data/antalya-standard-granule-readiness-2025-01-06-07.json',
-    ['data/antalya-standard-granule-readiness-2025-01-06-07.json','application/json']]
+    ['data/antalya-standard-granule-readiness-2025-01-06-07.json','application/json']],
+  ['/data/turkey-static-sensitivity-2023-2025.json',
+    ['data/turkey-static-sensitivity-2023-2025.json','application/json']],
+  ['/data/sacramento-frap-outcome-cohort-2023-2025.json',
+    ['data/sacramento-frap-outcome-cohort-2023-2025.json','application/json']]
 ]);
 const root = new URL('../../public/', import.meta.url);
 const server = createServer(async (request,response) => {
@@ -48,6 +52,15 @@ try {
     await page.locator('#annual-status').getByText('Three-year archive loaded.').waitFor();
     await page.locator('#spatial-status').getByText('Spatial recurrence evidence loaded.').waitFor();
     await page.locator('#standard-readiness-status').getByText('Standard product research evidence loaded.').waitFor();
+    await page.locator('#sensitivity-status').getByText('Real source sensitivity loaded.').waitFor();
+    await page.locator('#frap-status').getByText('Official perimeter evidence loaded.').waitFor();
+    assert.match(await page.locator('#sensitivity-summary').textContent(),/887/);
+    assert.equal(await page.locator('#sensitivity-rows tr').count(),6);
+    assert.equal(await page.locator('#frap-cases tr').count(),9);
+    assert.match(await page.locator('#frap-summary').textContent(),/Verified fire-negative units: 0/);
+    await page.locator('#sensitivity-region').selectOption('DALAMAN_25KM');
+    assert.match(await page.locator('#sensitivity-summary').textContent(),/79 original archived pixels/);
+    assert.match(await page.locator('#sensitivity-summary').textContent(),/0 lie in 0 unresolved/);
     assert.equal(await page.locator('#standard-readiness-days tr').count(),2);
     assert.match(await page.locator('#standard-readiness-days tr:last-child').textContent(),/opportunity unknown/);
     assert.match(await page.locator('#standard-readiness-gates').textContent(),/No model was trained/);
@@ -185,4 +198,18 @@ try {
   await missingStandard.locator('#standard-readiness-status').getByText(/evidence unavailable/).waitFor();
   assert.equal(await missingStandard.locator('#standard-readiness-days tr').count(),0);
   await missingStandard.close();
+  const missingSensitivity = await browser.newPage();
+  await missingSensitivity.route('**/data/turkey-static-sensitivity-2023-2025.json',
+    route => route.fulfill({status:503,body:'unavailable'}));
+  await missingSensitivity.goto(`http://127.0.0.1:${server.address().port}/analytics.html`);
+  await missingSensitivity.locator('#sensitivity-status').getByText(/Source sensitivity unavailable/).waitFor();
+  assert.equal(await missingSensitivity.locator('#sensitivity-rows tr').count(),0);
+  await missingSensitivity.close();
+  const missingFrap = await browser.newPage();
+  await missingFrap.route('**/data/sacramento-frap-outcome-cohort-2023-2025.json',
+    route => route.fulfill({status:503,body:'unavailable'}));
+  await missingFrap.goto(`http://127.0.0.1:${server.address().port}/analytics.html`);
+  await missingFrap.locator('#frap-status').getByText(/Official perimeter evidence unavailable/).waitFor();
+  assert.equal(await missingFrap.locator('#frap-cases tr').count(),0);
+  await missingFrap.close();
 } finally {await browser.close(); await new Promise(resolve => server.close(resolve));}

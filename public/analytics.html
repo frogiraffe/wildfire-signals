@@ -103,6 +103,26 @@
         <p id="standard-readiness-provenance"></p>
         <p><a href="./data/antalya-standard-granule-readiness-2025-01-06-07.json" download>Download source-backed readiness report</a> · <a href="https://cmr.earthdata.nasa.gov/search/" rel="noopener noreferrer" target="_blank">NASA CMR</a></p>
       </section>
+      <section aria-labelledby="sensitivity-heading" class="analytics-card">
+        <h2 id="sensitivity-heading">Persistent thermal-source sensitivity · Türkiye</h2>
+        <p>The original NASA pixels stay in the total. Amber marks pixels in recurrent bins whose physical source is <strong>unresolved</strong>; teal marks other candidates, which are also unverified. No bin was independently classified as non-wildfire or excluded. These are archive counts with unknown satellite opportunity, not annual fire rates.</p>
+        <p id="sensitivity-status" role="status" aria-live="polite">Loading source sensitivity…</p>
+        <div class="analytics-controls"><label>Study region <select id="sensitivity-region" aria-label="Static sensitivity region"></select></label></div>
+        <p id="sensitivity-summary"></p>
+        <div id="sensitivity-chart" class="analytics-chart" role="img" aria-label="Annual archive pixels separated by unresolved recurrent bins"></div>
+        <div class="analytics-table-wrap"><table><thead><tr><th scope="col">Year</th><th scope="col">Sensor</th><th scope="col">All pixels</th><th scope="col">Unresolved recurrent bins</th><th scope="col">Other candidates</th><th scope="col">Source type 2 in unresolved bins</th></tr></thead><tbody id="sensitivity-rows"></tbody></table></div>
+        <p id="sensitivity-provenance"></p>
+        <p><a href="./data/turkey-static-sensitivity-2023-2025.json" download>Download verified sensitivity aggregate</a> · <a href="https://firms.modaps.eosdis.nasa.gov/content/descriptions/FIRMS_VIIRS_Firehotspots.html" rel="noopener noreferrer" target="_blank">NASA FIRMS attribute guide</a></p>
+      </section>
+      <section aria-labelledby="frap-heading" class="analytics-card">
+        <h2 id="frap-heading">Independent-source review · Sacramento perimeters</h2>
+        <p>CAL FIRE FRAP’s retrospective 2023–2025 mapped perimeter records in a fixed Sacramento-area box. Ground/air GPS with a wildfire suppression objective supplies stronger <em>mapped perimeter</em> evidence; it does not establish how each incident was first detected. A final perimeter is not an ignition point. Unlisted events and dates have unknown status, never negative fire labels.</p>
+        <p id="frap-status" role="status" aria-live="polite">Loading official perimeter evidence…</p>
+        <p id="frap-summary"></p>
+        <div class="analytics-table-wrap"><table><thead><tr><th scope="col">Source year / name</th><th scope="col">Alarm date</th><th scope="col">Agency</th><th scope="col">Perimeter method</th><th scope="col">Evidence status</th></tr></thead><tbody id="frap-cases"></tbody></table></div>
+        <p id="frap-provenance"></p>
+        <p><a href="./data/sacramento-frap-outcome-cohort-2023-2025.json" download>Download source-backed perimeter cohort</a> · <a href="https://publish.data.ca.gov/dataset/california-fire-perimeters-all" rel="noopener noreferrer" target="_blank">CAL FIRE dataset, rights and limitations</a></p>
+      </section>
       <section aria-labelledby="methods-heading" class="analytics-card">
         <h2 id="methods-heading">Sources, scope and method</h2>
         <dl id="analytics-methods"></dl>

@@ -2,7 +2,8 @@ import {validatePilot, selectPilot, validateEnvironment, selectEnvironment,
   environmentalVariables, validateCatalog, validatePairedCatalog,
   validateAnnualArchive, selectAnnualArchive, annualYearSummary,
   annualVariables, validateSpatialRecurrence, selectSpatialRecurrence,
-  validateStandardReadiness} from './analytics-data.mjs';
+  validateStandardReadiness, validateStaticSensitivity, selectStaticSensitivity,
+  validateFrapCohort} from './analytics-data.mjs';
 
 const el = id => document.getElementById(id);
 const cell = (row, value) => {
@@ -352,6 +353,86 @@ async function startStandardReadiness() {
   }
 }
 
+async function startSensitivity() {
+  try {
+    const response = await fetch('./data/turkey-static-sensitivity-2023-2025.json',
+      {cache:'no-store'});
+    if (!response.ok) throw new Error(`Report unavailable (${response.status})`);
+    const report = validateStaticSensitivity(await response.json());
+    const selector = el('sensitivity-region');
+    selector.replaceChildren();
+    for (const region of report.regions) {
+      const option = document.createElement('option'); option.value = region.region_id;
+      option.textContent = region.region_id.replace('_25KM',''); selector.append(option);
+    }
+    const draw = () => {
+      const region = selectStaticSensitivity(report, selector.value);
+      el('sensitivity-summary').textContent = `${region.all_raw_pixels.toLocaleString()} original archived pixels; ${region.unresolved_recurrent_raw_pixels.toLocaleString()} lie in ${region.unresolved_recurrent_bins.length} unresolved recurrent bins; ${region.other_raw_pixels.toLocaleString()} remain other unverified candidates. Independently established non-wildfire exclusions: 0.`;
+      el('sensitivity-rows').replaceChildren();
+      for (const item of region.year_sensor_rows) {
+        const row = document.createElement('tr');
+        for (const value of [item.year, item.provider === 'VIIRS_NOAA20_STANDARD' ? 'NOAA-20' : 'Suomi NPP',
+          number(item.all_raw_pixels), number(item.unresolved_recurrent_raw_pixels),
+          number(item.other_raw_pixels), number(item.unresolved_source_type2_raw_pixels)]) cell(row,value);
+        el('sensitivity-rows').append(row);
+      }
+      const years = [...new Set(region.year_sensor_rows.map(item => item.year))];
+      const annual = years.map(year => {
+        const rows = region.year_sensor_rows.filter(item => item.year === year);
+        return {year, all: rows.reduce((n,item) => n+item.all_raw_pixels,0),
+          unresolved: rows.reduce((n,item) => n+item.unresolved_recurrent_raw_pixels,0)};
+      });
+      const maximum = Math.max(1,...annual.map(item => item.all));
+      el('sensitivity-chart').replaceChildren();
+      for (const item of annual) {
+        const bar = document.createElement('div'); bar.className = 'analytics-bar';
+        const count = document.createElement('strong'); count.textContent = number(item.all);
+        const column = document.createElement('span');
+        column.style.height = `${Math.max(2,Math.round(130*item.all/maximum))}px`;
+        const share = item.all ? Math.round(100*item.unresolved/item.all) : 0;
+        column.style.background = `linear-gradient(to top,#e8ad70 ${share}%,#7cc6be ${share}%)`;
+        const label = document.createElement('small'); label.textContent = String(item.year);
+        bar.title = `${item.year}: ${item.all} archived pixels, ${item.unresolved} unresolved recurrent-bin pixels; satellite exposure unknown`;
+        bar.append(count,column,label); el('sensitivity-chart').append(bar);
+      }
+      el('sensitivity-chart').setAttribute('aria-label', `${region.region_id}: annual original pixels, amber unresolved recurrent bins and teal other unverified candidates; unknown satellite exposure`);
+    };
+    selector.value = report.regions[0].region_id;
+    selector.addEventListener('change',draw);
+    draw();
+    el('sensitivity-provenance').textContent = `${number(report.population.country_source_rows)} rows from ${report.population.source_files} SHA-256 verified NASA originals; ${number(report.population.selected_raw_pixels)} selected pixels. Source recurrence report SHA-256 ${report.spatial_report_sha256}; aggregate SHA-256 ${report.evidence_sha256}. FIRMS source type and recurrent location are research cues, not independently verified physical identities.`;
+    el('sensitivity-status').textContent = 'Real source sensitivity loaded.';
+  } catch (error) {
+    el('sensitivity-status').textContent = `Source sensitivity unavailable: ${error.message}`;
+    el('sensitivity-chart').replaceChildren(); el('sensitivity-rows').replaceChildren();
+  }
+}
+
+async function startFrapCohort() {
+  try {
+    const response = await fetch('./data/sacramento-frap-outcome-cohort-2023-2025.json',
+      {cache:'no-store'});
+    if (!response.ok) throw new Error(`Report unavailable (${response.status})`);
+    const report = validateFrapCohort(await response.json());
+    el('frap-summary').textContent = `${report.population.source_perimeters} official mapped perimeters intersect the fixed study box in 2023–2025. ${report.population.ground_or_air_suppression_evidence} have ground/air GPS mapping plus a wildfire suppression objective; ${report.population.other_method_or_objective_unknown} have unresolved method or objective for this stronger evidence category. Verified fire-negative units: 0. Occurrence model: ineligible.`;
+    el('frap-cases').replaceChildren();
+    for (const item of report.cases) {
+      const row = document.createElement('tr');
+      for (const value of [`${item.source_year} · ${item.source_name ?? 'Unnamed'}`,
+        item.source_alarm_date_calendar ?? 'Unknown', item.source_agency ?? 'Unknown',
+        item.source_method, item.evidence_status === 'ground_or_air_mapped_suppression_perimeter'
+          ? 'GPS-mapped suppression perimeter; event lineage unresolved'
+          : 'Agency perimeter; independence or objective unresolved']) cell(row,value);
+      el('frap-cases').append(row);
+    }
+    el('frap-provenance').textContent = `CAL FIRE FRAP ${report.source_revision}; source GeoJSON SHA-256 ${report.source_geojson_sha256}, count response SHA-256 ${report.source_count_sha256}, layer metadata SHA-256 ${report.source_metadata_sha256}, report SHA-256 ${report.evidence_sha256}. Final perimeter geometry, source dates and collection methods may be revised; first record availability is unknown. The layer omits small or undocumented fires and supplies no verified negative population.`;
+    el('frap-status').textContent = 'Official perimeter evidence loaded.';
+  } catch (error) {
+    el('frap-status').textContent = `Official perimeter evidence unavailable: ${error.message}`;
+    el('frap-cases').replaceChildren();
+  }
+}
+
 async function start() {
   try {
     const response = await fetch('./data/thermal-capture-pilot-2026-10-13.json', {cache:'no-store'});
@@ -408,3 +489,5 @@ startAnnual();
 startSpatial();
 startCatalog();
 startStandardReadiness();
+startSensitivity();
+startFrapCohort();

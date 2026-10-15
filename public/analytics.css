@@ -6,3 +6,4 @@
 #annual-provenance{overflow-wrap:anywhere}.analytics-annual-chart .analytics-bar{min-width:31px;flex:0 0 31px}.analytics-annual-chart .analytics-bar span{width:23px}.analytics-annual-chart .analytics-bar small{font-size:9px;white-space:nowrap}.analytics-card h3{font-size:14px;color:#d6e7e7;margin:16px 0 2px}
 .analytics-spatial-chart .analytics-bar{min-width:42px;flex:0 0 42px}.analytics-spatial-chart .analytics-bar span{width:30px}.analytics-spatial-chart .analytics-bar small{font-size:9px;white-space:nowrap}#spatial-provenance{overflow-wrap:anywhere}
 #standard-readiness-provenance{overflow-wrap:anywhere}
+#sensitivity-provenance,#frap-provenance{overflow-wrap:anywhere}
