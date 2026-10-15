@@ -129,6 +129,14 @@
           <ol id="lead-list"></ol>
           <p id="lead-empty" data-i18n="leadEmpty">No matching recent observations in the available data. This does not mean no fire.</p>
         </section>
+        <section class="map-visualization" aria-label="Satellite visualization">
+          <label for="candidate-display">Satellite display</label>
+          <select id="candidate-display" aria-label="Satellite display">
+            <option value="points">Individual markers and clusters</option>
+            <option value="density">Observation density (not fire risk)</option>
+          </select>
+          <p id="display-explanation">Markers represent thermal candidates, not confirmed fire boundaries.</p>
+        </section>
         <label for="hours" data-i18n="time">Time window</label><select id="hours"><option value="6">6 h</option><option value="24">24 h</option><option value="72">72 h</option></select>
         <p class="intro" data-i18n="timeScope">Time window filters satellite observations. Agency records show the current source layer; check each agency update date.</p>
         <label for="source" data-i18n="source">Source</label><select id="source"><option value="all" data-i18n="all">All sources</option></select>
