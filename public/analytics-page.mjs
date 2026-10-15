@@ -1,3 +1,4 @@
+import {compareHistoricalEvidence,historicalEvidenceCsv} from './historical-evidence.mjs';
 import {validatePilot, selectPilot, validateEnvironment, selectEnvironment,
   environmentalVariables, validateCatalog, validatePairedCatalog,
   validateAnnualArchive, selectAnnualArchive, annualYearSummary,
@@ -147,6 +148,47 @@ async function startAnnual() {
     el('annual-summary').textContent = '';
     return;
   }
+  const exportEvidence = (filename,content,type) => {
+    const link=document.createElement('a');
+    const url=URL.createObjectURL(new Blob([content],{type}));
+    link.href=url;link.download=filename;link.click();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+  };
+  let evidenceComparison=null;
+  const renderEvidenceComparison = () => {
+    const selection={from:el('annual-from').value,to:el('annual-to').value,
+      provider:el('annual-provider').value,variable:el('annual-variable').value};
+    try {
+      evidenceComparison=compareHistoricalEvidence(available,selection);
+      el('evidence-comparison-rows').replaceChildren();
+      for(const row of evidenceComparison.rows) {
+        const tr=document.createElement('tr');
+        for (const val of [row.region,row.monthsWithCandidates,row.rawPixels,
+          row.candidateCellHours,row.weatherObservedMonths,'No']) cell(tr,String(val));
+        el('evidence-comparison-rows').append(tr);
+      }
+      el('evidence-comparison-quality').textContent=evidenceComparison.interpretation;
+      el('evidence-comparison-provenance').textContent=evidenceComparison.rows.map(row=>
+        row.region+': SHA-256 '+row.evidenceSha256).join(' · ');
+      el('evidence-comparison-json').disabled=false;
+      el('evidence-comparison-csv').disabled=false;
+    } catch(error) {
+      evidenceComparison=null;
+      el('evidence-comparison-rows').replaceChildren();
+      el('evidence-comparison-quality').textContent='Comparison unavailable: '+error.message;
+      el('evidence-comparison-provenance').textContent='';
+      el('evidence-comparison-json').disabled=true;
+      el('evidence-comparison-csv').disabled=true;
+    }
+  };
+  el('evidence-comparison-json').addEventListener('click',()=>{
+    if (evidenceComparison) exportEvidence('wildfire-historical-evidence.json',
+      JSON.stringify(evidenceComparison,null,2),'application/json');
+  });
+  el('evidence-comparison-csv').addEventListener('click',()=>{
+    if (evidenceComparison) exportEvidence('wildfire-historical-evidence.csv',
+      historicalEvidenceCsv(evidenceComparison),'text/csv;charset=utf-8');
+  });
   const renderSelected = () => {
     const chosen = available.find(item => item.pilot.id === el('annual-region').value);
     const {report,pilot} = chosen;
@@ -154,6 +196,7 @@ async function startAnnual() {
     el('annual-download').href = pilot.url;
     try {
       drawAnnual(report);
+      renderEvidenceComparison();
       el('annual-status').textContent = failures ? 'Three-year archive loaded; one study unavailable.' : 'Three-year archive loaded.';
     } catch (error) {
       el('annual-summary').textContent = '';
