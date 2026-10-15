@@ -27,3 +27,10 @@ test('legend distinguishes source and polygon evidence without risk claims', () 
   assert.match(html, /Official fire perimeter when available/);
   assert.match(html, /not the area burning or danger level/);
 });
+
+test('agency incident geometry is visually distinct from satellite markers', () => {
+  assert.match(js, /map\.addImage\('agency-diamond'/);
+  assert.match(js, /id:source,type:'symbol',source/);
+  assert.match(js, /'icon-image':'agency-diamond'/);
+  assert.match(js, /id:source,type:'circle',source/);
+});
