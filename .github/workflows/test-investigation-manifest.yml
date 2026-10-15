@@ -1,0 +1,21 @@
+name: Investigation selection export
+on:
+  pull_request:
+    paths:
+      - 'public/investigation-manifest.mjs'
+      - 'public/analytics-page.mjs'
+      - 'tests/js/investigation-manifest.test.mjs'
+      - '.github/workflows/test-investigation-manifest.yml'
+permissions:
+  contents: read
+jobs:
+  manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check public/analytics-page.mjs
+      - run: node --test tests/js/investigation-manifest.test.mjs
+      - run: npm run test:public

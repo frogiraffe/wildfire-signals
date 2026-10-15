@@ -13,6 +13,23 @@
       <nav aria-label="Primary"><a href="./index.html">← Global map</a></nav>
     </header>
     <main class="analytics-main">
+      <section class="workspace-header" aria-labelledby="workspace-heading">
+        <div class="workspace-heading-row">
+          <div><span class="eyebrow">RESEARCH WORKSPACE</span><h2 id="workspace-heading">Investigate satellite evidence</h2>
+          <p>Choose a task, select Antalya or Dalaman, then inspect observations and their limits without confusing thermal candidates with confirmed fires.</p></div>
+          <label for="workspace-mode">Workspace view
+            <select id="workspace-mode"><option value="overview">Overview</option><option value="geography">Geography</option><option value="environment">Weather context</option><option value="validation">Evidence & validation</option><option value="all">All panels</option></select>
+          </label>
+        </div>
+        <div class="workspace-modes" role="group" aria-label="Research task">
+          <button type="button" data-workspace-target="overview">Overview</button>
+          <button type="button" data-workspace-target="geography">Geography</button>
+          <button type="button" data-workspace-target="environment">Weather context</button>
+          <button type="button" data-workspace-target="validation">Evidence quality</button>
+          <button type="button" data-workspace-target="all">All panels</button>
+        </div>
+        <p id="workspace-view-note" role="status" aria-live="polite"></p>
+      </section>
       <p class="analytics-warning">Archived NASA FIRMS thermal candidates are observations, not confirmed wildfires, burned area, or a validated forecast. Each study below has its own source period and coverage limits.</p>
       <p id="analytics-status" role="status" aria-live="polite">Loading verified archive summary…</p>
       <section aria-labelledby="controls-heading" class="analytics-card">
@@ -68,13 +85,66 @@
         <p id="annual-provenance"></p>
         <p><a id="annual-download" href="./data/antalya-annual-context-2023-2025.json" download>Download joined analytical evidence JSON</a> · <a href="https://firms2.modaps.eosdis.nasa.gov/download/" rel="noopener noreferrer" target="_blank">NASA FIRMS archive</a> · <a href="https://www.ncei.noaa.gov/products/global-historical-climatology-network-hourly" rel="noopener noreferrer" target="_blank">NOAA GHCNh</a></p>
       </section>
+      <section aria-labelledby="evidence-compare-heading" class="analytics-card">
+        <h2 id="evidence-compare-heading">Historical evidence comparison · selected studies</h2>
+        <p>Same UTC month window and sensor selection across available pilots. Archive counts are not fire frequencies: satellite opportunity and independent outcomes have not been verified.</p>
+        <p id="evidence-comparison-quality" role="status">Comparison loads with the annual archive.</p>
+        <div class="analytics-table-wrap"><table><thead><tr><th>Study</th><th>Months with archived candidates</th><th>Archived thermal pixels</th><th>Candidate cell-hours</th><th>Months with station context</th><th>Satellite exposure verified</th></tr></thead><tbody id="evidence-comparison-rows"></tbody></table></div>
+        <p id="evidence-comparison-provenance"></p>
+        <button type="button" id="evidence-comparison-json" disabled>Export comparison JSON</button>
+        <button type="button" id="evidence-comparison-csv" disabled>Export comparison CSV</button>
+      </section>
+      <section aria-labelledby="historical-timeline-heading" class="analytics-card">
+        <h2 id="historical-timeline-heading">Historical Intelligence · monthly comparison timeline</h2>
+        <p>The same date and sensor filters above drive this chart. Each point is an archived detection count, NOT fire occurrence, growth or risk. Missing source months are not verified negative observations.</p>
+        <label class="timeline-metric-label" for="timeline-metric">Displayed metric
+          <select id="timeline-metric"><option value="raw_pixels">Archived thermal pixels</option><option value="candidate_cell_hours">Candidate cell-hours</option></select>
+        </label>
+        <p id="historical-timeline-status" role="status">Loading independently archived sources…</p>
+        <div id="historical-timeline-chart" class="historical-timeline-chart"></div>
+        <div class="analytics-table-wrap"><table><thead><tr><th scope="col">UTC month</th><th scope="col">Antalya</th><th scope="col">Dalaman</th><th scope="col">Archive coverage</th></tr></thead><tbody id="historical-timeline-rows"></tbody></table></div>
+      </section>
+      <section aria-labelledby="historical-navigation-heading" class="analytics-card">
+        <h2 id="historical-navigation-heading">Inspect the historical study on the global map</h2>
+        <p>Open the center of the selected archived research circle on the live map. Live observations cover only the recent window; this link does not turn archived 2023–2025 detections into live records or a fire perimeter.</p>
+        <p id="historical-navigation-status" role="status">Select an annual study region above.</p>
+        <a id="historical-navigation-link" href="./index.html">Open selected study location on map</a>
+      </section>
+      <section class="analytics-card" aria-labelledby="unified-heading">
+        <h2 id="unified-heading">Unified historical investigation</h2>
+        <p>Choose a study to synchronize the annual archive, temporal comparison, and geographical research cells. Sensor and date filters are linked where the underlying evidence supports them; individual grid bins are aggregate 2023–2025 summaries and cannot be re-filtered by month.</p>
+        <div class="analytics-controls"><label>Study <select id="unified-study"><option value="ANTALYA_25KM">Antalya</option><option value="DALAMAN_25KM">Dalaman</option></select></label>
+          <label>Satellite <select id="unified-sensor"><option value="all">Both sensors</option><option value="VIIRS_NOAA20_STANDARD">NOAA-20</option><option value="VIIRS_SNPP_STANDARD">Suomi NPP</option></select></label></div>
+        <button type="button" id="unified-apply">Apply across analysis panels</button>
+        <button type="button" id="unified-export">Export investigation selections JSON</button>
+        <button type="button" id="research-report-build">Generate evidence report</button>
+        <a id="research-report-download" hidden download="wildfire-historical-research-report.json">Download verified-source report JSON</a>
+        <a id="research-report-markdown" hidden download="wildfire-historical-research-report.md">Download readable report Markdown</a>
+        <pre id="research-report-preview" class="research-report-preview" aria-live="polite" hidden></pre>
+        <p id="unified-status" role="status" aria-live="polite">Select and apply a study across the available evidence views.</p>
+        <nav class="unified-links" aria-label="Investigation sections"><a href="#annual-heading">Annual archive</a><a href="#historical-timeline-heading">Historical timeline</a><a href="#spatial-heading">Geographical bins</a><a href="#weather-heading">Weather context</a></nav>
+      </section>
       <section aria-labelledby="spatial-heading" class="analytics-card">
         <h2 id="spatial-heading">Where archived thermal candidates recur</h2>
         <p>Original 2023–2025 FIRMS pixel centers are grouped offline into 0.01° WGS84 research bins. This grid is neither a sensor footprint nor an event boundary. A bin seen on multiple dates is a repeated <em>candidate</em>; the potential-static label is an unvalidated review cue based on long recurrence and FIRMS's own source type. It does not confirm an industrial site, non-vegetation source or wildfire. Empty bins have unknown satellite opportunity.</p>
         <p id="spatial-status" role="status" aria-live="polite">Loading spatial research evidence…</p>
         <div class="analytics-controls"><label>Study region <select id="spatial-region" aria-label="Spatial research region"></select></label></div>
+        <div class="analytics-controls"><label>Grid evidence <select id="spatial-grid-filter">
+          <option value="all">All published candidate bins</option>
+          <option value="recurrently_observed_candidate">Repeated candidate bins</option>
+          <option value="potential_static_thermal_source">Potential static-source review cues</option>
+          <option value="observed_thermal_candidate">Other observed candidates</option>
+        </select></label><label>Satellite sensor <select id="spatial-grid-sensor"><option value="all">Both sensors</option><option value="VIIRS_NOAA20_STANDARD">NOAA-20</option><option value="VIIRS_SNPP_STANDARD">S-NPP</option></select></label></div>
+        <p>Geographically positioned 0.01° research rectangles (not confirmed fire polygons). Colors indicate research classification, opacity reflects archived pixels; unpublished bins and unknown satellite exposure are excluded.</p>
+        <div id="spatial-grid-map" class="spatial-grid-map"></div>
+        <section id="spatial-cell-inspector" class="spatial-cell-inspector" aria-live="polite"><h3>Selected archived cell</h3><p id="spatial-cell-summary">Select a research rectangle to inspect its source evidence.</p><dl id="spatial-cell-evidence"></dl></section>
         <p id="spatial-summary"></p>
         <p id="spatial-quality"></p>
+        <section class="spatial-audit" aria-labelledby="spatial-audit-heading">
+          <h3 id="spatial-audit-heading">Archive evidence and uncertainty</h3>
+          <dl id="spatial-audit-values"></dl>
+          <p id="spatial-audit-warning"></p>
+        </section>
         <div class="analytics-table-wrap"><table><thead><tr><th scope="col">UTC year</th><th scope="col">Archived pixels</th><th scope="col">FIRMS type 0</th><th scope="col">FIRMS type 2</th><th scope="col">FIRMS type 3</th><th scope="col">Low / nominal / high confidence</th><th scope="col">Day / night</th></tr></thead><tbody id="spatial-year-quality"></tbody></table></div>
         <div id="spatial-chart" class="analytics-chart analytics-spatial-chart" role="img" aria-label="Top aggregated thermal candidate bins"></div>
         <div class="analytics-table-wrap"><table><thead><tr><th scope="col">0.01° bin</th><th scope="col">Pixels</th><th scope="col">Distinct dates / years</th><th scope="col">Both sensors on same day</th><th scope="col">Source type 2</th><th scope="col">Research status</th></tr></thead><tbody id="spatial-bins"></tbody></table></div>
@@ -103,6 +173,26 @@
         <p id="standard-readiness-provenance"></p>
         <p><a href="./data/antalya-standard-granule-readiness-2025-01-06-07.json" download>Download source-backed readiness report</a> · <a href="https://cmr.earthdata.nasa.gov/search/" rel="noopener noreferrer" target="_blank">NASA CMR</a></p>
       </section>
+      <section aria-labelledby="sensitivity-heading" class="analytics-card">
+        <h2 id="sensitivity-heading">Persistent thermal-source sensitivity · Türkiye</h2>
+        <p>The original NASA pixels stay in the total. Amber marks pixels in recurrent bins whose physical source is <strong>unresolved</strong>; teal marks other candidates, which are also unverified. No bin was independently classified as non-wildfire or excluded. These are archive counts with unknown satellite opportunity, not annual fire rates.</p>
+        <p id="sensitivity-status" role="status" aria-live="polite">Loading source sensitivity…</p>
+        <div class="analytics-controls"><label>Study region <select id="sensitivity-region" aria-label="Static sensitivity region"></select></label></div>
+        <p id="sensitivity-summary"></p>
+        <div id="sensitivity-chart" class="analytics-chart" role="img" aria-label="Annual archive pixels separated by unresolved recurrent bins"></div>
+        <div class="analytics-table-wrap"><table><thead><tr><th scope="col">Year</th><th scope="col">Sensor</th><th scope="col">All pixels</th><th scope="col">Unresolved recurrent bins</th><th scope="col">Other candidates</th><th scope="col">Source type 2 in unresolved bins</th></tr></thead><tbody id="sensitivity-rows"></tbody></table></div>
+        <p id="sensitivity-provenance"></p>
+        <p><a href="./data/turkey-static-sensitivity-2023-2025.json" download>Download verified sensitivity aggregate</a> · <a href="https://firms.modaps.eosdis.nasa.gov/content/descriptions/FIRMS_VIIRS_Firehotspots.html" rel="noopener noreferrer" target="_blank">NASA FIRMS attribute guide</a></p>
+      </section>
+      <section aria-labelledby="frap-heading" class="analytics-card">
+        <h2 id="frap-heading">Independent-source review · Sacramento perimeters</h2>
+        <p>CAL FIRE FRAP’s retrospective 2023–2025 mapped perimeter records in a fixed Sacramento-area box. Ground/air GPS with a wildfire suppression objective supplies stronger <em>mapped perimeter</em> evidence; it does not establish how each incident was first detected. A final perimeter is not an ignition point. Unlisted events and dates have unknown status, never negative fire labels.</p>
+        <p id="frap-status" role="status" aria-live="polite">Loading official perimeter evidence…</p>
+        <p id="frap-summary"></p>
+        <div class="analytics-table-wrap"><table><thead><tr><th scope="col">Source year / name</th><th scope="col">Alarm date</th><th scope="col">Agency</th><th scope="col">Perimeter method</th><th scope="col">Evidence status</th></tr></thead><tbody id="frap-cases"></tbody></table></div>
+        <p id="frap-provenance"></p>
+        <p><a href="./data/sacramento-frap-outcome-cohort-2023-2025.json" download>Download source-backed perimeter cohort</a> · <a href="https://publish.data.ca.gov/dataset/california-fire-perimeters-all" rel="noopener noreferrer" target="_blank">CAL FIRE dataset, rights and limitations</a></p>
+      </section>
       <section aria-labelledby="methods-heading" class="analytics-card">
         <h2 id="methods-heading">Sources, scope and method</h2>
         <dl id="analytics-methods"></dl>
@@ -112,5 +202,6 @@
     </main>
   </div>
   <script type="module" src="./analytics-page.mjs"></script>
+  <script type="module" src="./workspace-start.mjs"></script>
 </body>
 </html>

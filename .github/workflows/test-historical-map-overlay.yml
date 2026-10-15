@@ -1,0 +1,26 @@
+name: Integrated historical map research
+on:
+  pull_request:
+    paths:
+      - 'public/main.mjs'
+      - 'public/index.html'
+      - 'public/historical-map-overlay.mjs'
+      - 'public/analytics-page.mjs'
+      - 'tests/js/historical-map-overlay.test.mjs'
+      - 'tests/browser/investigation-local.mjs'
+      - '.github/workflows/test-historical-map-overlay.yml'
+permissions:
+  contents: read
+jobs:
+  map:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check public/main.mjs
+      - run: node --check public/analytics-page.mjs
+      - run: node --test tests/js/historical-map-overlay.test.mjs
+      - run: npm run test:public

@@ -1,8 +1,15 @@
+import {buildResearchReport,formatResearchReport} from './research-report.mjs';
+import {investigationManifest} from './investigation-manifest.mjs';
+import {historicalAudit} from './historical-audit.mjs';
+import {renderSpatialGrid} from './historical-grid.mjs';
+import {historicalTimeline,renderHistoricalTimeline} from './historical-timeline.mjs';
+import {compareHistoricalEvidence,historicalEvidenceCsv} from './historical-evidence.mjs';
 import {validatePilot, selectPilot, validateEnvironment, selectEnvironment,
   environmentalVariables, validateCatalog, validatePairedCatalog,
   validateAnnualArchive, selectAnnualArchive, annualYearSummary,
   annualVariables, validateSpatialRecurrence, selectSpatialRecurrence,
-  validateStandardReadiness} from './analytics-data.mjs';
+  validateStandardReadiness, validateStaticSensitivity, selectStaticSensitivity,
+  validateFrapCohort} from './analytics-data.mjs';
 
 const el = id => document.getElementById(id);
 const cell = (row, value) => {
@@ -146,13 +153,90 @@ async function startAnnual() {
     el('annual-summary').textContent = '';
     return;
   }
+  const exportEvidence = (filename,content,type) => {
+    const link=document.createElement('a');
+    const url=URL.createObjectURL(new Blob([content],{type}));
+    link.href=url;link.download=filename;link.click();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+  };
+  let evidenceComparison=null;
+  const renderEvidenceComparison = () => {
+    const selection={from:el('annual-from').value,to:el('annual-to').value,
+      provider:el('annual-provider').value,variable:el('annual-variable').value};
+    try {
+      evidenceComparison=compareHistoricalEvidence(available,selection);
+      el('evidence-comparison-rows').replaceChildren();
+      for(const row of evidenceComparison.rows) {
+        const tr=document.createElement('tr');
+        for (const val of [row.region,row.monthsWithCandidates,row.rawPixels,
+          row.candidateCellHours,row.weatherObservedMonths,'No']) cell(tr,String(val));
+        el('evidence-comparison-rows').append(tr);
+      }
+      el('evidence-comparison-quality').textContent=evidenceComparison.interpretation;
+      el('evidence-comparison-provenance').textContent=evidenceComparison.rows.map(row=>
+        row.region+': SHA-256 '+row.evidenceSha256).join(' · ');
+      el('evidence-comparison-json').disabled=false;
+      el('evidence-comparison-csv').disabled=false;
+    } catch(error) {
+      evidenceComparison=null;
+      el('evidence-comparison-rows').replaceChildren();
+      el('evidence-comparison-quality').textContent='Comparison unavailable: '+error.message;
+      el('evidence-comparison-provenance').textContent='';
+      el('evidence-comparison-json').disabled=true;
+      el('evidence-comparison-csv').disabled=true;
+    }
+  };
+  el('evidence-comparison-json').addEventListener('click',()=>{
+    if (evidenceComparison) exportEvidence('wildfire-historical-evidence.json',
+      JSON.stringify(evidenceComparison,null,2),'application/json');
+  });
+  el('evidence-comparison-csv').addEventListener('click',()=>{
+    if (evidenceComparison) exportEvidence('wildfire-historical-evidence.csv',
+      historicalEvidenceCsv(evidenceComparison),'text/csv;charset=utf-8');
+  });
+  let timelineMetric='raw_pixels';
+  const drawTimeline=()=>{
+    try {
+      const report=historicalTimeline(available,{
+        from:el('annual-from').value,to:el('annual-to').value,
+        provider:el('annual-provider').value,metric:timelineMetric});
+      renderHistoricalTimeline(el('historical-timeline-chart'),report);
+      const tbody=el('historical-timeline-rows');tbody.replaceChildren();
+      for(const point of report.points){
+        const tr=document.createElement('tr');
+        cell(tr,point.month);
+        for (const value of point.values) cell(tr,value===null?'Unknown':number(value));
+        cell(tr,'Satellite opportunity unverified');tbody.append(tr);
+      }
+      el('historical-timeline-status').textContent=report.note+' Sources: '+
+        report.series.map(s=>s.label+' '+s.sha256).join(' · ');
+    } catch(error){
+      el('historical-timeline-chart').replaceChildren();
+      el('historical-timeline-rows').replaceChildren();
+      el('historical-timeline-status').textContent='Timeline unavailable: '+error.message;
+    }
+  };
+  el('timeline-metric').addEventListener('change',event=>{
+    timelineMetric=event.target.value;drawTimeline();
+  });
   const renderSelected = () => {
     const chosen = available.find(item => item.pilot.id === el('annual-region').value);
     const {report,pilot} = chosen;
     el('annual-provenance').textContent = `${pilot.label}: ${report.population.country_source_rows.toLocaleString()} rows in ${report.population.source_files} NASA annual country files; ${report.population.selected_raw_pixels.toLocaleString()} selected pixels in a ${report.region.radius_km} km circle. ${report.population.station_source_rows.toLocaleString()} rows in ${report.population.weather_files} NOAA station files; ${report.population.weather_matched_provider_hours_temperature_c}/${report.population.candidate_provider_hours} positive sensor-hours have prior station temperature. NASA and NOAA files are revised; original first availability is unknown. Evidence SHA-256: ${report.evidence_sha256}. Source file hashes and revisions are in the download. Weather license: ${report.weather_license}. No independently confirmed wildfire outcome.`;
+    const center=report.region;
+    const mapParams=new URLSearchParams({
+      lat:String(center.latitude),lon:String(center.longitude),zoom:'9',hours:'72',
+      rlat:String(center.latitude),rlon:String(center.longitude),rr:String(center.radius_km)
+    });
+    el('historical-navigation-link').href='./index.html#'+mapParams.toString();
+    el('historical-navigation-status').textContent=
+      pilot.label+' · '+center.radius_km+' km archived study circle · '+center.latitude+
+      ', '+center.longitude+'. The linked global map shows recent source observations only.';
     el('annual-download').href = pilot.url;
     try {
       drawAnnual(report);
+      renderEvidenceComparison();
+      drawTimeline();
       el('annual-status').textContent = failures ? 'Three-year archive loaded; one study unavailable.' : 'Three-year archive loaded.';
     } catch (error) {
       el('annual-summary').textContent = '';
@@ -162,6 +246,11 @@ async function startAnnual() {
   };
   for (const id of ['annual-region','annual-from','annual-to','annual-provider','annual-variable'])
     el(id).addEventListener('change', renderSelected);
+  const deepStudy=new URLSearchParams(location.hash.replace(/^#/,'')).get('study');
+  if(available.some(item=>item.pilot.id===deepStudy)){
+    el('annual-region').value=deepStudy;
+    el('unified-study').value=deepStudy;
+  }
   renderSelected();
 }
 
@@ -184,6 +273,55 @@ async function startSpatial() {
     };
     const render = () => {
       const item = selectSpatialRecurrence(report, el('spatial-region').value);
+      const audit=historicalAudit(report,el('spatial-region').value);
+      const auditRows=[
+        ['Archived thermal pixels',number(audit.totalPixels)],
+        ['Pixels represented in published research bins',number(audit.mappedPixels)],
+        ['Pixels outside published bins',number(audit.unmappedPixels)],
+        ['Published geographic bins',number(audit.publishedBins)],
+        ['Satellite acquisition exposure','Unverified'],
+        ['Independently validated wildfire outcomes','None established'],
+        ['Independent static-source identification','Not verified'],
+        ['Evidence SHA-256',audit.sourceSha256]
+      ];
+      const auditList=el('spatial-audit-values');auditList.replaceChildren();
+      for(const [key,value] of auditRows){
+        const dt=document.createElement('dt');dt.textContent=key;
+        const dd=document.createElement('dd');dd.textContent=value;
+        auditList.append(dt,dd);
+      }
+      el('spatial-audit-warning').textContent=audit.caution;
+      const inspect = id => {
+        const bin=item.published_bins.find(row=>row.bin_id===id);
+        if(!bin)return;
+        el('spatial-cell-summary').textContent=id+' · '+bin.classification+
+          ' · research candidate only; independent source identity '+bin.source_identity_status+'.';
+        const dl=el('spatial-cell-evidence');dl.replaceChildren();
+        const entries=[
+          ['WGS84 bounds',bin.bounds_wgs84.join(', ')],
+          ['Archived thermal pixels',number(bin.raw_pixels)],
+          ['Observed UTC dates / years',bin.distinct_dates+' / '+bin.distinct_years],
+          ['First / last observation',bin.first_observed_at+' / '+bin.last_observed_at],
+          ['NOAA-20 / S-NPP pixels',(bin.provider_counts?.VIIRS_NOAA20_STANDARD??0)+' / '+(bin.provider_counts?.VIIRS_SNPP_STANDARD??0)],
+          ['Both-sensor dates',number(bin.sensor_agreement_dates)],
+          ['Classification basis',bin.classification_basis],
+          ['Independent classification',bin.independently_classified?'Yes':'No'],
+          ['Source identity',bin.source_identity_status],
+          ['Satellite observation opportunity','Unknown']
+        ];
+        for(const [label,value] of entries){
+          const dt=document.createElement('dt');dt.textContent=label;
+          const dd=document.createElement('dd');dd.textContent=value??'Unknown';
+          dl.append(dt,dd);
+        }
+      };
+      renderSpatialGrid(el('spatial-grid-map'),item,el('spatial-grid-filter').value,inspect,el('spatial-grid-sensor').value);
+      const displayed=item.published_bins.filter(bin=>(el('spatial-grid-filter').value==='all'||
+        bin.classification===el('spatial-grid-filter').value) &&
+        (el('spatial-grid-sensor').value==='all'||(bin.provider_counts?.[el('spatial-grid-sensor').value]??0)>0));
+      if(displayed.length)inspect(displayed[0].bin_id);
+      else {el('spatial-cell-summary').textContent='No mapped cells match the current filter.';
+        el('spatial-cell-evidence').replaceChildren();}
       el('spatial-summary').textContent = `${number(item.selected_raw_pixels)} archived pixels in ${number(item.occupied_bins)} occupied 0.01° bins; ${number(item.recurrently_observed_bins)} bins recur on multiple UTC dates, ${number(item.bins_seen_in_multiple_years)} span multiple years, ${number(item.potential_static_source_bins)} meet a source-based potential-static review rule. ${number(item.unpublished_bins)} other bins are summarized only. These are neither fire counts nor fire rates.`;
       el('spatial-quality').textContent = `FIRMS confidence: low ${number(item.confidence_counts.l ?? 0)}, nominal ${number(item.confidence_counts.n ?? 0)}, high ${number(item.confidence_counts.h ?? 0)}; day ${number(item.daynight_counts.D ?? 0)}, night ${number(item.daynight_counts.N ?? 0)}; source type 2 ${number(item.source_type_counts['2'] ?? 0)}. Historical source type can be wrong; independent source identity and acquisition opportunity are unknown.`;
       el('spatial-year-quality').replaceChildren();
@@ -215,7 +353,11 @@ async function startSpatial() {
       }
       el('spatial-chart').setAttribute('aria-label', `${item.region.region_id}: top ${item.published_bins.length} coarsened bins by recurring dates and pixel count; these are thermal candidates, not fires`);
     };
+    const deepStudy=new URLSearchParams(location.hash.replace(/^#/,'')).get('study');
+    if(report.regions.some(item=>item.region.region_id===deepStudy))el('spatial-region').value=deepStudy;
     el('spatial-region').addEventListener('change', render);
+    el('spatial-grid-filter').addEventListener('change', render);
+    el('spatial-grid-sensor').addEventListener('change', render);
     el('spatial-provenance').textContent = `${number(report.population.country_source_rows)} rows in ${report.population.source_files} original NASA files, SHA-256 pinned in the download. 0.01° bins are research grouping, not sensor footprints. NASA's Static Thermal Anomalies Mask is reference only and was not redistributed or joined. The historical FIRMS type field has known defects. No independent non-vegetation or wildfire classification, valid no-detection population, cloud/quality mask or operational model is present. Evidence SHA-256: ${report.evidence_sha256}.`;
     render();
     el('spatial-status').textContent = 'Spatial recurrence evidence loaded.';
@@ -352,6 +494,86 @@ async function startStandardReadiness() {
   }
 }
 
+async function startSensitivity() {
+  try {
+    const response = await fetch('./data/turkey-static-sensitivity-2023-2025.json',
+      {cache:'no-store'});
+    if (!response.ok) throw new Error(`Report unavailable (${response.status})`);
+    const report = validateStaticSensitivity(await response.json());
+    const selector = el('sensitivity-region');
+    selector.replaceChildren();
+    for (const region of report.regions) {
+      const option = document.createElement('option'); option.value = region.region_id;
+      option.textContent = region.region_id.replace('_25KM',''); selector.append(option);
+    }
+    const draw = () => {
+      const region = selectStaticSensitivity(report, selector.value);
+      el('sensitivity-summary').textContent = `${region.all_raw_pixels.toLocaleString()} original archived pixels; ${region.unresolved_recurrent_raw_pixels.toLocaleString()} lie in ${region.unresolved_recurrent_bins.length} unresolved recurrent bins; ${region.other_raw_pixels.toLocaleString()} remain other unverified candidates. Independently established non-wildfire exclusions: 0.`;
+      el('sensitivity-rows').replaceChildren();
+      for (const item of region.year_sensor_rows) {
+        const row = document.createElement('tr');
+        for (const value of [item.year, item.provider === 'VIIRS_NOAA20_STANDARD' ? 'NOAA-20' : 'Suomi NPP',
+          number(item.all_raw_pixels), number(item.unresolved_recurrent_raw_pixels),
+          number(item.other_raw_pixels), number(item.unresolved_source_type2_raw_pixels)]) cell(row,value);
+        el('sensitivity-rows').append(row);
+      }
+      const years = [...new Set(region.year_sensor_rows.map(item => item.year))];
+      const annual = years.map(year => {
+        const rows = region.year_sensor_rows.filter(item => item.year === year);
+        return {year, all: rows.reduce((n,item) => n+item.all_raw_pixels,0),
+          unresolved: rows.reduce((n,item) => n+item.unresolved_recurrent_raw_pixels,0)};
+      });
+      const maximum = Math.max(1,...annual.map(item => item.all));
+      el('sensitivity-chart').replaceChildren();
+      for (const item of annual) {
+        const bar = document.createElement('div'); bar.className = 'analytics-bar';
+        const count = document.createElement('strong'); count.textContent = number(item.all);
+        const column = document.createElement('span');
+        column.style.height = `${Math.max(2,Math.round(130*item.all/maximum))}px`;
+        const share = item.all ? Math.round(100*item.unresolved/item.all) : 0;
+        column.style.background = `linear-gradient(to top,#e8ad70 ${share}%,#7cc6be ${share}%)`;
+        const label = document.createElement('small'); label.textContent = String(item.year);
+        bar.title = `${item.year}: ${item.all} archived pixels, ${item.unresolved} unresolved recurrent-bin pixels; satellite exposure unknown`;
+        bar.append(count,column,label); el('sensitivity-chart').append(bar);
+      }
+      el('sensitivity-chart').setAttribute('aria-label', `${region.region_id}: annual original pixels, amber unresolved recurrent bins and teal other unverified candidates; unknown satellite exposure`);
+    };
+    selector.value = report.regions[0].region_id;
+    selector.addEventListener('change',draw);
+    draw();
+    el('sensitivity-provenance').textContent = `${number(report.population.country_source_rows)} rows from ${report.population.source_files} SHA-256 verified NASA originals; ${number(report.population.selected_raw_pixels)} selected pixels. Source recurrence report SHA-256 ${report.spatial_report_sha256}; aggregate SHA-256 ${report.evidence_sha256}. FIRMS source type and recurrent location are research cues, not independently verified physical identities.`;
+    el('sensitivity-status').textContent = 'Real source sensitivity loaded.';
+  } catch (error) {
+    el('sensitivity-status').textContent = `Source sensitivity unavailable: ${error.message}`;
+    el('sensitivity-chart').replaceChildren(); el('sensitivity-rows').replaceChildren();
+  }
+}
+
+async function startFrapCohort() {
+  try {
+    const response = await fetch('./data/sacramento-frap-outcome-cohort-2023-2025.json',
+      {cache:'no-store'});
+    if (!response.ok) throw new Error(`Report unavailable (${response.status})`);
+    const report = validateFrapCohort(await response.json());
+    el('frap-summary').textContent = `${report.population.source_perimeters} official mapped perimeters intersect the fixed study box in 2023–2025. ${report.population.ground_or_air_suppression_evidence} have ground/air GPS mapping plus a wildfire suppression objective; ${report.population.other_method_or_objective_unknown} have unresolved method or objective for this stronger evidence category. Verified fire-negative units: 0. Occurrence model: ineligible.`;
+    el('frap-cases').replaceChildren();
+    for (const item of report.cases) {
+      const row = document.createElement('tr');
+      for (const value of [`${item.source_year} · ${item.source_name ?? 'Unnamed'}`,
+        item.source_alarm_date_calendar ?? 'Unknown', item.source_agency ?? 'Unknown',
+        item.source_method, item.evidence_status === 'ground_or_air_mapped_suppression_perimeter'
+          ? 'GPS-mapped suppression perimeter; event lineage unresolved'
+          : 'Agency perimeter; independence or objective unresolved']) cell(row,value);
+      el('frap-cases').append(row);
+    }
+    el('frap-provenance').textContent = `CAL FIRE FRAP ${report.source_revision}; source GeoJSON SHA-256 ${report.source_geojson_sha256}, count response SHA-256 ${report.source_count_sha256}, layer metadata SHA-256 ${report.source_metadata_sha256}, report SHA-256 ${report.evidence_sha256}. Final perimeter geometry, source dates and collection methods may be revised; first record availability is unknown. The layer omits small or undocumented fires and supplies no verified negative population.`;
+    el('frap-status').textContent = 'Official perimeter evidence loaded.';
+  } catch (error) {
+    el('frap-status').textContent = `Official perimeter evidence unavailable: ${error.message}`;
+    el('frap-cases').replaceChildren();
+  }
+}
+
 async function start() {
   try {
     const response = await fetch('./data/thermal-capture-pilot-2026-10-13.json', {cache:'no-store'});
@@ -402,9 +624,92 @@ async function start() {
   }
 }
 
+
+function applyUnifiedInvestigation() {
+  const study=el('unified-study').value;
+  const sensor=el('unified-sensor').value;
+  if(!['ANTALYA_25KM','DALAMAN_25KM'].includes(study) ||
+      !['all','VIIRS_NOAA20_STANDARD','VIIRS_SNPP_STANDARD'].includes(sensor)) {
+    el('unified-status').textContent='Invalid study or sensor; no view updated.';
+    return;
+  }
+  const selections=[['annual-region',study],['spatial-region',study],
+    ['annual-provider',sensor],['spatial-grid-sensor',sensor]];
+  for (const [id,value] of selections) {
+    const input=el(id);
+    if (!input || ![...input.options].some(option=>option.value===value)) {
+      el('unified-status').textContent='Archive data for this study is not yet available; previous selection kept.';
+      return;
+    }
+  }
+  for (const [id,value] of selections) {
+    const input=el(id);input.value=value;
+    input.dispatchEvent(new Event('change',{bubbles:true}));
+  }
+  el('unified-status').textContent=
+    'Applied '+study.replace('_25KM','')+' and '+(sensor==='all'?'both VIIRS sensors':sensor)+
+    ' to annual, temporal and spatial evidence. Grid bins still represent the full 2023–2025 archive; weather studies use their own stations and periods.';
+}
+el('unified-apply').addEventListener('click',applyUnifiedInvestigation);
+el('unified-export').addEventListener('click',()=>{
+  try {
+    const manifest=investigationManifest({
+      study:el('annual-region').value,sensor:el('annual-provider').value,
+      from:el('annual-from').value,to:el('annual-to').value,
+      metric:el('timeline-metric').value,gridFilter:el('spatial-grid-filter').value
+    });
+    const blob=new Blob([JSON.stringify(manifest,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement('a');
+    link.href=url;link.download='wildfire-investigation-selection.json';link.click();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    el('unified-status').textContent='Investigation selection manifest prepared. It records source paths and filters, not the source datasets.';
+  } catch(error) {el('unified-status').textContent='Export unavailable: '+error.message;}
+});
+
+let researchReportUrl=null;
+let researchMarkdownUrl=null;
+el('research-report-build').addEventListener('click',async()=>{
+  const preview=el('research-report-preview'),download=el('research-report-download');
+  preview.hidden=false;download.hidden=true;
+  const markdown=el('research-report-markdown');markdown.hidden=true;
+  preview.textContent='Validating original archive evidence…';
+  try{
+    const study=el('annual-region').value;
+    const id=study==='ANTALYA_25KM'?'antalya':study==='DALAMAN_25KM'?'dalaman':null;
+    if(!id)throw new Error('Unknown study');
+    const paths=['./data/'+id+'-annual-context-2023-2025.json',
+      './data/turkey-spatial-recurrence-2023-2025.json'];
+    const reports=await Promise.all(paths.map(async path=>{
+      const response=await fetch(path,{cache:'no-store'});
+      if(!response.ok)throw new Error('Evidence unavailable: '+path);
+      return response.json();
+    }));
+    const report=buildResearchReport(reports[0],reports[1],{
+      study,sensor:el('annual-provider').value,
+      from:el('annual-from').value,to:el('annual-to').value,
+      metric:el('timeline-metric').value,gridFilter:el('spatial-grid-filter').value});
+    const formatted=formatResearchReport(report);
+    preview.textContent=formatted;
+    if(researchMarkdownUrl)URL.revokeObjectURL(researchMarkdownUrl);
+    researchMarkdownUrl=URL.createObjectURL(new Blob([formatted],{type:'text/markdown;charset=utf-8'}));
+    markdown.href=researchMarkdownUrl;markdown.hidden=false;
+    if(researchReportUrl)URL.revokeObjectURL(researchReportUrl);
+    researchReportUrl=URL.createObjectURL(new Blob([JSON.stringify(report,null,2)],
+      {type:'application/json'}));
+    download.href=researchReportUrl;download.hidden=false;
+    el('unified-status').textContent='Evidence report verified against both archived source contracts. Download includes source receipts and limitations.';
+  }catch(error){
+    preview.textContent='Report unavailable: '+error.message;
+    el('unified-status').textContent='Research report was not generated: '+error.message;
+  }
+});
+
 start();
 startEnvironment();
 startAnnual();
 startSpatial();
 startCatalog();
 startStandardReadiness();
+startSensitivity();
+startFrapCohort();

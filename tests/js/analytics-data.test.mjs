@@ -4,7 +4,30 @@ import {readFileSync} from 'node:fs';
 import {validatePilot, selectPilot, validateEnvironment, selectEnvironment,
   validateCatalog, validatePairedCatalog, validateAnnualArchive,
   selectAnnualArchive, annualYearSummary, validateSpatialRecurrence,
-  selectSpatialRecurrence, validateStandardReadiness} from '../../public/analytics-data.mjs';
+  selectSpatialRecurrence, validateStandardReadiness,
+  validateStaticSensitivity, selectStaticSensitivity,
+  validateFrapCohort} from '../../public/analytics-data.mjs';
+
+test('real static sensitivity separates unresolved pixels without dropping them', () => {
+  const evidence = validateStaticSensitivity(JSON.parse(readFileSync(new URL(
+    '../../public/data/turkey-static-sensitivity-2023-2025.json', import.meta.url))));
+  const antalya = selectStaticSensitivity(evidence,'ANTALYA_25KM');
+  assert.equal(antalya.all_raw_pixels,1340);
+  assert.equal(antalya.unresolved_recurrent_raw_pixels,887);
+  assert.equal(antalya.year_sensor_rows.length,6);
+  assert.equal(antalya.independently_excluded_raw_pixels,0);
+  assert.throws(() => validateStaticSensitivity({...evidence, fire_rate_comparison_supported:true}));
+});
+
+test('official FRAP source cohort retains incomplete outcomes and zero negatives', () => {
+  const evidence = validateFrapCohort(JSON.parse(readFileSync(new URL(
+    '../../public/data/sacramento-frap-outcome-cohort-2023-2025.json', import.meta.url))));
+  assert.equal(evidence.cases.length,9);
+  assert.equal(evidence.population.ground_or_air_suppression_evidence,5);
+  assert.equal(evidence.population.verified_negative_outcomes,0);
+  assert.ok(evidence.cases.every(row => !row.geometry_is_ignition_point));
+  assert.throws(() => validateFrapCohort({...evidence, complete_fire_outcome_coverage:true}));
+});
 
 test('standard VIIRS catalog pairs remain neither exposure nor fire outcomes', () => {
   const evidence = validateStandardReadiness(JSON.parse(readFileSync(new URL(

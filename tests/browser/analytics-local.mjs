@@ -8,7 +8,15 @@ const files = new Map([
   ['/analytics.css', ['analytics.css','text/css']],
   ['/style.css', ['style.css','text/css']],
   ['/analytics-page.mjs', ['analytics-page.mjs','text/javascript']],
+  ['/workspace-navigation.mjs', ['workspace-navigation.mjs','text/javascript']],
+  ['/workspace-start.mjs', ['workspace-start.mjs','text/javascript']],
   ['/analytics-data.mjs', ['analytics-data.mjs','text/javascript']],
+  ['/historical-evidence.mjs', ['historical-evidence.mjs','text/javascript']],
+  ['/historical-timeline.mjs', ['historical-timeline.mjs','text/javascript']],
+  ['/historical-grid.mjs', ['historical-grid.mjs','text/javascript']],
+  ['/historical-audit.mjs', ['historical-audit.mjs','text/javascript']],
+  ['/investigation-manifest.mjs', ['investigation-manifest.mjs','text/javascript']],
+  ['/research-report.mjs', ['research-report.mjs','text/javascript']],
   ['/data/thermal-capture-pilot-2026-10-13.json',
     ['data/thermal-capture-pilot-2026-10-13.json','application/json']],
   ['/data/batman-weather-context-2026-10-11.json',
@@ -26,7 +34,11 @@ const files = new Map([
   ['/data/turkey-spatial-recurrence-2023-2025.json',
     ['data/turkey-spatial-recurrence-2023-2025.json','application/json']],
   ['/data/antalya-standard-granule-readiness-2025-01-06-07.json',
-    ['data/antalya-standard-granule-readiness-2025-01-06-07.json','application/json']]
+    ['data/antalya-standard-granule-readiness-2025-01-06-07.json','application/json']],
+  ['/data/turkey-static-sensitivity-2023-2025.json',
+    ['data/turkey-static-sensitivity-2023-2025.json','application/json']],
+  ['/data/sacramento-frap-outcome-cohort-2023-2025.json',
+    ['data/sacramento-frap-outcome-cohort-2023-2025.json','application/json']]
 ]);
 const root = new URL('../../public/', import.meta.url);
 const server = createServer(async (request,response) => {
@@ -46,8 +58,42 @@ try {
     await page.locator('#analytics-status').getByText('Archived pilot loaded.').waitFor();
     await page.locator('#weather-status').getByText('Retrospective station pilot loaded.').waitFor();
     await page.locator('#annual-status').getByText('Three-year archive loaded.').waitFor();
+    await page.locator('#research-report-build').click();
+    await page.locator('#research-report-download:not([hidden])').waitFor();
+    await page.locator('#research-report-markdown:not([hidden])').waitFor();
+    assert.match(await page.locator('#research-report-preview').textContent(),/Independent wildfire outcomes verified: No/);
+
+    assert.equal(await page.locator('#workspace-mode').inputValue(),'all');
+    await page.locator('[data-workspace-target="geography"]').click();
+    assert.equal(await page.locator('#spatial-heading').isVisible(),true);
+    assert.equal(await page.locator('#annual-heading').isVisible(),false);
+    await page.locator('[data-workspace-target="validation"]').click();
+    assert.equal(await page.locator('#frap-heading').isVisible(),true);
+    await page.locator('[data-workspace-target="all"]').click();
+    assert.equal(await page.locator('#annual-heading').isVisible(),true);
+
     await page.locator('#spatial-status').getByText('Spatial recurrence evidence loaded.').waitFor();
+    await page.locator('#unified-study').selectOption('DALAMAN_25KM');
+    await page.locator('#unified-sensor').selectOption('VIIRS_SNPP_STANDARD');
+    await page.locator('#unified-apply').click();
+    assert.equal(await page.locator('#annual-region').inputValue(),'DALAMAN_25KM');
+    assert.equal(await page.locator('#spatial-region').inputValue(),'DALAMAN_25KM');
+    assert.equal(await page.locator('#annual-provider').inputValue(),'VIIRS_SNPP_STANDARD');
+    assert.equal(await page.locator('#spatial-grid-sensor').inputValue(),'VIIRS_SNPP_STANDARD');
+    assert.match(await page.locator('#unified-status').textContent(),/Applied DALAMAN/);
+    await page.locator('#unified-study').selectOption('ANTALYA_25KM');
+    await page.locator('#unified-sensor').selectOption('all');
+    await page.locator('#unified-apply').click();
     await page.locator('#standard-readiness-status').getByText('Standard product research evidence loaded.').waitFor();
+    await page.locator('#sensitivity-status').getByText('Real source sensitivity loaded.').waitFor();
+    await page.locator('#frap-status').getByText('Official perimeter evidence loaded.').waitFor();
+    assert.match(await page.locator('#sensitivity-summary').textContent(),/887/);
+    assert.equal(await page.locator('#sensitivity-rows tr').count(),6);
+    assert.equal(await page.locator('#frap-cases tr').count(),9);
+    assert.match(await page.locator('#frap-summary').textContent(),/Verified fire-negative units: 0/);
+    await page.locator('#sensitivity-region').selectOption('DALAMAN_25KM');
+    assert.match(await page.locator('#sensitivity-summary').textContent(),/79 original archived pixels/);
+    assert.match(await page.locator('#sensitivity-summary').textContent(),/0 lie in 0 unresolved/);
     assert.equal(await page.locator('#standard-readiness-days tr').count(),2);
     assert.match(await page.locator('#standard-readiness-days tr:last-child').textContent(),/opportunity unknown/);
     assert.match(await page.locator('#standard-readiness-gates').textContent(),/No model was trained/);
@@ -185,4 +231,18 @@ try {
   await missingStandard.locator('#standard-readiness-status').getByText(/evidence unavailable/).waitFor();
   assert.equal(await missingStandard.locator('#standard-readiness-days tr').count(),0);
   await missingStandard.close();
+  const missingSensitivity = await browser.newPage();
+  await missingSensitivity.route('**/data/turkey-static-sensitivity-2023-2025.json',
+    route => route.fulfill({status:503,body:'unavailable'}));
+  await missingSensitivity.goto(`http://127.0.0.1:${server.address().port}/analytics.html`);
+  await missingSensitivity.locator('#sensitivity-status').getByText(/Source sensitivity unavailable/).waitFor();
+  assert.equal(await missingSensitivity.locator('#sensitivity-rows tr').count(),0);
+  await missingSensitivity.close();
+  const missingFrap = await browser.newPage();
+  await missingFrap.route('**/data/sacramento-frap-outcome-cohort-2023-2025.json',
+    route => route.fulfill({status:503,body:'unavailable'}));
+  await missingFrap.goto(`http://127.0.0.1:${server.address().port}/analytics.html`);
+  await missingFrap.locator('#frap-status').getByText(/Official perimeter evidence unavailable/).waitFor();
+  assert.equal(await missingFrap.locator('#frap-cases tr').count(),0);
+  await missingFrap.close();
 } finally {await browser.close(); await new Promise(resolve => server.close(resolve));}

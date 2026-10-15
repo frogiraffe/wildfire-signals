@@ -1,0 +1,25 @@
+name: Historical workspace user journey
+on:
+  pull_request:
+    paths:
+      - 'public/workspace-navigation.mjs'
+      - 'public/workspace-start.mjs'
+      - 'public/analytics.html'
+      - 'public/analytics.css'
+      - 'tests/js/workspace-navigation.test.mjs'
+      - 'tests/browser/analytics-local.mjs'
+      - '.github/workflows/test-workspace-journey.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check public/workspace-navigation.mjs
+      - run: node --test tests/js/workspace-navigation.test.mjs
+      - run: npm run test:public

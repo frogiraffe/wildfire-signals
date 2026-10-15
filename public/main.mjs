@@ -1,7 +1,10 @@
+import {agencyBoundsGeojson} from './agency-bounds-overlay.mjs';
+import {archivedGeojson,historicalStudyUrl,STUDIES} from './historical-map-overlay.mjs';
 import * as maplibregl from 'https://unpkg.com/maplibre-gl@6.13.0/dist/maplibre-gl.mjs';
 import {MESSAGES, parseState, stateHash, visible, effectiveStatus, featureCollection} from './map-state.mjs';
 import {summarizeArea, investigationLeads} from './area-analysis.mjs';
 import {incidentTimeline} from './incident-timeline.mjs';
+import {observationSlice} from './observation-slice.mjs';
 import {fetchNwsWeather, forecastChanges} from './weather-context.mjs';
 import {fetchNifcPerimeter} from './perimeter-context.mjs';
 import {recordAnalysis} from './analysis-answers.mjs';
@@ -11,6 +14,8 @@ const state = parseState(location.hash);
 let snapshot = {manifest:{data_status:'unknown'},events:[],incidents:[],matches:[],sources:[],details:{}};
 let weatherController = null;
 let perimeterController = null;
+let candidateDisplay = 'points';
+let observationPlayback = 'all';
 const el = id => document.getElementById(id);
 const map = new maplibregl.Map({container:'map',
   style:'https://tiles.openfreemap.org/styles/liberty', center:[state.lon,state.lat], zoom:state.zoom,
@@ -366,12 +371,43 @@ function draw() {
     row.append(key,health); sources.append(row);
   }
   if (map.getSource('candidates')) {
-    map.getSource('candidates').setData(featureCollection(events,'candidate'));
+    const displayedEvents = observationSlice(events,state.hours,observationPlayback);
+    map.getSource('candidates').setData(featureCollection(displayedEvents,'candidate'));
+    map.getSource('candidate-density').setData(featureCollection(displayedEvents,'candidate'));
     map.getSource('incidents').setData(featureCollection(incidents,'incident'));
   }
 }
 
 map.on('load', () => {
+  map.addSource('agency-archive-bounds',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+  map.addLayer({id:'agency-archive-bounds',type:'line',source:'agency-archive-bounds',
+    paint:{'line-color':'#ecba6d','line-width':2,'line-dasharray':[2,2]}});
+  map.on('click','agency-archive-bounds',event=>{
+    const p=event.features?.[0]?.properties;if(!p)return;
+    const node=document.createElement('div');
+    const strong=document.createElement('strong');strong.textContent=p.name+' · '+p.year;
+    const desc=document.createElement('p');
+    desc.textContent='CAL FIRE archival perimeter bounding box only. Method: '+p.method+
+      '. Alarm date: '+p.alarmDate+'. Perimeter shape and ignition point are NOT represented.';
+    node.append(strong,desc);
+    new maplibregl.Popup().setLngLat(event.lngLat).setDOMContent(node).addTo(map);
+  });
+  map.addSource('historical-archive',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+  map.addLayer({id:'historical-archive-fill',type:'fill',source:'historical-archive',
+    paint:{'fill-color':['match',['get','classification'],'potential_static_thermal_source','#cf93c6','recurrently_observed_candidate','#eab178','#6bbcb6'],
+      'fill-opacity':0.35}});
+  map.addLayer({id:'historical-archive-outline',type:'line',source:'historical-archive',
+    paint:{'line-color':'#cfdef0','line-width':1}});
+  map.on('click','historical-archive-fill',event=>{
+    const feature=event.features?.[0]; if(!feature||regionExplorer.isPicking())return;
+    const props=feature.properties;
+    const node=document.createElement('div');
+    const heading=document.createElement('strong');heading.textContent='Archived research cell '+props.id;
+    const body=document.createElement('p');body.textContent=props.pixels+' thermal pixels in selected archived sensor, '+props.distinctDates+' dates; '+props.classification+'. Not an independently confirmed fire.';
+    const link=document.createElement('a');link.href=historicalStudyUrl(el('archive-region').value);link.textContent='View evidence and sources';
+    node.append(heading,body,link);
+    new maplibregl.Popup().setLngLat(event.lngLat).setDOMContent(node).addTo(map);
+  });
   map.addSource('nifc-perimeter',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
   map.addLayer({id:'nifc-perimeter-fill',type:'fill',source:'nifc-perimeter',
     paint:{'fill-color':'#f28b4b','fill-opacity':0.18}});
@@ -387,10 +423,36 @@ map.on('load', () => {
     paint:{'line-color':'#75d8e8','line-width':3,'line-dasharray':[1,2]}});
   map.addSource('candidates',{type:'geojson',data:featureCollection([],'candidate'),cluster:true,clusterRadius:42});
   map.addSource('incidents',{type:'geojson',data:featureCollection([],'incident'),cluster:true,clusterRadius:42});
+  map.addSource('candidate-density',{type:'geojson',data:featureCollection([],'candidate')});
+  map.addLayer({id:'candidate-density',type:'heatmap',source:'candidate-density',
+    layout:{visibility:'none'},
+    paint:{'heatmap-weight':1,'heatmap-intensity':['interpolate',['linear'],['zoom'],0,0.3,8,1.2],
+      'heatmap-radius':['interpolate',['linear'],['zoom'],0,9,8,27,12,42],
+      'heatmap-opacity':0.68}});
+
+  const diamond = new Uint8Array(20 * 20 * 4);
+  for (let y=0;y<20;y++) for (let x=0;x<20;x++) {
+    const distance=Math.abs(x-9.5)+Math.abs(y-9.5);
+    const i=(y*20+x)*4;
+    if (distance<=8) {
+      diamond[i]=93; diamond[i+1]=194; diamond[i+2]=199; diamond[i+3]=255;
+    } else if (distance<=9.5) {
+      diamond[i]=16; diamond[i+1]=32; diamond[i+2]=42; diamond[i+3]=255;
+    }
+  }
+  map.addImage('agency-diamond',{width:20,height:20,data:diamond});
   for (const [source,color] of [['candidates','#f19b53'],['incidents','#5dc2c7']]) {
-    map.addLayer({id:source,type:'circle',source,
-      paint:{'circle-color':color,'circle-radius':['case',['has','point_count'],17,8],
-        'circle-stroke-color':'#10202a','circle-stroke-width':2,'circle-opacity':.92}});
+    // Agency records use a diamond symbol; thermal candidates retain circles.
+    // Cluster bubbles remain circular and never imply official event boundaries.
+    if (source === 'incidents') {
+      map.addLayer({id:source,type:'symbol',source,
+        layout:{'icon-image':'agency-diamond','icon-size':['case',['has','point_count'],1.5,1],
+          'icon-allow-overlap':true}});
+    } else {
+      map.addLayer({id:source,type:'circle',source,
+        paint:{'circle-color':color,'circle-radius':['case',['has','point_count'],17,8],
+          'circle-stroke-color':'#10202a','circle-stroke-width':2,'circle-opacity':.92}});
+    }
     map.on('click',source,e => {
       if (regionExplorer.isPicking()) return;
       const feature = e.features?.[0]; if (!feature) return;
@@ -402,11 +464,113 @@ map.on('load', () => {
     map.on('mouseenter',source,() => {map.getCanvas().style.cursor='pointer';});
     map.on('mouseleave',source,() => {map.getCanvas().style.cursor='';});
   }
+  updateCandidateDisplay();
   map.on('click',e=>regionExplorer.handleMapClick(e));
   draw();
 });
 map.on('moveend',() => {saveState();draw();});
 
+function updateCandidateDisplay() {
+  const density = candidateDisplay === 'density';
+  if (!map.getLayer('candidate-density')) return;
+  map.setLayoutProperty('candidate-density','visibility',density ? 'visible':'none');
+  map.setLayoutProperty('candidates','visibility',density ? 'none':'visible');
+  updateOptionalLayers();
+  el('display-explanation').textContent = density
+    ? 'Density indicates relative concentration of satellite detections, not burned area, spread, severity or probability. Switch to markers to inspect records.'
+    : 'Markers represent thermal candidates, not confirmed fire boundaries.';
+}
+function updateOptionalLayers() {
+  for (const [id,visible] of [
+    ['incidents',el('show-agency').checked],
+    ['nifc-perimeter-fill',el('show-perimeters').checked],
+    ['nifc-perimeter-line',el('show-perimeters').checked]
+  ]) {
+    if (map.getLayer(id)) map.setLayoutProperty(id,'visibility',visible ? 'visible':'none');
+  }
+}
+let agencyArchiveToken=0;
+let agencyArchiveReport=null;
+async function updateAgencyArchive(){
+  const token=++agencyArchiveToken;
+  const source=map.getSource('agency-archive-bounds');
+  if(!el('agency-archive-show').checked){
+    source?.setData({type:'FeatureCollection',features:[]});
+    el('agency-archive-status').textContent='Agency archive is off; live map data is unchanged.';
+    return;
+  }
+  el('agency-archive-status').textContent='Validating CAL FIRE agency evidence…';
+  try{
+    if(!agencyArchiveReport){
+      const response=await fetch('./data/sacramento-frap-outcome-cohort-2023-2025.json',{cache:'no-store'});
+      if(!response.ok)throw new Error('Agency archive HTTP '+response.status);
+      agencyArchiveReport=await response.json();
+    }
+    const geojson=agencyBoundsGeojson(agencyArchiveReport);
+    if(token!==agencyArchiveToken)return;
+    source?.setData(geojson);
+    map.easeTo({center:[-121.41,38.78],zoom:10});
+    el('agency-archive-status').textContent=geojson.features.length+
+      ' CAL FIRE research perimeter extent boxes. These dashed boxes are NOT actual fire shapes.';
+  }catch(error){
+    if(token!==agencyArchiveToken)return;
+    source?.setData({type:'FeatureCollection',features:[]});
+    el('agency-archive-status').textContent='Agency evidence unavailable: '+error.message;
+  }
+}
+el('agency-archive-show').addEventListener('change',updateAgencyArchive);
+
+let historicalReport=null;
+let historicalRequestToken=0;
+async function updateHistoricalArchive() {
+  const on=el('archive-overlay').checked;
+  const study=el('archive-region').value;
+  const sensor=el('archive-sensor').value;
+  const token=++historicalRequestToken;
+  el('archive-open-workbench').href=historicalStudyUrl(study);
+  const source=map.getSource('historical-archive');
+  if(!on) {
+    source?.setData({type:'FeatureCollection',features:[]});
+    el('archive-status').textContent='Archived overlay is off; live records are unchanged.';
+    return;
+  }
+  el('archive-status').textContent='Validating historic research evidence…';
+  try {
+    if(!historicalReport){
+      const response=await fetch('./data/turkey-spatial-recurrence-2023-2025.json',{cache:'no-store'});
+      if(!response.ok)throw new Error('Archived research source unavailable: HTTP '+response.status);
+      historicalReport=await response.json();
+    }
+    const geojson=archivedGeojson(historicalReport,study,sensor);
+    if(token!==historicalRequestToken)return;
+    source?.setData(geojson);
+    const position=STUDIES[study];
+    map.easeTo({center:[position.lon,position.lat],zoom:9});
+    el('archive-status').textContent=geojson.features.length+
+      ' published archived research cells (2023–2025). Missing locations and satellite opportunities are unknown, not no-fire labels.';
+  }catch(error){
+    if(token!==historicalRequestToken)return;
+    source?.setData({type:'FeatureCollection',features:[]});
+    el('archive-status').textContent='Archived overlay unavailable: '+error.message;
+  }
+}
+for(const id of ['archive-region','archive-sensor','archive-overlay'])
+  el(id).addEventListener('change',updateHistoricalArchive);
+
+for (const id of ['show-agency','show-perimeters']) {
+  el(id).addEventListener('change',updateOptionalLayers);
+}
+el('map-slice').addEventListener('change',event => {
+  observationPlayback = ['all','0','1','2'].includes(event.target.value) ? event.target.value : 'all';
+  el('map-slice-explanation').textContent = observationPlayback === 'all'
+    ? 'Map uses the full selected window. Regional statistics continue to use the full window.'
+    : 'Only the chosen third of the selected time window is drawn on the map. Counts and regional analyses remain based on the full window; this does not show fire movement.';
+  draw();
+});
+el('candidate-display').addEventListener('change',event => {
+  candidateDisplay = event.target.value === 'density' ? 'density' : 'points';
+  updateCandidateDisplay();
+});
 for (const key of ['language','hours','source','kind']) el(key).addEventListener('change',event => {
   state[key === 'language' ? 'lang' : key] = key === 'hours' ? Number(event.target.value) : event.target.value;
   saveState(); draw();

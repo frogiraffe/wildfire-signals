@@ -19,6 +19,31 @@
       <aside class="sidebar" aria-label="Map filters and sources">
         <p class="intro" data-i18n="about">Thermal detections are candidates, not confirmed fires.</p>
         <div class="counts"><div><strong id="candidate-count">–</strong><span data-i18n="candidates">Satellite candidates</span></div><div><strong id="incident-count">–</strong><span data-i18n="incidents">Agency incidents</span></div></div>
+        <section class="map-legend" aria-label="Map legend">
+          <h2>Map legend</h2>
+          <ul>
+            <li><span class="legend-swatch legend-satellite" aria-hidden="true"></span><span>Satellite thermal candidates — not confirmed fires</span></li>
+            <li><span class="legend-swatch legend-agency" aria-hidden="true"></span><span>Agency-reported incidents — provider records</span></li>
+            <li><span class="legend-swatch legend-perimeter" aria-hidden="true"></span><span>Official fire perimeter when available — dated source geometry</span></li>
+          </ul>
+          <p>Heatmap brightness shows concentrations of detections, not the area burning or danger level.</p>
+        </section>
+        <section class="historical-overlay-controls" aria-labelledby="historical-overlay-heading">
+          <h2 id="historical-overlay-heading">Archived thermal research · 2023–2025</h2>
+          <p>Published 0.01° satellite candidate bins, not fire perimeters. Historical coverage and source identities are unverified; this layer is separate from the live 6–72 h feed.</p>
+          <label for="archive-region">Study area <select id="archive-region"><option value="ANTALYA_25KM">Antalya</option><option value="DALAMAN_25KM">Dalaman</option></select></label>
+          <label for="archive-sensor">Sensor <select id="archive-sensor"><option value="all">Both VIIRS sensors</option><option value="VIIRS_NOAA20_STANDARD">NOAA-20</option><option value="VIIRS_SNPP_STANDARD">Suomi NPP</option></select></label>
+          <label class="archive-toggle"><input type="checkbox" id="archive-overlay"> Show historical grid on live map</label>
+          <p id="archive-status" role="status" aria-live="polite">Archived overlay is off.</p>
+          <a id="archive-open-workbench" href="./analytics.html#study=ANTALYA_25KM">Investigate this study in historical workspace</a>
+        </section>
+        <section class="agency-archive-controls" aria-labelledby="agency-archive-heading">
+          <h2 id="agency-archive-heading">CAL FIRE historical agency evidence · Sacramento</h2>
+          <p>Retrospective 2023–2025 agency records. Dashed rectangles show only the recorded <strong>bounding boxes</strong> of perimeter geometries; actual perimeter vertices are not in this archive. These are not ignition points, current incidents or independently verified satellite labels.</p>
+          <label><input id="agency-archive-show" type="checkbox"> Show agency perimeter extent boxes</label>
+          <p id="agency-archive-status" role="status" aria-live="polite">Agency archive is off.</p>
+          <a href="./analytics.html#frap-heading">Review agency source evidence and caveats</a>
+        </section>
         <section class="area-analysis" aria-labelledby="area-title">
           <h2 id="area-title" data-i18n="areaTitle">Visible map area</h2>
           <p data-i18n="areaScope">Counts use the map viewport, not a country boundary.</p>
@@ -128,6 +153,28 @@
           <p id="lead-quality" role="status"></p>
           <ol id="lead-list"></ol>
           <p id="lead-empty" data-i18n="leadEmpty">No matching recent observations in the available data. This does not mean no fire.</p>
+        </section>
+        <section class="map-visualization" aria-label="Satellite visualization">
+          <label for="candidate-display">Satellite display</label>
+          <select id="candidate-display" aria-label="Satellite display">
+            <option value="points">Individual markers and clusters</option>
+            <option value="density">Observation density (not fire risk)</option>
+          </select>
+          <div class="layer-toggles">
+            <label><input type="checkbox" id="show-agency" checked> Show agency incidents</label>
+            <label><input type="checkbox" id="show-perimeters" checked> Show selected official perimeter</label>
+          </div>
+          <p id="display-explanation">Markers represent thermal candidates, not confirmed fire boundaries.</p>
+        </section>
+        <section class="map-playback" aria-label="Satellite observation time slice">
+          <label for="map-slice">Observation playback</label>
+          <select id="map-slice" aria-label="Satellite observation time slice">
+            <option value="all">Entire selected window</option>
+            <option value="0">Oldest third</option>
+            <option value="1">Middle third</option>
+            <option value="2">Newest third</option>
+          </select>
+          <p id="map-slice-explanation">Map uses the full selected observation window. Regional statistics continue to use the full window.</p>
         </section>
         <label for="hours" data-i18n="time">Time window</label><select id="hours"><option value="6">6 h</option><option value="24">24 h</option><option value="72">72 h</option></select>
         <p class="intro" data-i18n="timeScope">Time window filters satellite observations. Agency records show the current source layer; check each agency update date.</p>

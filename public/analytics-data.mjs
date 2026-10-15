@@ -37,6 +37,57 @@ export function validateStandardReadiness(report) {
   return report;
 }
 
+export function validateStaticSensitivity(report) {
+  if (report?.schema_version !== 1 || report.status !== 'unresolved_static_source_sensitivity_only' ||
+      report.grid_degrees_wgs84 !== 0.01 || report.unresolved_bins_not_excluded !== true ||
+      report.independent_nonwildfire_source_count !== 0 ||
+      report.observation_opportunity_verified !== false ||
+      report.fire_rate_comparison_supported !== false ||
+      !/^[a-f0-9]{64}$/.test(report.evidence_sha256 ?? '') ||
+      !/^[a-f0-9]{64}$/.test(report.spatial_report_sha256 ?? '') ||
+      !Array.isArray(report.regions) || !Array.isArray(report.source_asset_manifest) ||
+      report.population?.source_files !== report.source_asset_manifest.length ||
+      report.population?.selected_raw_pixels !== report.regions.reduce((n,r) => n+r.all_raw_pixels,0) ||
+      report.regions.some(region => !Array.isArray(region.year_sensor_rows) ||
+        region.year_sensor_rows.reduce((n,row) => n+row.all_raw_pixels,0) !== region.all_raw_pixels ||
+        region.unresolved_recurrent_raw_pixels + region.other_raw_pixels !== region.all_raw_pixels ||
+        region.independently_excluded_raw_pixels !== 0 ||
+        region.year_sensor_rows.some(row => row.all_raw_pixels !==
+          row.unresolved_recurrent_raw_pixels + row.other_raw_pixels ||
+          row.independently_excluded_raw_pixels !== 0 ||
+          row.unresolved_source_type2_raw_pixels > row.unresolved_recurrent_raw_pixels)))
+    throw new Error('Unsupported or inconsistent static sensitivity evidence');
+  return report;
+}
+
+export function selectStaticSensitivity(report, regionId) {
+  const region = report.regions.find(row => row.region_id === regionId);
+  if (!region) throw new Error('Unknown static sensitivity region');
+  return region;
+}
+
+export function validateFrapCohort(report) {
+  if (report?.schema_version !== 1 || report.status !== 'retrospective_agency_perimeter_evidence_only' ||
+      report.independent_event_ascertainment_verified !== false ||
+      report.complete_fire_outcome_coverage !== false ||
+      report.satellite_cell_exposure_verified !== false || report.occurrence_model_eligible !== false ||
+      report.population?.verified_negative_outcomes !== 0 ||
+      report.population?.source_perimeters !== report.cases?.length ||
+      !/^[a-f0-9]{64}$/.test(report.evidence_sha256 ?? '') ||
+      !/^[a-f0-9]{64}$/.test(report.source_geojson_sha256 ?? '') ||
+      !/^[a-f0-9]{64}$/.test(report.source_metadata_sha256 ?? '') ||
+      !/^[a-f0-9]{64}$/.test(report.source_count_sha256 ?? '') ||
+      !Array.isArray(report.cases) ||
+      report.population.ground_or_air_suppression_evidence !== report.cases.filter(row =>
+        row.evidence_status === 'ground_or_air_mapped_suppression_perimeter').length ||
+      report.cases.some(row => row.geometry_is_ignition_point !== false ||
+        row.decision_time_available !== false || row.fire_negative !== false ||
+        row.event_ascertainment_independence_verified !== false ||
+        !Array.isArray(row.geometry_bounds_wgs84) || row.geometry_bounds_wgs84.length !== 4))
+    throw new Error('Unsupported or incomplete FRAP outcome evidence');
+  return report;
+}
+
 export function selectPilot(report, {regionId, from, to}) {
   if (!report.regions.some(region => region.region_id === regionId) ||
       !/^\d{4}-\d\d-\d\d$/.test(from) || !/^\d{4}-\d\d-\d\d$/.test(to) || from > to)

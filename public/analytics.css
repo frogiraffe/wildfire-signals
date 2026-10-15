@@ -6,3 +6,47 @@
 #annual-provenance{overflow-wrap:anywhere}.analytics-annual-chart .analytics-bar{min-width:31px;flex:0 0 31px}.analytics-annual-chart .analytics-bar span{width:23px}.analytics-annual-chart .analytics-bar small{font-size:9px;white-space:nowrap}.analytics-card h3{font-size:14px;color:#d6e7e7;margin:16px 0 2px}
 .analytics-spatial-chart .analytics-bar{min-width:42px;flex:0 0 42px}.analytics-spatial-chart .analytics-bar span{width:30px}.analytics-spatial-chart .analytics-bar small{font-size:9px;white-space:nowrap}#spatial-provenance{overflow-wrap:anywhere}
 #standard-readiness-provenance{overflow-wrap:anywhere}
+#sensitivity-provenance,#frap-provenance{overflow-wrap:anywhere}
+
+/* SHA-256 receipts must wrap rather than expanding the page on mobile. */
+#evidence-comparison-provenance{overflow-wrap:anywhere;word-break:break-word}
+#evidence-comparison-quality{overflow-wrap:anywhere}
+#evidence-comparison-json,#evidence-comparison-csv{margin:6px 8px 4px 0;padding:9px 12px;max-width:100%}
+
+.historical-timeline-chart{max-width:100%;overflow:hidden;margin:12px 0}
+.historical-timeline-chart svg{width:100%;height:auto;display:block;max-width:100%}
+#historical-timeline-status{overflow-wrap:anywhere}
+.timeline-metric-label{display:grid;gap:6px;max-width:320px;font-size:13px}
+.timeline-metric-label select{width:100%;padding:8px;min-height:38px}
+
+.spatial-grid-map{max-width:100%;overflow:hidden;background:#101f29;border:1px solid #385664;border-radius:8px;margin:12px 0}
+.spatial-grid-map svg{display:block;width:100%;height:auto;max-height:420px}
+#spatial-grid-filter{min-height:38px}
+
+.spatial-grid-map .inspectable-grid-cell{cursor:pointer}
+.spatial-grid-map .inspectable-grid-cell:hover,.spatial-grid-map .inspectable-grid-cell:focus{stroke:#ffffff;stroke-width:2.5;outline:none}
+.spatial-cell-inspector{border:1px solid #3b5864;border-radius:8px;padding:12px;margin:12px 0;background:#1b303b}
+.spatial-cell-inspector dl{display:grid;grid-template-columns:minmax(100px,1fr) minmax(0,2fr);gap:7px 12px;font-size:12px}
+.spatial-cell-inspector dt{color:#b5cbd0}.spatial-cell-inspector dd{margin:0;overflow-wrap:anywhere}
+@media(max-width:600px){.spatial-cell-inspector dl{grid-template-columns:1fr;gap:3px}.spatial-cell-inspector dd{margin-bottom:9px}}
+
+.unified-links{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px}.unified-links a{font-size:13px}#unified-apply{padding:10px 14px;margin-top:12px;cursor:pointer}#unified-status{overflow-wrap:anywhere}
+
+.spatial-audit{padding:12px;border:1px solid #46606c;border-radius:8px;margin:12px 0}.spatial-audit dl{display:grid;grid-template-columns:minmax(155px,1fr) minmax(0,2fr);gap:8px 12px;font-size:13px}.spatial-audit dd{margin:0;overflow-wrap:anywhere}.spatial-audit dt{color:#bdd1d5}@media(max-width:600px){.spatial-audit dl{grid-template-columns:1fr;gap:4px}.spatial-audit dd{margin-bottom:8px}}
+
+/* Task-oriented research navigation; data remains source-scoped. */
+.workspace-header{border:1px solid #496371;border-radius:12px;background:#1d313d;padding:18px;margin:15px 0}
+.workspace-heading-row{display:flex;justify-content:space-between;align-items:start;gap:24px}
+.workspace-heading-row h2{font-size:23px;margin:4px 0 8px}
+.workspace-heading-row p{font-size:14px;line-height:1.5;max-width:660px;color:#c4d5d8}
+.workspace-heading-row label{min-width:175px;display:grid;gap:8px;font-size:12px}
+.workspace-heading-row select{min-height:40px;width:100%}
+.workspace-modes{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.workspace-modes button{border:1px solid #5a7884;background:#213b48;color:#e6f1f2;padding:10px 12px;border-radius:8px;cursor:pointer}
+.workspace-modes button[aria-pressed=true]{background:#245c66;border-color:#86d2cf}
+.workspace-modes button:focus-visible{outline:3px solid #91d9d3;outline-offset:2px}
+#workspace-view-note{font-size:13px;color:#bdd1d6;line-height:1.5}
+.analytics-main > section.analytics-card[hidden]{display:none}
+@media(max-width:650px){.workspace-header{padding:13px}.workspace-heading-row{flex-direction:column;gap:8px}.workspace-heading-row label{width:100%}.workspace-modes button{flex:1 1 125px}}
+
+.research-report-preview{white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%;font-size:12px;line-height:1.7;padding:14px;background:#10232e;border:1px solid #41616c;border-radius:8px}#research-report-build{margin:8px;padding:10px 13px;cursor:pointer}#research-report-download{display:inline-block;margin:8px;padding:10px}#research-report-download[hidden]{display:none}

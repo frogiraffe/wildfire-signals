@@ -1,0 +1,21 @@
+name: Historical grid inspector
+on:
+  pull_request:
+    paths:
+      - 'public/historical-grid.mjs'
+      - 'public/analytics-page.mjs'
+      - 'public/analytics.html'
+      - '.github/workflows/test-grid-inspector.yml'
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check public/historical-grid.mjs
+      - run: node --check public/analytics-page.mjs
+      - run: npm run test:public
