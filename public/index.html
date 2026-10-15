@@ -19,6 +19,15 @@
       <aside class="sidebar" aria-label="Map filters and sources">
         <p class="intro" data-i18n="about">Thermal detections are candidates, not confirmed fires.</p>
         <div class="counts"><div><strong id="candidate-count">–</strong><span data-i18n="candidates">Satellite candidates</span></div><div><strong id="incident-count">–</strong><span data-i18n="incidents">Agency incidents</span></div></div>
+        <section class="map-legend" aria-label="Map legend">
+          <h2>Map legend</h2>
+          <ul>
+            <li><span class="legend-swatch legend-satellite" aria-hidden="true"></span><span>Satellite thermal candidates — not confirmed fires</span></li>
+            <li><span class="legend-swatch legend-agency" aria-hidden="true"></span><span>Agency-reported incidents — provider records</span></li>
+            <li><span class="legend-swatch legend-perimeter" aria-hidden="true"></span><span>Official fire perimeter when available — dated source geometry</span></li>
+          </ul>
+          <p>Heatmap brightness shows concentrations of detections, not the area burning or danger level.</p>
+        </section>
         <section class="area-analysis" aria-labelledby="area-title">
           <h2 id="area-title" data-i18n="areaTitle">Visible map area</h2>
           <p data-i18n="areaScope">Counts use the map viewport, not a country boundary.</p>
