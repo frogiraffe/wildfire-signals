@@ -23,3 +23,9 @@ assert result["model_training_authorized"] is False
 Run `python -m unittest tests.test_feature_availability_audit -v` from repository root, then the full Python suite. This gate is deliberately orthogonal to the independent-label review, source coverage, orbital exposure, geographic/time holdout and outcome-adjudication requirements. A structural pass **cannot** be interpreted as evidence that wildfire model evaluation is scientifically valid.
 
 Engineering integration: use this check before passing labeled datasets to experimental baselines; explicitly require the remaining source/label/split checks separately. It makes no network requests and does not modify public collection or deployment.
+
+## Labeled evaluator integration
+
+When `run_evaluation` receives a JSONL cohort with `features` on **every** row, it propagates the same per-case chronology audit into `feature_availability_audit` in the private aggregate report, and rejects any ineligible feature. If no rows carry feature-level evidence, the field is `null` (not a passed check). Mixing rows with and without feature evidence is refused. These checks are structural; a source identifier does not prove provider authenticity.
+
+The output remains a research baseline, not a forecast. Historical exposure, independently verified positives and negatives, availability chronology, geographic holdout and source licensing still require separate audits.
