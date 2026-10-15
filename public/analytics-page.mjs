@@ -289,9 +289,10 @@ async function startSpatial() {
           dl.append(dt,dd);
         }
       };
-      renderSpatialGrid(el('spatial-grid-map'),item,el('spatial-grid-filter').value,inspect);
-      const displayed=item.published_bins.filter(bin=>el('spatial-grid-filter').value==='all'||
-        bin.classification===el('spatial-grid-filter').value);
+      renderSpatialGrid(el('spatial-grid-map'),item,el('spatial-grid-filter').value,inspect,el('spatial-grid-sensor').value);
+      const displayed=item.published_bins.filter(bin=>(el('spatial-grid-filter').value==='all'||
+        bin.classification===el('spatial-grid-filter').value) &&
+        (el('spatial-grid-sensor').value==='all'||(bin.provider_counts?.[el('spatial-grid-sensor').value]??0)>0));
       if(displayed.length)inspect(displayed[0].bin_id);
       else {el('spatial-cell-summary').textContent='No mapped cells match the current filter.';
         el('spatial-cell-evidence').replaceChildren();}
@@ -328,6 +329,7 @@ async function startSpatial() {
     };
     el('spatial-region').addEventListener('change', render);
     el('spatial-grid-filter').addEventListener('change', render);
+    el('spatial-grid-sensor').addEventListener('change', render);
     el('spatial-provenance').textContent = `${number(report.population.country_source_rows)} rows in ${report.population.source_files} original NASA files, SHA-256 pinned in the download. 0.01° bins are research grouping, not sensor footprints. NASA's Static Thermal Anomalies Mask is reference only and was not redistributed or joined. The historical FIRMS type field has known defects. No independent non-vegetation or wildfire classification, valid no-detection population, cloud/quality mask or operational model is present. Evidence SHA-256: ${report.evidence_sha256}.`;
     render();
     el('spatial-status').textContent = 'Spatial recurrence evidence loaded.';
