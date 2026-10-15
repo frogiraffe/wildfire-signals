@@ -396,10 +396,29 @@ map.on('load', () => {
       'heatmap-radius':['interpolate',['linear'],['zoom'],0,9,8,27,12,42],
       'heatmap-opacity':0.68}});
 
+  const diamond = new Uint8Array(20 * 20 * 4);
+  for (let y=0;y<20;y++) for (let x=0;x<20;x++) {
+    const distance=Math.abs(x-9.5)+Math.abs(y-9.5);
+    const i=(y*20+x)*4;
+    if (distance<=8) {
+      diamond[i]=93; diamond[i+1]=194; diamond[i+2]=199; diamond[i+3]=255;
+    } else if (distance<=9.5) {
+      diamond[i]=16; diamond[i+1]=32; diamond[i+2]=42; diamond[i+3]=255;
+    }
+  }
+  map.addImage('agency-diamond',{width:20,height:20,data:diamond});
   for (const [source,color] of [['candidates','#f19b53'],['incidents','#5dc2c7']]) {
-    map.addLayer({id:source,type:'circle',source,
-      paint:{'circle-color':color,'circle-radius':['case',['has','point_count'],17,8],
-        'circle-stroke-color':'#10202a','circle-stroke-width':2,'circle-opacity':.92}});
+    // Agency records use a diamond symbol; thermal candidates retain circles.
+    // Cluster bubbles remain circular and never imply official event boundaries.
+    if (source === 'incidents') {
+      map.addLayer({id:source,type:'symbol',source,
+        layout:{'icon-image':'agency-diamond','icon-size':['case',['has','point_count'],1.5,1],
+          'icon-allow-overlap':true}});
+    } else {
+      map.addLayer({id:source,type:'circle',source,
+        paint:{'circle-color':color,'circle-radius':['case',['has','point_count'],17,8],
+          'circle-stroke-color':'#10202a','circle-stroke-width':2,'circle-opacity':.92}});
+    }
     map.on('click',source,e => {
       if (regionExplorer.isPicking()) return;
       const feature = e.features?.[0]; if (!feature) return;
