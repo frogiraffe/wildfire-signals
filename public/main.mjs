@@ -389,8 +389,6 @@ map.on('load', () => {
     paint:{'line-color':'#75d8e8','line-width':3,'line-dasharray':[1,2]}});
   map.addSource('candidates',{type:'geojson',data:featureCollection([],'candidate'),cluster:true,clusterRadius:42});
   map.addSource('incidents',{type:'geojson',data:featureCollection([],'incident'),cluster:true,clusterRadius:42});
-  // Separate non-clustered source: heatmap intensity reflects observation
-  // locations only, never physical extent, severity, or fire probability.
   map.addSource('candidate-density',{type:'geojson',data:featureCollection([],'candidate')});
   map.addLayer({id:'candidate-density',type:'heatmap',source:'candidate-density',
     layout:{visibility:'none'},
