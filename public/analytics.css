@@ -48,3 +48,5 @@
 #workspace-view-note{font-size:13px;color:#bdd1d6;line-height:1.5}
 .analytics-main > section.analytics-card[hidden]{display:none}
 @media(max-width:650px){.workspace-header{padding:13px}.workspace-heading-row{flex-direction:column;gap:8px}.workspace-heading-row label{width:100%}.workspace-modes button{flex:1 1 125px}}
+
+.research-report-preview{white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%;font-size:12px;line-height:1.7;padding:14px;background:#10232e;border:1px solid #41616c;border-radius:8px}#research-report-build{margin:8px;padding:10px 13px;cursor:pointer}#research-report-download{display:inline-block;margin:8px;padding:10px}#research-report-download[hidden]{display:none}

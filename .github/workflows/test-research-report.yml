@@ -1,0 +1,25 @@
+name: Historical research report user journey
+on:
+  pull_request:
+    paths:
+      - 'public/research-report.mjs'
+      - 'public/analytics.html'
+      - 'public/analytics-page.mjs'
+      - 'tests/js/research-report.test.mjs'
+      - 'tests/browser/analytics-local.mjs'
+      - '.github/workflows/test-research-report.yml'
+permissions:
+  contents: read
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check public/research-report.mjs
+      - run: node --check public/analytics-page.mjs
+      - run: node --test tests/js/research-report.test.mjs
+      - run: npm run test:public

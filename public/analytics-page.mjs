@@ -1,3 +1,4 @@
+import {buildResearchReport,formatResearchReport} from './research-report.mjs';
 import {investigationManifest} from './investigation-manifest.mjs';
 import {historicalAudit} from './historical-audit.mjs';
 import {renderSpatialGrid} from './historical-grid.mjs';
@@ -657,6 +658,38 @@ el('unified-export').addEventListener('click',()=>{
     setTimeout(()=>URL.revokeObjectURL(url),1000);
     el('unified-status').textContent='Investigation selection manifest prepared. It records source paths and filters, not the source datasets.';
   } catch(error) {el('unified-status').textContent='Export unavailable: '+error.message;}
+});
+
+let researchReportUrl=null;
+el('research-report-build').addEventListener('click',async()=>{
+  const preview=el('research-report-preview'),download=el('research-report-download');
+  preview.hidden=false;download.hidden=true;
+  preview.textContent='Validating original archive evidence…';
+  try{
+    const study=el('annual-region').value;
+    const id=study==='ANTALYA_25KM'?'antalya':study==='DALAMAN_25KM'?'dalaman':null;
+    if(!id)throw new Error('Unknown study');
+    const paths=['./data/'+id+'-annual-context-2023-2025.json',
+      './data/turkey-spatial-recurrence-2023-2025.json'];
+    const reports=await Promise.all(paths.map(async path=>{
+      const response=await fetch(path,{cache:'no-store'});
+      if(!response.ok)throw new Error('Evidence unavailable: '+path);
+      return response.json();
+    }));
+    const report=buildResearchReport(reports[0],reports[1],{
+      study,sensor:el('annual-provider').value,
+      from:el('annual-from').value,to:el('annual-to').value,
+      metric:el('timeline-metric').value,gridFilter:el('spatial-grid-filter').value});
+    preview.textContent=formatResearchReport(report);
+    if(researchReportUrl)URL.revokeObjectURL(researchReportUrl);
+    researchReportUrl=URL.createObjectURL(new Blob([JSON.stringify(report,null,2)],
+      {type:'application/json'}));
+    download.href=researchReportUrl;download.hidden=false;
+    el('unified-status').textContent='Evidence report verified against both archived source contracts. Download includes source receipts and limitations.';
+  }catch(error){
+    preview.textContent='Report unavailable: '+error.message;
+    el('unified-status').textContent='Research report was not generated: '+error.message;
+  }
 });
 
 start();
