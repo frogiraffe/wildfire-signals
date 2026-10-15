@@ -298,6 +298,7 @@ async function startSpatial() {
       el('spatial-chart').setAttribute('aria-label', `${item.region.region_id}: top ${item.published_bins.length} coarsened bins by recurring dates and pixel count; these are thermal candidates, not fires`);
     };
     el('spatial-region').addEventListener('change', render);
+    el('spatial-grid-filter').addEventListener('change', render);
     el('spatial-provenance').textContent = `${number(report.population.country_source_rows)} rows in ${report.population.source_files} original NASA files, SHA-256 pinned in the download. 0.01° bins are research grouping, not sensor footprints. NASA's Static Thermal Anomalies Mask is reference only and was not redistributed or joined. The historical FIRMS type field has known defects. No independent non-vegetation or wildfire classification, valid no-detection population, cloud/quality mask or operational model is present. Evidence SHA-256: ${report.evidence_sha256}.`;
     render();
     el('spatial-status').textContent = 'Spatial recurrence evidence loaded.';
