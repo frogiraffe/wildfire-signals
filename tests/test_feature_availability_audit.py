@@ -74,6 +74,24 @@ class AsOfFeatureAuditTests(unittest.TestCase):
         row["features"]["temperature"]["issued_at"] = "2026-10-01T11:00:00Z"
         self.assertEqual(audit_asof_features([row])["eligible"], 1)
 
+    def test_availability_before_provider_issue_is_rejected(self):
+        row = sample()
+        row["features"]["temperature"]["issued_at"] = "2026-10-01T11:30:00Z"
+        result = audit_asof_features([row])
+        self.assertIn("temperature:available_before_issued",
+                      result["cases"][0]["violations"])
+
+    def test_provider_issue_equals_availability_is_allowed(self):
+        row = sample()
+        row["features"]["temperature"]["issued_at"] = "2026-10-01T11:00:00Z"
+        self.assertEqual(audit_asof_features([row])["eligible"], 1)
+
+    def test_bad_issue_time_still_fails_closed(self):
+        row = sample()
+        row["features"]["temperature"]["issued_at"] = "invalid"
+        self.assertIn("temperature:invalid_issued_at",
+                      audit_asof_features([row])["cases"][0]["violations"])
+
     def test_duplicate_cases_rejected(self):
         with self.assertRaises(ValueError):
             audit_asof_features([sample(), sample()])
