@@ -441,9 +441,22 @@ function updateCandidateDisplay() {
   if (!map.getLayer('candidate-density')) return;
   map.setLayoutProperty('candidate-density','visibility',density ? 'visible':'none');
   map.setLayoutProperty('candidates','visibility',density ? 'none':'visible');
+  updateOptionalLayers();
   el('display-explanation').textContent = density
-    ? 'Density indicates relative concentration of satellite detections, not burned area, spread, severity or probability. Select markers to inspect records.'
+    ? 'Density indicates relative concentration of satellite detections, not burned area, spread, severity or probability. Switch to markers to inspect records.'
     : 'Markers represent thermal candidates, not confirmed fire boundaries.';
+}
+function updateOptionalLayers() {
+  for (const [id,visible] of [
+    ['incidents',el('show-agency').checked],
+    ['nifc-perimeter-fill',el('show-perimeters').checked],
+    ['nifc-perimeter-line',el('show-perimeters').checked]
+  ]) {
+    if (map.getLayer(id)) map.setLayoutProperty(id,'visibility',visible ? 'visible':'none');
+  }
+}
+for (const id of ['show-agency','show-perimeters']) {
+  el(id).addEventListener('change',updateOptionalLayers);
 }
 el('candidate-display').addEventListener('change',event => {
   candidateDisplay = event.target.value === 'density' ? 'density' : 'points';
