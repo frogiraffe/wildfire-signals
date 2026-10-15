@@ -151,3 +151,8 @@
 
 /* Match agency diamond glyph used by the interactive map. */
 .legend-agency{border-radius:0;transform:rotate(45deg);width:12px;height:12px;flex-basis:12px;margin:2px}
+
+/* Layer toggles remain touch-friendly and preserve independent evidence types. */
+.layer-toggles{display:grid;gap:8px;margin-top:10px}
+.layer-toggles label{display:flex;align-items:center;gap:9px;font-weight:400;line-height:1.4;cursor:pointer}
+.layer-toggles input{width:17px;height:17px;accent-color:#75d8e8;flex:none}
