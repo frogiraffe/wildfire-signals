@@ -140,5 +140,33 @@ class LabeledEvaluationTests(unittest.TestCase):
         self.assertNotEqual(blocked.returncode,0)
         self.assertEqual(len(self.cohort.read_text().splitlines()),6)
 
+
+    def test_feature_audit_is_reported_and_future_data_blocked(self):
+        for r in self.rows:
+            r["features"] = {"temperature": {
+                "value": 24,
+                "observed_at": r["decision_at"],
+                "available_at": r["decision_at"],
+                "source_id": "synthetic-weather-receipt"}}
+        self.save()
+        result = self.evaluate()
+        self.assertEqual(result["feature_availability_audit"]["eligible"], 6)
+        self.assertFalse(result["feature_availability_audit"]["model_training_authorized"])
+        self.rows[0]["features"]["temperature"]["available_at"] = "2026-12-01T00:00:00Z"
+        self.save()
+        with self.assertRaisesRegex(ValueError, "Feature as-of"):
+            self.evaluate()
+
+    def test_missing_feature_evidence_is_explicit_not_a_pass(self):
+        result = self.evaluate()
+        self.assertIsNone(result["feature_availability_audit"])
+        self.rows[0]["features"] = {"temperature": {
+            "value": 24, "observed_at": self.rows[0]["decision_at"],
+            "available_at": self.rows[0]["decision_at"],
+            "source_id": "synthetic"}}
+        self.save()
+        with self.assertRaisesRegex(ValueError, "Partial feature evidence"):
+            self.evaluate()
+
 if __name__=='__main__':
     unittest.main()
