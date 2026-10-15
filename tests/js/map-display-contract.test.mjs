@@ -34,3 +34,11 @@ test('agency incident geometry is visually distinct from satellite markers', () 
   assert.match(js, /'icon-image':'agency-diamond'/);
   assert.match(js, /id:source,type:'circle',source/);
 });
+
+test('source and official perimeter visibility can be changed independently', () => {
+  assert.match(html, /id="show-agency"/);
+  assert.match(html, /id="show-perimeters"/);
+  assert.match(js, /\['incidents',el\('show-agency'\)\.checked\]/);
+  assert.match(js, /\['nifc-perimeter-fill',el\('show-perimeters'\)\.checked\]/);
+  assert.match(js, /\['nifc-perimeter-line',el\('show-perimeters'\)\.checked\]/);
+});
