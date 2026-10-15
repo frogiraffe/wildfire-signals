@@ -56,6 +56,24 @@ class AsOfFeatureAuditTests(unittest.TestCase):
         self.assertEqual(result["eligible"], 0)
         self.assertFalse(result["model_training_authorized"])
 
+    def test_nonfinite_numeric_evidence_is_ineligible(self):
+        for value in (float("nan"), float("inf"), float("-inf"), True):
+            with self.subTest(value=repr(value)):
+                row = sample()
+                row["features"]["temperature"]["value"] = value
+                self.assertEqual(audit_asof_features([row])["eligible"], 0)
+
+    def test_future_source_issue_timestamp_is_ineligible(self):
+        row = sample()
+        row["features"]["temperature"]["issued_at"] = "2026-10-01T13:00:00Z"
+        self.assertIn("temperature:issued_at_after_decision",
+                      audit_asof_features([row])["cases"][0]["violations"])
+
+    def test_earlier_source_issue_timestamp_is_accepted(self):
+        row = sample()
+        row["features"]["temperature"]["issued_at"] = "2026-10-01T11:00:00Z"
+        self.assertEqual(audit_asof_features([row])["eligible"], 1)
+
     def test_duplicate_cases_rejected(self):
         with self.assertRaises(ValueError):
             audit_asof_features([sample(), sample()])
