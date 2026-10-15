@@ -8,6 +8,8 @@ const files = new Map([
   ['/analytics.css', ['analytics.css','text/css']],
   ['/style.css', ['style.css','text/css']],
   ['/analytics-page.mjs', ['analytics-page.mjs','text/javascript']],
+  ['/workspace-navigation.mjs', ['workspace-navigation.mjs','text/javascript']],
+  ['/workspace-start.mjs', ['workspace-start.mjs','text/javascript']],
   ['/analytics-data.mjs', ['analytics-data.mjs','text/javascript']],
   ['/historical-evidence.mjs', ['historical-evidence.mjs','text/javascript']],
   ['/historical-timeline.mjs', ['historical-timeline.mjs','text/javascript']],
@@ -55,6 +57,15 @@ try {
     await page.locator('#analytics-status').getByText('Archived pilot loaded.').waitFor();
     await page.locator('#weather-status').getByText('Retrospective station pilot loaded.').waitFor();
     await page.locator('#annual-status').getByText('Three-year archive loaded.').waitFor();
+    assert.equal(await page.locator('#workspace-mode').inputValue(),'all');
+    await page.locator('[data-workspace-target="geography"]').click();
+    assert.equal(await page.locator('#spatial-heading').isVisible(),true);
+    assert.equal(await page.locator('#annual-heading').isVisible(),false);
+    await page.locator('[data-workspace-target="validation"]').click();
+    assert.equal(await page.locator('#frap-heading').isVisible(),true);
+    await page.locator('[data-workspace-target="all"]').click();
+    assert.equal(await page.locator('#annual-heading').isVisible(),true);
+
     await page.locator('#spatial-status').getByText('Spatial recurrence evidence loaded.').waitFor();
     await page.locator('#unified-study').selectOption('DALAMAN_25KM');
     await page.locator('#unified-sensor').selectOption('VIIRS_SNPP_STANDARD');
