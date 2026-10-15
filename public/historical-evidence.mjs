@@ -20,7 +20,7 @@ export function compareHistoricalEvidence(studies, selection) {
 
 const quote=value=>{
   const raw=String(value??'');
-  const safe=/^[\\s]*[=+@\\-\\t\\r]/.test(raw) ? "'"+raw : raw;
+  const safe=['=','+','-','@'].some(prefix=>raw.trimStart().startsWith(prefix)) ? "'"+raw : raw;
   return '"'+safe.replaceAll('"','""')+'"';
 };
 export function historicalEvidenceCsv(comparison) {
