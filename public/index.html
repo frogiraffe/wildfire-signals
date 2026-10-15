@@ -144,6 +144,10 @@
             <option value="points">Individual markers and clusters</option>
             <option value="density">Observation density (not fire risk)</option>
           </select>
+          <div class="layer-toggles">
+            <label><input type="checkbox" id="show-agency" checked> Show agency incidents</label>
+            <label><input type="checkbox" id="show-perimeters" checked> Show selected official perimeter</label>
+          </div>
           <p id="display-explanation">Markers represent thermal candidates, not confirmed fire boundaries.</p>
         </section>
         <label for="hours" data-i18n="time">Time window</label><select id="hours"><option value="6">6 h</option><option value="24">24 h</option><option value="72">72 h</option></select>
