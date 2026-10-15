@@ -1,3 +1,4 @@
+import {historicalTimeline,renderHistoricalTimeline} from './historical-timeline.mjs';
 import {compareHistoricalEvidence,historicalEvidenceCsv} from './historical-evidence.mjs';
 import {validatePilot, selectPilot, validateEnvironment, selectEnvironment,
   environmentalVariables, validateCatalog, validatePairedCatalog,
@@ -189,6 +190,31 @@ async function startAnnual() {
     if (evidenceComparison) exportEvidence('wildfire-historical-evidence.csv',
       historicalEvidenceCsv(evidenceComparison),'text/csv;charset=utf-8');
   });
+  let timelineMetric='raw_pixels';
+  const drawTimeline=()=>{
+    try {
+      const report=historicalTimeline(available,{
+        from:el('annual-from').value,to:el('annual-to').value,
+        provider:el('annual-provider').value,metric:timelineMetric});
+      renderHistoricalTimeline(el('historical-timeline-chart'),report);
+      const tbody=el('historical-timeline-rows');tbody.replaceChildren();
+      for(const point of report.points){
+        const tr=document.createElement('tr');
+        cell(tr,point.month);
+        for (const value of point.values) cell(tr,value===null?'Unknown':number(value));
+        cell(tr,'Satellite opportunity unverified');tbody.append(tr);
+      }
+      el('historical-timeline-status').textContent=report.note+' Sources: '+
+        report.series.map(s=>s.label+' '+s.sha256).join(' · ');
+    } catch(error){
+      el('historical-timeline-chart').replaceChildren();
+      el('historical-timeline-rows').replaceChildren();
+      el('historical-timeline-status').textContent='Timeline unavailable: '+error.message;
+    }
+  };
+  el('timeline-metric').addEventListener('change',event=>{
+    timelineMetric=event.target.value;drawTimeline();
+  });
   const renderSelected = () => {
     const chosen = available.find(item => item.pilot.id === el('annual-region').value);
     const {report,pilot} = chosen;
@@ -197,6 +223,7 @@ async function startAnnual() {
     try {
       drawAnnual(report);
       renderEvidenceComparison();
+      drawTimeline();
       el('annual-status').textContent = failures ? 'Three-year archive loaded; one study unavailable.' : 'Three-year archive loaded.';
     } catch (error) {
       el('annual-summary').textContent = '';
