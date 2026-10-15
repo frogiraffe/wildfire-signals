@@ -31,3 +31,5 @@ When `run_evaluation` receives a JSONL cohort with `features` on **every** row, 
 The output remains a research baseline, not a forecast. Historical exposure, independently verified positives and negatives, availability chronology, geographic holdout and source licensing still require separate audits.
 
 Optional `issued_at` can record a provider's source issue/publication timestamp; if supplied, it must be timezone-aware and not later than the decision. Non-finite floating point values and booleans are rejected as evidence values. These are structural checks, not independent proof of issue-time provenance.
+
+Additional chronology invariant: when `issued_at` is present, `available_at` cannot precede the provider's issue timestamp. This guards against internally inconsistent source receipts without proving the provider timestamps are authentic.
