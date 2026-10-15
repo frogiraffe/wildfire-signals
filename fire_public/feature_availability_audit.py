@@ -6,6 +6,7 @@ No outcomes, predictions or model performance are produced.
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from math import isfinite
 from typing import Any, Iterable
 
 
@@ -46,8 +47,21 @@ def audit_asof_features(rows: Iterable[dict[str, Any]]) -> dict[str, Any]:
         for name, evidence in sorted(features.items()):
             if not isinstance(name, str) or not name.strip() or not isinstance(evidence, dict):
                 raise ValueError(f"case {case_id}: invalid feature evidence")
-            if evidence.get("value") is None:
+            value = evidence.get("value")
+            if value is None:
                 violations.append(f"{name}:unknown_value")
+            elif isinstance(value, float) and not isfinite(value):
+                violations.append(f"{name}:nonfinite_value")
+            elif isinstance(value, bool):
+                violations.append(f"{name}:boolean_value")
+            if "issued_at" in evidence:
+                try:
+                    issued = _instant(evidence["issued_at"], f"{name}.issued_at")
+                except ValueError:
+                    violations.append(f"{name}:invalid_issued_at")
+                else:
+                    if issued > decision:
+                        violations.append(f"{name}:issued_at_after_decision")
             instants = {}
             for field in ("observed_at", "available_at"):
                 try:
