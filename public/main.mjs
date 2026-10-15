@@ -1,3 +1,4 @@
+import {archivedGeojson,historicalStudyUrl,STUDIES} from './historical-map-overlay.mjs';
 import * as maplibregl from 'https://unpkg.com/maplibre-gl@6.13.0/dist/maplibre-gl.mjs';
 import {MESSAGES, parseState, stateHash, visible, effectiveStatus, featureCollection} from './map-state.mjs';
 import {summarizeArea, investigationLeads} from './area-analysis.mjs';
@@ -377,6 +378,22 @@ function draw() {
 }
 
 map.on('load', () => {
+  map.addSource('historical-archive',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+  map.addLayer({id:'historical-archive-fill',type:'fill',source:'historical-archive',
+    paint:{'fill-color':['match',['get','classification'],'potential_static_thermal_source','#cf93c6','recurrently_observed_candidate','#eab178','#6bbcb6'],
+      'fill-opacity':0.35}});
+  map.addLayer({id:'historical-archive-outline',type:'line',source:'historical-archive',
+    paint:{'line-color':'#cfdef0','line-width':1}});
+  map.on('click','historical-archive-fill',event=>{
+    const feature=event.features?.[0]; if(!feature||regionExplorer.isPicking())return;
+    const props=feature.properties;
+    const node=document.createElement('div');
+    const heading=document.createElement('strong');heading.textContent='Archived research cell '+props.id;
+    const body=document.createElement('p');body.textContent=props.pixels+' thermal pixels in selected archived sensor, '+props.distinctDates+' dates; '+props.classification+'. Not an independently confirmed fire.';
+    const link=document.createElement('a');link.href=historicalStudyUrl(el('archive-region').value);link.textContent='View evidence and sources';
+    node.append(heading,body,link);
+    new maplibregl.Popup().setLngLat(event.lngLat).setDOMContent(node).addTo(map);
+  });
   map.addSource('nifc-perimeter',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
   map.addLayer({id:'nifc-perimeter-fill',type:'fill',source:'nifc-perimeter',
     paint:{'fill-color':'#f28b4b','fill-opacity':0.18}});
@@ -458,6 +475,43 @@ function updateOptionalLayers() {
     if (map.getLayer(id)) map.setLayoutProperty(id,'visibility',visible ? 'visible':'none');
   }
 }
+let historicalReport=null;
+let historicalRequestToken=0;
+async function updateHistoricalArchive() {
+  const on=el('archive-overlay').checked;
+  const study=el('archive-region').value;
+  const sensor=el('archive-sensor').value;
+  const token=++historicalRequestToken;
+  el('archive-open-workbench').href=historicalStudyUrl(study);
+  const source=map.getSource('historical-archive');
+  if(!on) {
+    source?.setData({type:'FeatureCollection',features:[]});
+    el('archive-status').textContent='Archived overlay is off; live records are unchanged.';
+    return;
+  }
+  el('archive-status').textContent='Validating historic research evidence…';
+  try {
+    if(!historicalReport){
+      const response=await fetch('./data/turkey-spatial-recurrence-2023-2025.json',{cache:'no-store'});
+      if(!response.ok)throw new Error('Archived research source unavailable: HTTP '+response.status);
+      historicalReport=await response.json();
+    }
+    const geojson=archivedGeojson(historicalReport,study,sensor);
+    if(token!==historicalRequestToken)return;
+    source?.setData(geojson);
+    const position=STUDIES[study];
+    map.easeTo({center:[position.lon,position.lat],zoom:9});
+    el('archive-status').textContent=geojson.features.length+
+      ' published archived research cells (2023–2025). Missing locations and satellite opportunities are unknown, not no-fire labels.';
+  }catch(error){
+    if(token!==historicalRequestToken)return;
+    source?.setData({type:'FeatureCollection',features:[]});
+    el('archive-status').textContent='Archived overlay unavailable: '+error.message;
+  }
+}
+for(const id of ['archive-region','archive-sensor','archive-overlay'])
+  el(id).addEventListener('change',updateHistoricalArchive);
+
 for (const id of ['show-agency','show-perimeters']) {
   el(id).addEventListener('change',updateOptionalLayers);
 }
