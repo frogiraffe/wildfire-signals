@@ -1,0 +1,30 @@
+name: Full research integration validation
+on:
+  pull_request:
+    paths:
+      - 'fire_public/**'
+      - 'tests/**'
+      - 'public/**'
+      - '.github/workflows/test-research-integration.yml'
+permissions:
+  contents: read
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m compileall -q fire_public
+      - run: python -m unittest discover -s tests -q
+  javascript:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm run test:public
