@@ -9,6 +9,7 @@ from math import isfinite
 from typing import Any, Iterable
 
 from .evaluation_splits import holdout_split
+from .feature_availability_audit import audit_asof_features
 from .model_evaluation import evaluate_binary
 
 
@@ -35,6 +36,19 @@ def historical_rate_experiment(
         raise ValueError("smoothing must be between 0 and 1000")
     for r in items:
         _check_case(r)
+    provided = [r for r in items if "features" in r]
+    if provided:
+        if len(provided) != len(items):
+            raise ValueError("Partial feature evidence: every case must provide features")
+        audit = audit_asof_features([
+            {"case_id": f"case-{i}", "decision_at": row["decision_at"],
+             "features": row["features"]}
+            for i, row in enumerate(items)
+        ])
+        if audit["ineligible"]:
+            raise ValueError("Feature as-of chronology/provenance audit failed")
+    else:
+        audit = None
     split = holdout_split(items, test_start=test_start, embargo_hours=embargo_hours,
                           heldout_regions=heldout_regions)
     train, test = split["train"], split["test"]
@@ -52,6 +66,7 @@ def historical_rate_experiment(
     evaluation = evaluate_binary(heldout_predictions)
     return {
         "method": "laplace_smoothed_historical_base_rate",
+        "feature_availability_audit": audit,
         "train_n": total, "train_positive": positive, "test_n": len(test),
         "fit_rate": rate, "smoothing": smoothing,
         "split": {k: v for k, v in split.items() if k not in ("train", "test")},
