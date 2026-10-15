@@ -27,10 +27,11 @@ const server = createServer(async (request,response) => {
   if (!['index.html','style.css','main.mjs','map-state.mjs','area-analysis.mjs',
     'incident-timeline.mjs','weather-context.mjs','perimeter-context.mjs',
     'analysis-answers.mjs','region-explorer.mjs','region-explorer-view.mjs',
-    'coverage-audit.mjs','region-compare.mjs','analysis-engine.mjs','observation-slice.mjs'].includes(name)) {
+    'coverage-audit.mjs','region-compare.mjs','analysis-engine.mjs','observation-slice.mjs','historical-map-overlay.mjs','analytics-data.mjs',
+    'data/turkey-spatial-recurrence-2023-2025.json'].includes(name)) {
     response.writeHead(404).end(); return;
   }
-  response.setHeader('Content-Type',name.endsWith('.css') ? 'text/css'
+  response.setHeader('Content-Type',name.endsWith('.json') ? 'application/json' : name.endsWith('.css') ? 'text/css'
     : name.endsWith('.mjs') ? 'text/javascript' : 'text/html');
   response.end(await readFile(join(publicDir.pathname,name)));
 });
@@ -143,6 +144,16 @@ try {
     assert.deepEqual(errors,[]);
     if (process.env.SCREENSHOT_DIR)
       await page.screenshot({path:`${process.env.SCREENSHOT_DIR}/investigation-${viewport.width}.png`});
+    // Historic NASA research bins remain distinct from current feed and agency outlines.
+    await page.locator('#archive-region').selectOption('DALAMAN_25KM');
+    await page.locator('#archive-overlay').check();
+    await page.locator('#archive-status').getByText(/published archived research cells/).waitFor();
+    assert.match(await page.locator('#archive-open-workbench').getAttribute('href'),/study=DALAMAN_25KM/);
+    await page.locator('#archive-sensor').selectOption('VIIRS_SNPP_STANDARD');
+    await page.locator('#archive-status').getByText(/published archived research cells/).waitFor();
+    await page.locator('#archive-overlay').uncheck();
+    assert.match(await page.locator('#archive-status').textContent(),/off/);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1),false);
     await page.close();
   }
   activeSnapshot = {...snapshot,events:[],manifest:{...snapshot.manifest,
