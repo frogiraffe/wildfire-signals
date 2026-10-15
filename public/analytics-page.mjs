@@ -1,3 +1,4 @@
+import {renderSpatialGrid} from './historical-grid.mjs';
 import {historicalTimeline,renderHistoricalTimeline} from './historical-timeline.mjs';
 import {compareHistoricalEvidence,historicalEvidenceCsv} from './historical-evidence.mjs';
 import {validatePilot, selectPilot, validateEnvironment, selectEnvironment,
@@ -264,6 +265,7 @@ async function startSpatial() {
     };
     const render = () => {
       const item = selectSpatialRecurrence(report, el('spatial-region').value);
+      renderSpatialGrid(el('spatial-grid-map'),item,el('spatial-grid-filter').value);
       el('spatial-summary').textContent = `${number(item.selected_raw_pixels)} archived pixels in ${number(item.occupied_bins)} occupied 0.01° bins; ${number(item.recurrently_observed_bins)} bins recur on multiple UTC dates, ${number(item.bins_seen_in_multiple_years)} span multiple years, ${number(item.potential_static_source_bins)} meet a source-based potential-static review rule. ${number(item.unpublished_bins)} other bins are summarized only. These are neither fire counts nor fire rates.`;
       el('spatial-quality').textContent = `FIRMS confidence: low ${number(item.confidence_counts.l ?? 0)}, nominal ${number(item.confidence_counts.n ?? 0)}, high ${number(item.confidence_counts.h ?? 0)}; day ${number(item.daynight_counts.D ?? 0)}, night ${number(item.daynight_counts.N ?? 0)}; source type 2 ${number(item.source_type_counts['2'] ?? 0)}. Historical source type can be wrong; independent source identity and acquisition opportunity are unknown.`;
       el('spatial-year-quality').replaceChildren();
