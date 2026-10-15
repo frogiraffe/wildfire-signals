@@ -60,6 +60,7 @@ try {
     await page.locator('#annual-status').getByText('Three-year archive loaded.').waitFor();
     await page.locator('#research-report-build').click();
     await page.locator('#research-report-download:not([hidden])').waitFor();
+    await page.locator('#research-report-markdown:not([hidden])').waitFor();
     assert.match(await page.locator('#research-report-preview').textContent(),/Independent wildfire outcomes verified: No/);
 
     assert.equal(await page.locator('#workspace-mode').inputValue(),'all');
