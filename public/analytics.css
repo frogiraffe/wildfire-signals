@@ -7,3 +7,8 @@
 .analytics-spatial-chart .analytics-bar{min-width:42px;flex:0 0 42px}.analytics-spatial-chart .analytics-bar span{width:30px}.analytics-spatial-chart .analytics-bar small{font-size:9px;white-space:nowrap}#spatial-provenance{overflow-wrap:anywhere}
 #standard-readiness-provenance{overflow-wrap:anywhere}
 #sensitivity-provenance,#frap-provenance{overflow-wrap:anywhere}
+
+/* SHA-256 receipts must wrap rather than expanding the page on mobile. */
+#evidence-comparison-provenance{overflow-wrap:anywhere;word-break:break-word}
+#evidence-comparison-quality{overflow-wrap:anywhere}
+#evidence-comparison-json,#evidence-comparison-csv{margin:6px 8px 4px 0;padding:9px 12px;max-width:100%}
