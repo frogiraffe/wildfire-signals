@@ -1,0 +1,23 @@
+name: Historical evidence workbench
+on:
+  pull_request:
+    paths:
+      - 'public/analytics.html'
+      - 'public/analytics-page.mjs'
+      - 'public/historical-evidence.mjs'
+      - 'tests/js/historical-evidence.test.mjs'
+      - '.github/workflows/test-historical-evidence-ui.yml'
+permissions:
+  contents: read
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check public/analytics-page.mjs
+      - run: node --test tests/js/historical-evidence.test.mjs
+      - run: npm run test:public
