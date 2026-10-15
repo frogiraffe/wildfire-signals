@@ -29,3 +29,5 @@
 .spatial-cell-inspector dl{display:grid;grid-template-columns:minmax(100px,1fr) minmax(0,2fr);gap:7px 12px;font-size:12px}
 .spatial-cell-inspector dt{color:#b5cbd0}.spatial-cell-inspector dd{margin:0;overflow-wrap:anywhere}
 @media(max-width:600px){.spatial-cell-inspector dl{grid-template-columns:1fr;gap:3px}.spatial-cell-inspector dd{margin-bottom:9px}}
+
+.unified-links{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px}.unified-links a{font-size:13px}#unified-apply{padding:10px 14px;margin-top:12px;cursor:pointer}#unified-status{overflow-wrap:anywhere}
