@@ -13,6 +13,23 @@
       <nav aria-label="Primary"><a href="./index.html">← Global map</a></nav>
     </header>
     <main class="analytics-main">
+      <section class="workspace-header" aria-labelledby="workspace-heading">
+        <div class="workspace-heading-row">
+          <div><span class="eyebrow">RESEARCH WORKSPACE</span><h2 id="workspace-heading">Investigate satellite evidence</h2>
+          <p>Choose a task, select Antalya or Dalaman, then inspect observations and their limits without confusing thermal candidates with confirmed fires.</p></div>
+          <label for="workspace-mode">Workspace view
+            <select id="workspace-mode"><option value="overview">Overview</option><option value="geography">Geography</option><option value="environment">Weather context</option><option value="validation">Evidence & validation</option><option value="all">All panels</option></select>
+          </label>
+        </div>
+        <div class="workspace-modes" role="group" aria-label="Research task">
+          <button type="button" data-workspace-target="overview">Overview</button>
+          <button type="button" data-workspace-target="geography">Geography</button>
+          <button type="button" data-workspace-target="environment">Weather context</button>
+          <button type="button" data-workspace-target="validation">Evidence quality</button>
+          <button type="button" data-workspace-target="all">All panels</button>
+        </div>
+        <p id="workspace-view-note" role="status" aria-live="polite"></p>
+      </section>
       <p class="analytics-warning">Archived NASA FIRMS thermal candidates are observations, not confirmed wildfires, burned area, or a validated forecast. Each study below has its own source period and coverage limits.</p>
       <p id="analytics-status" role="status" aria-live="polite">Loading verified archive summary…</p>
       <section aria-labelledby="controls-heading" class="analytics-card">
@@ -181,5 +198,6 @@
     </main>
   </div>
   <script type="module" src="./analytics-page.mjs"></script>
+  <script type="module" src="./workspace-start.mjs"></script>
 </body>
 </html>
