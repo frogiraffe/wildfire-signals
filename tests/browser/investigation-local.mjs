@@ -27,8 +27,9 @@ const server = createServer(async (request,response) => {
   if (!['index.html','style.css','main.mjs','map-state.mjs','area-analysis.mjs',
     'incident-timeline.mjs','weather-context.mjs','perimeter-context.mjs',
     'analysis-answers.mjs','region-explorer.mjs','region-explorer-view.mjs',
-    'coverage-audit.mjs','region-compare.mjs','analysis-engine.mjs','observation-slice.mjs','historical-map-overlay.mjs','analytics-data.mjs',
-    'data/turkey-spatial-recurrence-2023-2025.json'].includes(name)) {
+    'coverage-audit.mjs','region-compare.mjs','analysis-engine.mjs','observation-slice.mjs','historical-map-overlay.mjs','analytics-data.mjs','agency-bounds-overlay.mjs',
+    'data/turkey-spatial-recurrence-2023-2025.json',
+    'data/sacramento-frap-outcome-cohort-2023-2025.json'].includes(name)) {
     response.writeHead(404).end(); return;
   }
   response.setHeader('Content-Type',name.endsWith('.json') ? 'application/json' : name.endsWith('.css') ? 'text/css'
@@ -154,6 +155,10 @@ try {
     await page.locator('#archive-overlay').uncheck();
     assert.match(await page.locator('#archive-status').textContent(),/off/);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1),false);
+    await page.locator('#agency-archive-show').check();
+    await page.locator('#agency-archive-status').getByText(/CAL FIRE research perimeter extent boxes/).waitFor();
+    await page.locator('#agency-archive-show').uncheck();
+    assert.match(await page.locator('#agency-archive-status').textContent(),/off/);
     await page.close();
   }
   activeSnapshot = {...snapshot,events:[],manifest:{...snapshot.manifest,

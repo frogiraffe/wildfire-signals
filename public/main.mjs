@@ -1,3 +1,4 @@
+import {agencyBoundsGeojson} from './agency-bounds-overlay.mjs';
 import {archivedGeojson,historicalStudyUrl,STUDIES} from './historical-map-overlay.mjs';
 import * as maplibregl from 'https://unpkg.com/maplibre-gl@6.13.0/dist/maplibre-gl.mjs';
 import {MESSAGES, parseState, stateHash, visible, effectiveStatus, featureCollection} from './map-state.mjs';
@@ -378,6 +379,19 @@ function draw() {
 }
 
 map.on('load', () => {
+  map.addSource('agency-archive-bounds',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+  map.addLayer({id:'agency-archive-bounds',type:'line',source:'agency-archive-bounds',
+    paint:{'line-color':'#ecba6d','line-width':2,'line-dasharray':[2,2]}});
+  map.on('click','agency-archive-bounds',event=>{
+    const p=event.features?.[0]?.properties;if(!p)return;
+    const node=document.createElement('div');
+    const strong=document.createElement('strong');strong.textContent=p.name+' · '+p.year;
+    const desc=document.createElement('p');
+    desc.textContent='CAL FIRE archival perimeter bounding box only. Method: '+p.method+
+      '. Alarm date: '+p.alarmDate+'. Perimeter shape and ignition point are NOT represented.';
+    node.append(strong,desc);
+    new maplibregl.Popup().setLngLat(event.lngLat).setDOMContent(node).addTo(map);
+  });
   map.addSource('historical-archive',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
   map.addLayer({id:'historical-archive-fill',type:'fill',source:'historical-archive',
     paint:{'fill-color':['match',['get','classification'],'potential_static_thermal_source','#cf93c6','recurrently_observed_candidate','#eab178','#6bbcb6'],
@@ -475,6 +489,37 @@ function updateOptionalLayers() {
     if (map.getLayer(id)) map.setLayoutProperty(id,'visibility',visible ? 'visible':'none');
   }
 }
+let agencyArchiveToken=0;
+let agencyArchiveReport=null;
+async function updateAgencyArchive(){
+  const token=++agencyArchiveToken;
+  const source=map.getSource('agency-archive-bounds');
+  if(!el('agency-archive-show').checked){
+    source?.setData({type:'FeatureCollection',features:[]});
+    el('agency-archive-status').textContent='Agency archive is off; live map data is unchanged.';
+    return;
+  }
+  el('agency-archive-status').textContent='Validating CAL FIRE agency evidence…';
+  try{
+    if(!agencyArchiveReport){
+      const response=await fetch('./data/sacramento-frap-outcome-cohort-2023-2025.json',{cache:'no-store'});
+      if(!response.ok)throw new Error('Agency archive HTTP '+response.status);
+      agencyArchiveReport=await response.json();
+    }
+    const geojson=agencyBoundsGeojson(agencyArchiveReport);
+    if(token!==agencyArchiveToken)return;
+    source?.setData(geojson);
+    map.easeTo({center:[-121.41,38.78],zoom:10});
+    el('agency-archive-status').textContent=geojson.features.length+
+      ' CAL FIRE research perimeter extent boxes. These dashed boxes are NOT actual fire shapes.';
+  }catch(error){
+    if(token!==agencyArchiveToken)return;
+    source?.setData({type:'FeatureCollection',features:[]});
+    el('agency-archive-status').textContent='Agency evidence unavailable: '+error.message;
+  }
+}
+el('agency-archive-show').addEventListener('change',updateAgencyArchive);
+
 let historicalReport=null;
 let historicalRequestToken=0;
 async function updateHistoricalArchive() {
