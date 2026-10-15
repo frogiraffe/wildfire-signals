@@ -98,6 +98,14 @@
         <p>Original 2023–2025 FIRMS pixel centers are grouped offline into 0.01° WGS84 research bins. This grid is neither a sensor footprint nor an event boundary. A bin seen on multiple dates is a repeated <em>candidate</em>; the potential-static label is an unvalidated review cue based on long recurrence and FIRMS's own source type. It does not confirm an industrial site, non-vegetation source or wildfire. Empty bins have unknown satellite opportunity.</p>
         <p id="spatial-status" role="status" aria-live="polite">Loading spatial research evidence…</p>
         <div class="analytics-controls"><label>Study region <select id="spatial-region" aria-label="Spatial research region"></select></label></div>
+        <div class="analytics-controls"><label>Grid evidence <select id="spatial-grid-filter">
+          <option value="all">All published candidate bins</option>
+          <option value="recurrently_observed_candidate">Repeated candidate bins</option>
+          <option value="potential_static_thermal_source">Potential static-source review cues</option>
+          <option value="observed_thermal_candidate">Other observed candidates</option>
+        </select></label></div>
+        <p>Geographically positioned 0.01° research rectangles (not confirmed fire polygons). Colors indicate research classification, opacity reflects archived pixels; unpublished bins and unknown satellite exposure are excluded.</p>
+        <div id="spatial-grid-map" class="spatial-grid-map"></div>
         <p id="spatial-summary"></p>
         <p id="spatial-quality"></p>
         <div class="analytics-table-wrap"><table><thead><tr><th scope="col">UTC year</th><th scope="col">Archived pixels</th><th scope="col">FIRMS type 0</th><th scope="col">FIRMS type 2</th><th scope="col">FIRMS type 3</th><th scope="col">Low / nominal / high confidence</th><th scope="col">Day / night</th></tr></thead><tbody id="spatial-year-quality"></tbody></table></div>

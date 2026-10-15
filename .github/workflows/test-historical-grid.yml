@@ -1,0 +1,23 @@
+name: Historical geographic grid checks
+on:
+  pull_request:
+    paths:
+      - 'public/historical-grid.mjs'
+      - 'public/analytics-page.mjs'
+      - 'public/analytics.html'
+      - 'tests/js/historical-grid.test.mjs'
+      - '.github/workflows/test-historical-grid.yml'
+permissions:
+  contents: read
+jobs:
+  grid:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check public/historical-grid.mjs
+      - run: node --test tests/js/historical-grid.test.mjs
+      - run: npm run test:public

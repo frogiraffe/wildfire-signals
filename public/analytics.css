@@ -18,3 +18,7 @@
 #historical-timeline-status{overflow-wrap:anywhere}
 .timeline-metric-label{display:grid;gap:6px;max-width:320px;font-size:13px}
 .timeline-metric-label select{width:100%;padding:8px;min-height:38px}
+
+.spatial-grid-map{max-width:100%;overflow:hidden;background:#101f29;border:1px solid #385664;border-radius:8px;margin:12px 0}
+.spatial-grid-map svg{display:block;width:100%;height:auto;max-height:420px}
+#spatial-grid-filter{min-height:38px}
