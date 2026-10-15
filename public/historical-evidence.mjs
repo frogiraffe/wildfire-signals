@@ -18,7 +18,11 @@ export function compareHistoricalEvidence(studies, selection) {
     wildfireRiskComparisonAvailable:false,rateRatio:null,fireProbability:null};
 }
 
-const quote=value=>'"'+String(value??'').replaceAll('"','""')+'"';
+const quote=value=>{
+  const raw=String(value??'');
+  const safe=/^[\\s]*[=+@\\-\\t\\r]/.test(raw) ? "'"+raw : raw;
+  return '"'+safe.replaceAll('"','""')+'"';
+};
 export function historicalEvidenceCsv(comparison) {
   const headers=['region','regionId','monthsWithCandidates','rawPixels','candidateCellHours',
     'weatherObservedMonths','evidenceSha256','satelliteOpportunityVerified','independentFireOutcomesVerified'];
