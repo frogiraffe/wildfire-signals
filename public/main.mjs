@@ -2,6 +2,7 @@ import * as maplibregl from 'https://unpkg.com/maplibre-gl@6.13.0/dist/maplibre-
 import {MESSAGES, parseState, stateHash, visible, effectiveStatus, featureCollection} from './map-state.mjs';
 import {summarizeArea, investigationLeads} from './area-analysis.mjs';
 import {incidentTimeline} from './incident-timeline.mjs';
+import {observationSlice} from './observation-slice.mjs';
 import {fetchNwsWeather, forecastChanges} from './weather-context.mjs';
 import {fetchNifcPerimeter} from './perimeter-context.mjs';
 import {recordAnalysis} from './analysis-answers.mjs';
@@ -12,6 +13,7 @@ let snapshot = {manifest:{data_status:'unknown'},events:[],incidents:[],matches:
 let weatherController = null;
 let perimeterController = null;
 let candidateDisplay = 'points';
+let observationPlayback = 'all';
 const el = id => document.getElementById(id);
 const map = new maplibregl.Map({container:'map',
   style:'https://tiles.openfreemap.org/styles/liberty', center:[state.lon,state.lat], zoom:state.zoom,
@@ -367,8 +369,9 @@ function draw() {
     row.append(key,health); sources.append(row);
   }
   if (map.getSource('candidates')) {
-    map.getSource('candidates').setData(featureCollection(events,'candidate'));
-    map.getSource('candidate-density').setData(featureCollection(events,'candidate'));
+    const displayedEvents = observationSlice(events,state.hours,observationPlayback);
+    map.getSource('candidates').setData(featureCollection(displayedEvents,'candidate'));
+    map.getSource('candidate-density').setData(featureCollection(displayedEvents,'candidate'));
     map.getSource('incidents').setData(featureCollection(incidents,'incident'));
   }
 }
@@ -458,6 +461,13 @@ function updateOptionalLayers() {
 for (const id of ['show-agency','show-perimeters']) {
   el(id).addEventListener('change',updateOptionalLayers);
 }
+el('map-slice').addEventListener('change',event => {
+  observationPlayback = ['all','0','1','2'].includes(event.target.value) ? event.target.value : 'all';
+  el('map-slice-explanation').textContent = observationPlayback === 'all'
+    ? 'Map uses the full selected window. Regional statistics continue to use the full window.'
+    : 'Only the chosen third of the selected time window is drawn on the map. Counts and regional analyses remain based on the full window; this does not show fire movement.';
+  draw();
+});
 el('candidate-display').addEventListener('change',event => {
   candidateDisplay = event.target.value === 'density' ? 'density' : 'points';
   updateCandidateDisplay();
