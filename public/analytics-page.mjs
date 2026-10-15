@@ -1,3 +1,4 @@
+import {historicalAudit} from './historical-audit.mjs';
 import {renderSpatialGrid} from './historical-grid.mjs';
 import {historicalTimeline,renderHistoricalTimeline} from './historical-timeline.mjs';
 import {compareHistoricalEvidence,historicalEvidenceCsv} from './historical-evidence.mjs';
@@ -265,6 +266,24 @@ async function startSpatial() {
     };
     const render = () => {
       const item = selectSpatialRecurrence(report, el('spatial-region').value);
+      const audit=historicalAudit(report,el('spatial-region').value);
+      const auditRows=[
+        ['Archived thermal pixels',number(audit.totalPixels)],
+        ['Pixels represented in published research bins',number(audit.mappedPixels)],
+        ['Pixels outside published bins',number(audit.unmappedPixels)],
+        ['Published geographic bins',number(audit.publishedBins)],
+        ['Satellite acquisition exposure','Unverified'],
+        ['Independently validated wildfire outcomes','None established'],
+        ['Independent static-source identification','Not verified'],
+        ['Evidence SHA-256',audit.sourceSha256]
+      ];
+      const auditList=el('spatial-audit-values');auditList.replaceChildren();
+      for(const [key,value] of auditRows){
+        const dt=document.createElement('dt');dt.textContent=key;
+        const dd=document.createElement('dd');dd.textContent=value;
+        auditList.append(dt,dd);
+      }
+      el('spatial-audit-warning').textContent=audit.caution;
       const inspect = id => {
         const bin=item.published_bins.find(row=>row.bin_id===id);
         if(!bin)return;

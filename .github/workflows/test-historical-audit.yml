@@ -1,0 +1,21 @@
+name: Historical source audit tests
+on:
+  pull_request:
+    paths:
+      - 'public/historical-audit.mjs'
+      - 'public/analytics-page.mjs'
+      - 'tests/js/historical-audit.test.mjs'
+      - '.github/workflows/test-historical-audit.yml'
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check public/analytics-page.mjs
+      - run: node --test tests/js/historical-audit.test.mjs
+      - run: npm run test:public
