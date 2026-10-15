@@ -265,7 +265,36 @@ async function startSpatial() {
     };
     const render = () => {
       const item = selectSpatialRecurrence(report, el('spatial-region').value);
-      renderSpatialGrid(el('spatial-grid-map'),item,el('spatial-grid-filter').value);
+      const inspect = id => {
+        const bin=item.published_bins.find(row=>row.bin_id===id);
+        if(!bin)return;
+        el('spatial-cell-summary').textContent=id+' · '+bin.classification+
+          ' · research candidate only; independent source identity '+bin.source_identity_status+'.';
+        const dl=el('spatial-cell-evidence');dl.replaceChildren();
+        const entries=[
+          ['WGS84 bounds',bin.bounds_wgs84.join(', ')],
+          ['Archived thermal pixels',number(bin.raw_pixels)],
+          ['Observed UTC dates / years',bin.distinct_dates+' / '+bin.distinct_years],
+          ['First / last observation',bin.first_observed_at+' / '+bin.last_observed_at],
+          ['NOAA-20 / S-NPP pixels',(bin.provider_counts?.VIIRS_NOAA20_STANDARD??0)+' / '+(bin.provider_counts?.VIIRS_SNPP_STANDARD??0)],
+          ['Both-sensor dates',number(bin.sensor_agreement_dates)],
+          ['Classification basis',bin.classification_basis],
+          ['Independent classification',bin.independently_classified?'Yes':'No'],
+          ['Source identity',bin.source_identity_status],
+          ['Satellite observation opportunity','Unknown']
+        ];
+        for(const [label,value] of entries){
+          const dt=document.createElement('dt');dt.textContent=label;
+          const dd=document.createElement('dd');dd.textContent=value??'Unknown';
+          dl.append(dt,dd);
+        }
+      };
+      renderSpatialGrid(el('spatial-grid-map'),item,el('spatial-grid-filter').value,inspect);
+      const displayed=item.published_bins.filter(bin=>el('spatial-grid-filter').value==='all'||
+        bin.classification===el('spatial-grid-filter').value);
+      if(displayed.length)inspect(displayed[0].bin_id);
+      else {el('spatial-cell-summary').textContent='No mapped cells match the current filter.';
+        el('spatial-cell-evidence').replaceChildren();}
       el('spatial-summary').textContent = `${number(item.selected_raw_pixels)} archived pixels in ${number(item.occupied_bins)} occupied 0.01° bins; ${number(item.recurrently_observed_bins)} bins recur on multiple UTC dates, ${number(item.bins_seen_in_multiple_years)} span multiple years, ${number(item.potential_static_source_bins)} meet a source-based potential-static review rule. ${number(item.unpublished_bins)} other bins are summarized only. These are neither fire counts nor fire rates.`;
       el('spatial-quality').textContent = `FIRMS confidence: low ${number(item.confidence_counts.l ?? 0)}, nominal ${number(item.confidence_counts.n ?? 0)}, high ${number(item.confidence_counts.h ?? 0)}; day ${number(item.daynight_counts.D ?? 0)}, night ${number(item.daynight_counts.N ?? 0)}; source type 2 ${number(item.source_type_counts['2'] ?? 0)}. Historical source type can be wrong; independent source identity and acquisition opportunity are unknown.`;
       el('spatial-year-quality').replaceChildren();
