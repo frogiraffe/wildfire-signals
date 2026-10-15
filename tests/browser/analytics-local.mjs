@@ -12,6 +12,7 @@ const files = new Map([
   ['/historical-evidence.mjs', ['historical-evidence.mjs','text/javascript']],
   ['/historical-timeline.mjs', ['historical-timeline.mjs','text/javascript']],
   ['/historical-grid.mjs', ['historical-grid.mjs','text/javascript']],
+  ['/historical-audit.mjs', ['historical-audit.mjs','text/javascript']],
   ['/data/thermal-capture-pilot-2026-10-13.json',
     ['data/thermal-capture-pilot-2026-10-13.json','application/json']],
   ['/data/batman-weather-context-2026-10-11.json',
