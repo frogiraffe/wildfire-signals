@@ -68,6 +68,15 @@
         <p id="annual-provenance"></p>
         <p><a id="annual-download" href="./data/antalya-annual-context-2023-2025.json" download>Download joined analytical evidence JSON</a> · <a href="https://firms2.modaps.eosdis.nasa.gov/download/" rel="noopener noreferrer" target="_blank">NASA FIRMS archive</a> · <a href="https://www.ncei.noaa.gov/products/global-historical-climatology-network-hourly" rel="noopener noreferrer" target="_blank">NOAA GHCNh</a></p>
       </section>
+      <section aria-labelledby="evidence-compare-heading" class="analytics-card">
+        <h2 id="evidence-compare-heading">Historical evidence comparison · selected studies</h2>
+        <p>Same UTC month window and sensor selection across available pilots. Archive counts are not fire frequencies: satellite opportunity and independent outcomes have not been verified.</p>
+        <p id="evidence-comparison-quality" role="status">Comparison loads with the annual archive.</p>
+        <div class="analytics-table-wrap"><table><thead><tr><th>Study</th><th>Months with archived candidates</th><th>Archived thermal pixels</th><th>Candidate cell-hours</th><th>Months with station context</th><th>Satellite exposure verified</th></tr></thead><tbody id="evidence-comparison-rows"></tbody></table></div>
+        <p id="evidence-comparison-provenance"></p>
+        <button type="button" id="evidence-comparison-json" disabled>Export comparison JSON</button>
+        <button type="button" id="evidence-comparison-csv" disabled>Export comparison CSV</button>
+      </section>
       <section aria-labelledby="spatial-heading" class="analytics-card">
         <h2 id="spatial-heading">Where archived thermal candidates recur</h2>
         <p>Original 2023–2025 FIRMS pixel centers are grouped offline into 0.01° WGS84 research bins. This grid is neither a sensor footprint nor an event boundary. A bin seen on multiple dates is a repeated <em>candidate</em>; the potential-static label is an unvalidated review cue based on long recurrence and FIRMS's own source type. It does not confirm an industrial site, non-vegetation source or wildfire. Empty bins have unknown satellite opportunity.</p>
