@@ -48,14 +48,19 @@ def audit_asof_features(rows: Iterable[dict[str, Any]]) -> dict[str, Any]:
                 raise ValueError(f"case {case_id}: invalid feature evidence")
             if evidence.get("value") is None:
                 violations.append(f"{name}:unknown_value")
+            instants = {}
             for field in ("observed_at", "available_at"):
                 try:
                     at = _instant(evidence.get(field), f"{name}.{field}")
                 except ValueError:
                     violations.append(f"{name}:invalid_{field}")
                     continue
+                instants[field] = at
                 if at > decision:
                     violations.append(f"{name}:{field}_after_decision")
+            if (len(instants) == 2
+                    and instants["available_at"] < instants["observed_at"]):
+                violations.append(f"{name}:available_before_observed")
             source = evidence.get("source_id")
             if not isinstance(source, str) or not source.strip():
                 violations.append(f"{name}:missing_source_id")
