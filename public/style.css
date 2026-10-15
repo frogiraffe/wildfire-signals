@@ -112,6 +112,8 @@
 
 
 /* Statistical analysis: observation-only, readable on narrow sidebars. */
+.top-actions .analytics-link{color:#9edbd5;font-size:12px;white-space:nowrap}
+@media(max-width:700px){.top-actions .analytics-link{font-size:10px;max-width:70px;white-space:normal;line-height:1.1}}
 .regional-statistics{border-top:1px solid #53707c;margin:16px 0 12px;padding-top:10px;min-width:0}
 .regional-statistics p{font-size:11px;line-height:1.5;overflow-wrap:anywhere}
 #analysis-engine-quality{color:#f9d298;font-size:11px}
@@ -131,7 +133,6 @@
 @media(max-width:700px){.regional-stats-metrics{padding:6px;gap:4px}
   #stats-timeline{font-size:9px;min-width:255px}}
 
-/* Distinguish thermal marker and density views without implying fire severity. */
 .map-visualization{padding:10px 12px;margin:0 0 12px;border:1px solid #36515c;border-radius:8px;background:#1c303b}
 .map-visualization label{display:block;font-size:12px;font-weight:600;margin-bottom:7px}
 .map-visualization select{width:100%;max-width:100%;min-height:36px}
