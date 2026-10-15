@@ -16,6 +16,7 @@ const files = new Map([
   ['/historical-grid.mjs', ['historical-grid.mjs','text/javascript']],
   ['/historical-audit.mjs', ['historical-audit.mjs','text/javascript']],
   ['/investigation-manifest.mjs', ['investigation-manifest.mjs','text/javascript']],
+  ['/research-report.mjs', ['research-report.mjs','text/javascript']],
   ['/data/thermal-capture-pilot-2026-10-13.json',
     ['data/thermal-capture-pilot-2026-10-13.json','application/json']],
   ['/data/batman-weather-context-2026-10-11.json',
@@ -57,6 +58,10 @@ try {
     await page.locator('#analytics-status').getByText('Archived pilot loaded.').waitFor();
     await page.locator('#weather-status').getByText('Retrospective station pilot loaded.').waitFor();
     await page.locator('#annual-status').getByText('Three-year archive loaded.').waitFor();
+    await page.locator('#research-report-build').click();
+    await page.locator('#research-report-download:not([hidden])').waitFor();
+    assert.match(await page.locator('#research-report-preview').textContent(),/Independent wildfire outcomes verified: No/);
+
     assert.equal(await page.locator('#workspace-mode').inputValue(),'all');
     await page.locator('[data-workspace-target="geography"]').click();
     assert.equal(await page.locator('#spatial-heading').isVisible(),true);
