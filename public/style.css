@@ -156,3 +156,8 @@
 .layer-toggles{display:grid;gap:8px;margin-top:10px}
 .layer-toggles label{display:flex;align-items:center;gap:9px;font-weight:400;line-height:1.4;cursor:pointer}
 .layer-toggles input{width:17px;height:17px;accent-color:#75d8e8;flex:none}
+
+.map-playback{padding:10px 12px;margin:0 0 12px;border:1px solid #36515c;border-radius:8px;background:#1c303b}
+.map-playback label{display:block;font-size:12px;font-weight:600;margin-bottom:7px}
+.map-playback select{width:100%;min-height:36px}
+.map-playback p{font-size:11px;line-height:1.45;color:#c0d3d8;margin:9px 0 0}
