@@ -596,6 +596,34 @@ async function start() {
   }
 }
 
+
+function applyUnifiedInvestigation() {
+  const study=el('unified-study').value;
+  const sensor=el('unified-sensor').value;
+  if(!['ANTALYA_25KM','DALAMAN_25KM'].includes(study) ||
+      !['all','VIIRS_NOAA20_STANDARD','VIIRS_SNPP_STANDARD'].includes(sensor)) {
+    el('unified-status').textContent='Invalid study or sensor; no view updated.';
+    return;
+  }
+  const selections=[['annual-region',study],['spatial-region',study],
+    ['annual-provider',sensor],['spatial-grid-sensor',sensor]];
+  for (const [id,value] of selections) {
+    const input=el(id);
+    if (!input || ![...input.options].some(option=>option.value===value)) {
+      el('unified-status').textContent='Archive data for this study is not yet available; previous selection kept.';
+      return;
+    }
+  }
+  for (const [id,value] of selections) {
+    const input=el(id);input.value=value;
+    input.dispatchEvent(new Event('change',{bubbles:true}));
+  }
+  el('unified-status').textContent=
+    'Applied '+study.replace('_25KM','')+' and '+(sensor==='all'?'both VIIRS sensors':sensor)+
+    ' to annual, temporal and spatial evidence. Grid bins still represent the full 2023–2025 archive; weather studies use their own stations and periods.';
+}
+el('unified-apply').addEventListener('click',applyUnifiedInvestigation);
+
 start();
 startEnvironment();
 startAnnual();

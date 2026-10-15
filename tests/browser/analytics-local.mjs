@@ -54,6 +54,17 @@ try {
     await page.locator('#weather-status').getByText('Retrospective station pilot loaded.').waitFor();
     await page.locator('#annual-status').getByText('Three-year archive loaded.').waitFor();
     await page.locator('#spatial-status').getByText('Spatial recurrence evidence loaded.').waitFor();
+    await page.locator('#unified-study').selectOption('DALAMAN_25KM');
+    await page.locator('#unified-sensor').selectOption('VIIRS_SNPP_STANDARD');
+    await page.locator('#unified-apply').click();
+    assert.equal(await page.locator('#annual-region').inputValue(),'DALAMAN_25KM');
+    assert.equal(await page.locator('#spatial-region').inputValue(),'DALAMAN_25KM');
+    assert.equal(await page.locator('#annual-provider').inputValue(),'VIIRS_SNPP_STANDARD');
+    assert.equal(await page.locator('#spatial-grid-sensor').inputValue(),'VIIRS_SNPP_STANDARD');
+    assert.match(await page.locator('#unified-status').textContent(),/Applied DALAMAN/);
+    await page.locator('#unified-study').selectOption('ANTALYA_25KM');
+    await page.locator('#unified-sensor').selectOption('all');
+    await page.locator('#unified-apply').click();
     await page.locator('#standard-readiness-status').getByText('Standard product research evidence loaded.').waitFor();
     await page.locator('#sensitivity-status').getByText('Real source sensitivity loaded.').waitFor();
     await page.locator('#frap-status').getByText('Official perimeter evidence loaded.').waitFor();
