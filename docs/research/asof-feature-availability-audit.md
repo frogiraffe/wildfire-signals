@@ -29,3 +29,5 @@ Engineering integration: use this check before passing labeled datasets to exper
 When `run_evaluation` receives a JSONL cohort with `features` on **every** row, it propagates the same per-case chronology audit into `feature_availability_audit` in the private aggregate report, and rejects any ineligible feature. If no rows carry feature-level evidence, the field is `null` (not a passed check). Mixing rows with and without feature evidence is refused. These checks are structural; a source identifier does not prove provider authenticity.
 
 The output remains a research baseline, not a forecast. Historical exposure, independently verified positives and negatives, availability chronology, geographic holdout and source licensing still require separate audits.
+
+Optional `issued_at` can record a provider's source issue/publication timestamp; if supplied, it must be timezone-aware and not later than the decision. Non-finite floating point values and booleans are rejected as evidence values. These are structural checks, not independent proof of issue-time provenance.
