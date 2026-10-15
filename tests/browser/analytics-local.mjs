@@ -62,6 +62,9 @@ try {
     assert.equal(await page.locator('#annual-provider').inputValue(),'VIIRS_SNPP_STANDARD');
     assert.equal(await page.locator('#spatial-grid-sensor').inputValue(),'VIIRS_SNPP_STANDARD');
     assert.match(await page.locator('#unified-status').textContent(),/Applied DALAMAN/);
+    await page.locator('#unified-study').selectOption('ANTALYA_25KM');
+    await page.locator('#unified-sensor').selectOption('all');
+    await page.locator('#unified-apply').click();
     await page.locator('#standard-readiness-status').getByText('Standard product research evidence loaded.').waitFor();
     await page.locator('#sensitivity-status').getByText('Real source sensitivity loaded.').waitFor();
     await page.locator('#frap-status').getByText('Official perimeter evidence loaded.').waitFor();
