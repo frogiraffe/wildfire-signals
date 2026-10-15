@@ -12,3 +12,9 @@
 #evidence-comparison-provenance{overflow-wrap:anywhere;word-break:break-word}
 #evidence-comparison-quality{overflow-wrap:anywhere}
 #evidence-comparison-json,#evidence-comparison-csv{margin:6px 8px 4px 0;padding:9px 12px;max-width:100%}
+
+.historical-timeline-chart{max-width:100%;overflow:hidden;margin:12px 0}
+.historical-timeline-chart svg{width:100%;height:auto;display:block;max-width:100%}
+#historical-timeline-status{overflow-wrap:anywhere}
+.timeline-metric-label{display:grid;gap:6px;max-width:320px;font-size:13px}
+.timeline-metric-label select{width:100%;padding:8px;min-height:38px}
