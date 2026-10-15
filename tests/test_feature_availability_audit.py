@@ -44,6 +44,18 @@ class AsOfFeatureAuditTests(unittest.TestCase):
         row["features"]["temperature"]["available_at"] = "2026-10-01T15:00:00+03:00"
         self.assertEqual(audit_asof_features([row])["eligible"], 1)
 
+    def test_availability_cannot_precede_observation(self):
+        row = sample()
+        row["features"]["temperature"]["available_at"] = "2026-10-01T09:00:00Z"
+        result = audit_asof_features([row])
+        self.assertIn("temperature:available_before_observed",
+                      result["cases"][0]["violations"])
+
+    def test_empty_cohort_has_no_training_authority(self):
+        result = audit_asof_features([])
+        self.assertEqual(result["eligible"], 0)
+        self.assertFalse(result["model_training_authorized"])
+
     def test_duplicate_cases_rejected(self):
         with self.assertRaises(ValueError):
             audit_asof_features([sample(), sample()])
