@@ -7,3 +7,9 @@ test('reject invalid and reversed geometry',()=>{
   assert.throws(()=>spatialGridCells({published_bins:[{bounds_wgs84:[37,31,36,32],raw_pixels:1}]}),/Invalid grid/);
   assert.throws(()=>spatialGridCells({published_bins:[{bounds_wgs84:[36,31,37,32],raw_pixels:-1}]}),/Invalid grid/);
 });
+
+test('sensor counts remain attached to their source cell',()=>{
+ const cells=spatialGridCells({published_bins:[{bin_id:'x',bounds_wgs84:[36,30,36.01,30.01],raw_pixels:3,distinct_dates:2,provider_counts:{VIIRS_NOAA20_STANDARD:2,VIIRS_SNPP_STANDARD:1}}]});
+ assert.equal(cells[0].providers.VIIRS_NOAA20_STANDARD,2);
+ assert.equal(cells[0].providers.VIIRS_SNPP_STANDARD,1);
+});
