@@ -221,7 +221,8 @@ async function startAnnual() {
     el('annual-provenance').textContent = `${pilot.label}: ${report.population.country_source_rows.toLocaleString()} rows in ${report.population.source_files} NASA annual country files; ${report.population.selected_raw_pixels.toLocaleString()} selected pixels in a ${report.region.radius_km} km circle. ${report.population.station_source_rows.toLocaleString()} rows in ${report.population.weather_files} NOAA station files; ${report.population.weather_matched_provider_hours_temperature_c}/${report.population.candidate_provider_hours} positive sensor-hours have prior station temperature. NASA and NOAA files are revised; original first availability is unknown. Evidence SHA-256: ${report.evidence_sha256}. Source file hashes and revisions are in the download. Weather license: ${report.weather_license}. No independently confirmed wildfire outcome.`;
     const center=report.region;
     const mapParams=new URLSearchParams({
-      lat:String(center.latitude),lon:String(center.longitude),zoom:'9',hours:'72'
+      lat:String(center.latitude),lon:String(center.longitude),zoom:'9',hours:'72',
+      rlat:String(center.latitude),rlon:String(center.longitude),rr:String(center.radius_km)
     });
     el('historical-navigation-link').href='./index.html#'+mapParams.toString();
     el('historical-navigation-status').textContent=
