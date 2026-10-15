@@ -31,3 +31,5 @@
 @media(max-width:600px){.spatial-cell-inspector dl{grid-template-columns:1fr;gap:3px}.spatial-cell-inspector dd{margin-bottom:9px}}
 
 .unified-links{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px}.unified-links a{font-size:13px}#unified-apply{padding:10px 14px;margin-top:12px;cursor:pointer}#unified-status{overflow-wrap:anywhere}
+
+.spatial-audit{padding:12px;border:1px solid #46606c;border-radius:8px;margin:12px 0}.spatial-audit dl{display:grid;grid-template-columns:minmax(155px,1fr) minmax(0,2fr);gap:8px 12px;font-size:13px}.spatial-audit dd{margin:0;overflow-wrap:anywhere}.spatial-audit dt{color:#bdd1d5}@media(max-width:600px){.spatial-audit dl{grid-template-columns:1fr;gap:4px}.spatial-audit dd{margin-bottom:8px}}
