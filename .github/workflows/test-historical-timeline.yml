@@ -1,0 +1,25 @@
+name: Historical timeline visualization
+on:
+  pull_request:
+    paths:
+      - 'public/historical-timeline.mjs'
+      - 'public/analytics-page.mjs'
+      - 'public/analytics.html'
+      - 'public/analytics.css'
+      - 'tests/js/historical-timeline.test.mjs'
+      - '.github/workflows/test-historical-timeline.yml'
+permissions:
+  contents: read
+jobs:
+  timeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check public/historical-timeline.mjs
+      - run: node --check public/analytics-page.mjs
+      - run: node --test tests/js/historical-timeline.test.mjs
+      - run: npm run test:public
