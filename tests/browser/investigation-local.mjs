@@ -46,15 +46,6 @@ try {
     await page.goto(`http://127.0.0.1:${server.address().port}/#lang=tr&lat=-6&lon=145&zoom=7`);
     const lead = page.locator('#lead-list button').first();
     await lead.waitFor({timeout:30000});
-    // Historic NASA research bins remain distinct from current feed and agency outlines.
-    await page.locator('#archive-region').selectOption('DALAMAN_25KM');
-    await page.locator('#archive-overlay').check();
-    await page.locator('#archive-status').getByText(/published archived research cells/).waitFor();
-    assert.match(await page.locator('#archive-open-workbench').getAttribute('href'),/study=DALAMAN_25KM/);
-    await page.locator('#archive-sensor').selectOption('VIIRS_SNPP_STANDARD');
-    await page.locator('#archive-status').getByText(/published archived research cells/).waitFor();
-    await page.locator('#archive-overlay').uncheck();
-    assert.match(await page.locator('#archive-status').textContent(),/off/);
     // Global explorer: real UI, local snapshot fixture, and shareable region.
     await page.locator('#region-center').click();
     await page.locator('#region-results:not([hidden])').waitFor();
@@ -153,6 +144,16 @@ try {
     assert.deepEqual(errors,[]);
     if (process.env.SCREENSHOT_DIR)
       await page.screenshot({path:`${process.env.SCREENSHOT_DIR}/investigation-${viewport.width}.png`});
+    // Historic NASA research bins remain distinct from current feed and agency outlines.
+    await page.locator('#archive-region').selectOption('DALAMAN_25KM');
+    await page.locator('#archive-overlay').check();
+    await page.locator('#archive-status').getByText(/published archived research cells/).waitFor();
+    assert.match(await page.locator('#archive-open-workbench').getAttribute('href'),/study=DALAMAN_25KM/);
+    await page.locator('#archive-sensor').selectOption('VIIRS_SNPP_STANDARD');
+    await page.locator('#archive-status').getByText(/published archived research cells/).waitFor();
+    await page.locator('#archive-overlay').uncheck();
+    assert.match(await page.locator('#archive-status').textContent(),/off/);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1),false);
     await page.close();
   }
   activeSnapshot = {...snapshot,events:[],manifest:{...snapshot.manifest,
