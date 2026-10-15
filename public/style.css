@@ -137,3 +137,14 @@
 .map-visualization label{display:block;font-size:12px;font-weight:600;margin-bottom:7px}
 .map-visualization select{width:100%;max-width:100%;min-height:36px}
 .map-visualization p{font-size:11px;line-height:1.5;color:#c0d3d8;margin:9px 0 0}
+
+/* Source meaning is intentionally visible even when a detail card is closed. */
+.map-legend{padding:11px 12px;margin:0 0 14px;border:1px solid #36515c;border-radius:8px;background:#1c303b}
+.map-legend h2{font-size:13px;margin:0 0 9px}
+.map-legend ul{list-style:none;padding:0;margin:0;display:grid;gap:9px}
+.map-legend li{display:flex;align-items:center;gap:10px;font-size:11px;line-height:1.4}
+.map-legend p{font-size:11px;line-height:1.45;color:#c1d3d9;margin:9px 0 0}
+.legend-swatch{display:inline-block;flex:0 0 15px;height:15px}
+.legend-satellite{background:#f19b53;border:2px solid #10202a;border-radius:50%}
+.legend-agency{background:#5dc2c7;border:2px solid #10202a;border-radius:50%}
+.legend-perimeter{background:rgba(242,139,75,.18);border:2px solid #f28b4b}
