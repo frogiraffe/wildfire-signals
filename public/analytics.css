@@ -22,3 +22,10 @@
 .spatial-grid-map{max-width:100%;overflow:hidden;background:#101f29;border:1px solid #385664;border-radius:8px;margin:12px 0}
 .spatial-grid-map svg{display:block;width:100%;height:auto;max-height:420px}
 #spatial-grid-filter{min-height:38px}
+
+.spatial-grid-map .inspectable-grid-cell{cursor:pointer}
+.spatial-grid-map .inspectable-grid-cell:hover,.spatial-grid-map .inspectable-grid-cell:focus{stroke:#ffffff;stroke-width:2.5;outline:none}
+.spatial-cell-inspector{border:1px solid #3b5864;border-radius:8px;padding:12px;margin:12px 0;background:#1b303b}
+.spatial-cell-inspector dl{display:grid;grid-template-columns:minmax(100px,1fr) minmax(0,2fr);gap:7px 12px;font-size:12px}
+.spatial-cell-inspector dt{color:#b5cbd0}.spatial-cell-inspector dd{margin:0;overflow-wrap:anywhere}
+@media(max-width:600px){.spatial-cell-inspector dl{grid-template-columns:1fr;gap:3px}.spatial-cell-inspector dd{margin-bottom:9px}}

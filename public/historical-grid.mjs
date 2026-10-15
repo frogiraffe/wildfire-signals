@@ -10,7 +10,7 @@ export function spatialGridCells(region) {
       pixels:bin.raw_pixels,classification:bin.classification,dates:bin.distinct_dates};
   });
 }
-export function renderSpatialGrid(root,region,filter='all'){
+export function renderSpatialGrid(root,region,filter='all',onSelect=null){
   const cells=spatialGridCells(region).filter(c=>filter==='all'||c.classification===filter);
   root.replaceChildren();
   if(!cells.length){const p=document.createElement('p');p.textContent='No published bins match this filter. Unpublished bins are not mapped.';root.append(p);return;}
@@ -27,16 +27,24 @@ export function renderSpatialGrid(root,region,filter='all'){
     for(const [k,v] of Object.entries(attrs))node.setAttribute(k,String(v));
     if(titleText){const t=document.createElementNS(ns,'title');t.textContent=titleText;node.append(t);}
     svg.append(node);
+    return node;
   };
   const max=Math.max(1,...cells.map(c=>c.pixels));
   for(const c of cells){
     const x=40+(c.west-minLon)*scale,y=25+(maxLat-c.north)*scale;
     const fill=c.classification==='potential_static_thermal_source'?'#db9bc7':
       c.classification==='recurrently_observed_candidate'?'#e9b578':'#78c6bd';
-    draw('rect',{x,y,width:Math.max(1,(c.east-c.west)*scale),
+    const rect=draw('rect',{x,y,width:Math.max(1,(c.east-c.west)*scale),
       height:Math.max(1,(c.north-c.south)*scale),fill,stroke:'#14232b',
       'stroke-width':.6,opacity:.25+.75*Math.sqrt(c.pixels/max)},
       c.id+'; '+c.pixels+' archived pixels; '+c.dates+' observed dates; '+c.classification);
+    if (onSelect) {
+      rect.setAttribute('tabindex','0');rect.setAttribute('role','button');
+      rect.setAttribute('aria-label','Inspect archived cell '+c.id);
+      rect.classList.add('inspectable-grid-cell');
+      rect.addEventListener('click',()=>onSelect(c.id));
+      rect.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();onSelect(c.id);}});
+    }
   }
   root.append(svg);
 }
