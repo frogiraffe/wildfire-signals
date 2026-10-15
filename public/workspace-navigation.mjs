@@ -20,7 +20,7 @@ export function activateWorkspace(mode,sections) {
 }
 export function mountWorkspace(root=document) {
   const menu=root.getElementById('workspace-mode');
-  const sections=[...root.querySelectorAll('.analytics-main > section[aria-labelledby]')];
+  const sections=[...root.querySelectorAll('.analytics-main > section.analytics-card[aria-labelledby]')];
   const note=root.getElementById('workspace-view-note');
   const buttons=[...root.querySelectorAll('[data-workspace-target]')];
   const update=mode=>{
@@ -41,7 +41,7 @@ export function mountWorkspace(root=document) {
   };
   menu.addEventListener('change',()=>update(menu.value));
   for(const button of buttons)button.addEventListener('click',()=>update(button.dataset.workspaceTarget));
-  update('overview');
+  update('all');
   // Deep links remain functional even when the targeted group is currently hidden.
   const revealHash=()=>{
     const id=decodeURIComponent(location.hash.slice(1));
