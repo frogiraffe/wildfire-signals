@@ -661,9 +661,11 @@ el('unified-export').addEventListener('click',()=>{
 });
 
 let researchReportUrl=null;
+let researchMarkdownUrl=null;
 el('research-report-build').addEventListener('click',async()=>{
   const preview=el('research-report-preview'),download=el('research-report-download');
   preview.hidden=false;download.hidden=true;
+  const markdown=el('research-report-markdown');markdown.hidden=true;
   preview.textContent='Validating original archive evidence…';
   try{
     const study=el('annual-region').value;
@@ -680,7 +682,11 @@ el('research-report-build').addEventListener('click',async()=>{
       study,sensor:el('annual-provider').value,
       from:el('annual-from').value,to:el('annual-to').value,
       metric:el('timeline-metric').value,gridFilter:el('spatial-grid-filter').value});
-    preview.textContent=formatResearchReport(report);
+    const formatted=formatResearchReport(report);
+    preview.textContent=formatted;
+    if(researchMarkdownUrl)URL.revokeObjectURL(researchMarkdownUrl);
+    researchMarkdownUrl=URL.createObjectURL(new Blob([formatted],{type:'text/markdown;charset=utf-8'}));
+    markdown.href=researchMarkdownUrl;markdown.hidden=false;
     if(researchReportUrl)URL.revokeObjectURL(researchReportUrl);
     researchReportUrl=URL.createObjectURL(new Blob([JSON.stringify(report,null,2)],
       {type:'application/json'}));
