@@ -150,6 +150,16 @@
           </div>
           <p id="display-explanation">Markers represent thermal candidates, not confirmed fire boundaries.</p>
         </section>
+        <section class="map-playback" aria-label="Satellite observation time slice">
+          <label for="map-slice">Observation playback</label>
+          <select id="map-slice" aria-label="Satellite observation time slice">
+            <option value="all">Entire selected window</option>
+            <option value="0">Oldest third</option>
+            <option value="1">Middle third</option>
+            <option value="2">Newest third</option>
+          </select>
+          <p id="map-slice-explanation">Map uses the full selected observation window. Regional statistics continue to use the full window.</p>
+        </section>
         <label for="hours" data-i18n="time">Time window</label><select id="hours"><option value="6">6 h</option><option value="24">24 h</option><option value="72">72 h</option></select>
         <p class="intro" data-i18n="timeScope">Time window filters satellite observations. Agency records show the current source layer; check each agency update date.</p>
         <label for="source" data-i18n="source">Source</label><select id="source"><option value="all" data-i18n="all">All sources</option></select>
